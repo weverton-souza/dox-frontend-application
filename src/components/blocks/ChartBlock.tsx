@@ -11,36 +11,9 @@ import {
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import Select from '@/components/ui/Select'
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  LineElement,
-  PointElement,
-  Title,
-  Tooltip,
-  Legend,
-  BarController,
-  LineController,
-} from 'chart.js'
-import annotationPlugin from 'chartjs-plugin-annotation'
-import ChartDataLabels from 'chartjs-plugin-datalabels'
-
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  LineElement,
-  PointElement,
-  BarController,
-  LineController,
-  Title,
-  Tooltip,
-  Legend,
-  annotationPlugin,
-  ChartDataLabels
-)
+import { CloseIcon } from '@/components/icons'
+import { Chart as ChartJS } from 'chart.js'
+import '@/lib/chart-setup'
 
 interface ChartBlockProps {
   data: ChartData
@@ -604,9 +577,7 @@ export default function ChartBlock({ data, onChange }: ChartBlockProps) {
                 className="p-1 rounded hover:bg-red-50 text-gray-400 hover:text-red-500"
                 title="Remover série"
               >
-                <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
-                </svg>
+                <CloseIcon size={14} />
               </button>
             )}
           </div>

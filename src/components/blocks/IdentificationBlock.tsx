@@ -1,11 +1,14 @@
-import { useCallback } from 'react'
-import { IdentificationData, Professional, PatientData, Solicitor } from '@/types'
+import { useCallback, useMemo } from 'react'
+import { IdentificationData, Professional, PatientData, Solicitor, Patient } from '@/types'
 import Input from '@/components/ui/Input'
 import Toggle from '@/components/ui/Toggle'
+import Select from '@/components/ui/Select'
 
 interface IdentificationBlockProps {
   data: IdentificationData
   onChange: (data: IdentificationData) => void
+  patients?: Patient[]
+  onPatientSelected?: (patientId: string) => void
 }
 
 const sectionHeaderClass =
@@ -46,8 +49,28 @@ function calculateAge(birthDate: string, referenceDate: string): string {
   return `${years} ${years === 1 ? 'ano' : 'anos'} e ${months} ${months === 1 ? 'mes' : 'meses'}`
 }
 
-const IdentificationBlock = ({ data, onChange }: IdentificationBlockProps) => {
+const IdentificationBlock = ({ data, onChange, patients, onPatientSelected }: IdentificationBlockProps) => {
   const hasSolicitor = !!data.solicitor
+
+  const patientOptions = useMemo(() => {
+    if (!patients || patients.length === 0) return []
+    return patients.map((p) => ({
+      value: p.id,
+      label: p.data.name || 'Paciente sem nome',
+    }))
+  }, [patients])
+
+  const handleSelectPatient = useCallback(
+    (patientId: string) => {
+      if (!patientId || !patients) return
+      const patient = patients.find((p) => p.id === patientId)
+      if (!patient) return
+      // Copy patient data into the identification block
+      onChange({ ...data, patient: { ...patient.data } })
+      onPatientSelected?.(patientId)
+    },
+    [data, onChange, patients, onPatientSelected]
+  )
 
   const updateProfessional = useCallback(
     (field: keyof Professional, value: string) => {
@@ -187,6 +210,16 @@ const IdentificationBlock = ({ data, onChange }: IdentificationBlockProps) => {
       {/* Dados do Paciente */}
       <section>
         <h3 className={sectionHeaderClass}>Dados do Paciente</h3>
+        {patientOptions.length > 0 && (
+          <div className="mb-4">
+            <Select
+              value=""
+              onChange={handleSelectPatient}
+              options={patientOptions}
+              placeholder="Preencher com paciente cadastrado..."
+            />
+          </div>
+        )}
         <div className="grid grid-cols-2 gap-4">
           <Input
             label="Nome"
