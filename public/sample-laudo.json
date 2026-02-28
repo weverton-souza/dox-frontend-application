@@ -1,0 +1,413 @@
+{
+  "id": "sample-weverton-001",
+  "createdAt": "2026-02-26T10:00:00.000Z",
+  "updatedAt": "2026-02-26T10:00:00.000Z",
+  "status": "rascunho",
+  "patientName": "Weverton da Silva Souza",
+  "blocks": [
+    {
+      "id": "b-ident-001",
+      "type": "identification",
+      "order": 0,
+      "collapsed": false,
+      "data": {
+        "professional": {
+          "name": "Dênia Falcão de Bittencourt",
+          "crp": "04/30761",
+          "specialization": "Especialista em Neuropsicologia",
+          "phone": "",
+          "instagram": "",
+          "email": ""
+        },
+        "solicitor": {
+          "name": "Dra. Marcella Bianca",
+          "crm": "",
+          "rqe": "",
+          "specialty": "Médica Psiquiatra"
+        },
+        "patient": {
+          "name": "Weverton da Silva Souza",
+          "cpf": "",
+          "birthDate": "1993-07-11",
+          "age": "31 anos e 4 meses",
+          "education": "Superior Completo em Engenharia de Computação",
+          "profession": "Desenvolvedor de Softwares",
+          "motherName": "Lucélia da Silva Souza",
+          "fatherName": ""
+        },
+        "date": "2024-11-18",
+        "location": "Belo Horizonte - MG"
+      }
+    },
+    {
+      "id": "b-demanda-002",
+      "type": "text",
+      "order": 1,
+      "collapsed": false,
+      "data": {
+        "title": "Descrição da Demanda e Objetivos da Avaliação",
+        "subtitle": "",
+        "content": "Weverton da Silva Souza, 31 anos, procurou a avaliação neuropsicológica por encaminhamento de sua médica psiquiatra, Dra. Marcella Bianca, com o objetivo de investigar suas funções cognitivas e comportamentais.\n\nA avaliação teve como principal propósito mapear o perfil neuropsicológico do paciente, abrangendo as funções cognitivas como atenção, memória, funções executivas, velocidade de processamento e habilidades intelectuais gerais. Além disso, buscou-se identificar possíveis indicadores clínicos associados ao Transtorno do Déficit de Atenção e Hiperatividade (TDAH), considerando os sintomas relatados pelo paciente, como dificuldades de concentração, organização e regulação emocional.",
+        "labeledItems": [],
+        "useLabeledItems": false
+      }
+    },
+    {
+      "id": "b-proced-003",
+      "type": "text",
+      "order": 2,
+      "collapsed": false,
+      "data": {
+        "title": "Procedimentos",
+        "subtitle": "",
+        "content": "A avaliação neuropsicológica foi realizada em 4 sessões de aproximadamente 1h30 cada, utilizando os seguintes instrumentos:\n\n• Entrevista clínica semiestruturada (anamnese)\n• WAIS-IV — Escala Wechsler de Inteligência para Adultos\n• FDT — Five Digit Test\n• RAVLT — Teste de Aprendizagem Auditivo Verbal de Rey\n• Torre de Londres\n• Teste dos Cinco Pontos\n• IFP-II — Inventário Fatorial de Personalidade\n• SRS-2 — Escala de Responsividade Social\n• ETDAH-AD — Escala de TDAH para Adultos\n• Avaliação qualitativa da criatividade\n• Observação comportamental",
+        "labeledItems": [],
+        "useLabeledItems": false
+      }
+    },
+    {
+      "id": "b-anamn-004",
+      "type": "text",
+      "order": 3,
+      "collapsed": false,
+      "data": {
+        "title": "Anamnese",
+        "subtitle": "",
+        "content": "Weverton é natural de Belo Horizonte-MG, engenheiro de computação de formação e desenvolvedor de software. Reside com a mãe. Relata que sempre teve dificuldades em manter a atenção em tarefas que não considera estimulantes, tendendo a procrastinar atividades rotineiras e burocráticas.\n\nNa infância, apresentou desempenho acadêmico satisfatório, porém com queixas de professores sobre desatenção e agitação em sala de aula. Na adolescência, essas dificuldades foram parcialmente compensadas pelo alto potencial intelectual. No ensino superior, as demandas organizacionais intensificaram os sintomas.\n\nAtualmente, refere dificuldades significativas na organização do tempo, esquecimentos frequentes, dificuldade em finalizar projetos, impulsividade em decisões e variações no humor. Relata também hiperfoco em atividades de interesse, especialmente relacionadas à programação.\n\nNão faz uso de medicações psiquiátricas no momento. Não há histórico de uso de substâncias. O sono é irregular, com dificuldade para adormecer. A alimentação é descrita como irregular.",
+        "labeledItems": [],
+        "useLabeledItems": false
+      }
+    },
+    {
+      "id": "b-result-005",
+      "type": "text",
+      "order": 4,
+      "collapsed": false,
+      "data": {
+        "title": "Resultados",
+        "subtitle": "",
+        "content": "",
+        "labeledItems": [],
+        "useLabeledItems": false
+      }
+    },
+    {
+      "id": "b-intelig-006",
+      "type": "text",
+      "order": 5,
+      "collapsed": false,
+      "data": {
+        "title": "",
+        "subtitle": "Inteligência",
+        "content": "No WAIS-IV, Weverton apresentou QI Total de 115, classificado como Médio Superior, com perfil heterogêneo entre os índices fatoriais. O Índice de Compreensão Verbal (ICV = 121) e o Índice de Organização Perceptual (IOP = 118) situaram-se na faixa Superior e Médio Superior, respectivamente, indicando excelentes habilidades de raciocínio verbal, formação de conceitos e organização visuoespacial.\n\nO Índice de Memória Operacional (IMO = 106) ficou na faixa Média, e o Índice de Velocidade de Processamento (IVP = 95) na faixa Média, representando áreas relativamente mais fracas em comparação com suas habilidades verbais e perceptuais. Essa discrepância é clinicamente significativa e compatível com o perfil atencional observado.",
+        "labeledItems": [],
+        "useLabeledItems": false
+      }
+    },
+    {
+      "id": "b-wais-table-007",
+      "type": "score-table",
+      "order": 6,
+      "collapsed": false,
+      "data": {
+        "title": "WAIS-IV — Índices Fatoriais",
+        "columns": [
+          { "id": "col-indice", "label": "Índice" },
+          { "id": "col-pontuacao", "label": "Pontuação Composta" },
+          { "id": "col-percentil", "label": "Percentil" },
+          { "id": "col-ic", "label": "IC 95%" },
+          { "id": "col-class", "label": "Classificação" }
+        ],
+        "rows": [
+          { "id": "r1", "values": { "col-indice": "ICV — Compreensão Verbal", "col-pontuacao": "121", "col-percentil": "92", "col-ic": "113-127", "col-class": "Superior" } },
+          { "id": "r2", "values": { "col-indice": "IOP — Organização Perceptual", "col-pontuacao": "118", "col-percentil": "88", "col-ic": "109-124", "col-class": "Médio Superior" } },
+          { "id": "r3", "values": { "col-indice": "IMO — Memória Operacional", "col-pontuacao": "106", "col-percentil": "66", "col-ic": "98-113", "col-class": "Média" } },
+          { "id": "r4", "values": { "col-indice": "IVP — Velocidade de Processamento", "col-pontuacao": "95", "col-percentil": "37", "col-ic": "87-105", "col-class": "Média" } },
+          { "id": "r5", "values": { "col-indice": "QIT — QI Total", "col-pontuacao": "115", "col-percentil": "84", "col-ic": "110-119", "col-class": "Médio Superior" } }
+        ],
+        "footnote": "ICV = Índice de Compreensão Verbal; IOP = Índice de Organização Perceptual; IMO = Índice de Memória Operacional; IVP = Índice de Velocidade de Processamento; QIT = QI Total"
+      }
+    },
+    {
+      "id": "b-wais-chart-008",
+      "type": "chart",
+      "order": 7,
+      "collapsed": false,
+      "data": {
+        "title": "Perfil WAIS-IV — Índices Fatoriais",
+        "chartType": "bar",
+        "displayMode": "grouped",
+        "categories": [
+          { "id": "cat-icv", "label": "ICV", "values": { "s1": 121 } },
+          { "id": "cat-iop", "label": "IOP", "values": { "s1": 118 } },
+          { "id": "cat-imo", "label": "IMO", "values": { "s1": 106 } },
+          { "id": "cat-ivp", "label": "IVP", "values": { "s1": 95 } },
+          { "id": "cat-qit", "label": "QIT", "values": { "s1": 115 } }
+        ],
+        "series": [
+          { "id": "s1", "label": "Pontuação Composta", "color": "#2E86C1" }
+        ],
+        "referenceLines": [
+          { "id": "rl1", "label": "Média (100)", "value": 100, "color": "#666666" }
+        ],
+        "referenceRegions": [
+          { "id": "rr1", "label": "Média", "min": 90, "max": 109, "color": "rgba(76, 175, 80, 0.15)" },
+          { "id": "rr2", "label": "Médio Superior", "min": 110, "max": 119, "color": "rgba(33, 150, 243, 0.15)" },
+          { "id": "rr3", "label": "Superior", "min": 120, "max": 129, "color": "rgba(156, 39, 176, 0.15)" }
+        ],
+        "yAxisLabel": "Pontuação Composta",
+        "showValues": true,
+        "showLegend": true,
+        "showRegionLegend": true,
+        "description": ""
+      }
+    },
+    {
+      "id": "b-atencao-009",
+      "type": "text",
+      "order": 8,
+      "collapsed": false,
+      "data": {
+        "title": "",
+        "subtitle": "Atenção",
+        "content": "No Five Digit Test (FDT), o desempenho de Weverton revelou um perfil atencional com marcantes diferenças entre as etapas automáticas e controladas. Nas tarefas de leitura e contagem, o desempenho foi adequado, na faixa média. Entretanto, nas etapas de escolha e alternância, que demandam maior controle inibitório e flexibilidade cognitiva, observou-se lentificação significativa e aumento de erros, sugerindo dificuldade em tarefas que exigem controle atencional sustentado e inibição de respostas automáticas.",
+        "labeledItems": [],
+        "useLabeledItems": false
+      }
+    },
+    {
+      "id": "b-fdt-table-010",
+      "type": "score-table",
+      "order": 9,
+      "collapsed": false,
+      "data": {
+        "title": "FDT — Five Digit Test (Atenção)",
+        "columns": [
+          { "id": "col-subteste", "label": "Subteste" },
+          { "id": "col-tempo", "label": "Tempo (seg)" },
+          { "id": "col-erros", "label": "Erros" },
+          { "id": "col-percentil", "label": "Percentil" },
+          { "id": "col-class", "label": "Classificação" }
+        ],
+        "rows": [
+          { "id": "r1", "values": { "col-subteste": "Leitura", "col-tempo": "22", "col-erros": "0", "col-percentil": "55", "col-class": "Média" } },
+          { "id": "r2", "values": { "col-subteste": "Contagem", "col-tempo": "28", "col-erros": "0", "col-percentil": "50", "col-class": "Média" } },
+          { "id": "r3", "values": { "col-subteste": "Escolha", "col-tempo": "52", "col-erros": "3", "col-percentil": "15", "col-class": "Médio Inferior" } },
+          { "id": "r4", "values": { "col-subteste": "Alternância", "col-tempo": "68", "col-erros": "5", "col-percentil": "10", "col-class": "Inferior" } },
+          { "id": "r5", "values": { "col-subteste": "Inibição (Escolha - Leitura)", "col-tempo": "30", "col-erros": "3", "col-percentil": "12", "col-class": "Inferior" } },
+          { "id": "r6", "values": { "col-subteste": "Flexibilidade (Alternância - Leitura)", "col-tempo": "46", "col-erros": "5", "col-percentil": "8", "col-class": "Inferior" } }
+        ],
+        "footnote": ""
+      }
+    },
+    {
+      "id": "b-memoria-011",
+      "type": "text",
+      "order": 10,
+      "collapsed": false,
+      "data": {
+        "title": "",
+        "subtitle": "Memória",
+        "content": "No RAVLT (Teste de Aprendizagem Auditivo Verbal de Rey), Weverton apresentou curva de aprendizagem ascendente, indicando capacidade de codificação e aprendizagem adequadas. Porém, na evocação tardia (após 30 minutos), observou-se perda significativa de informações, sugerindo vulnerabilidade na consolidação e recuperação de memória de longo prazo. O reconhecimento foi preservado, indicando que as informações são armazenadas, mas há dificuldade no acesso espontâneo.",
+        "labeledItems": [],
+        "useLabeledItems": false
+      }
+    },
+    {
+      "id": "b-ravlt-table-012",
+      "type": "score-table",
+      "order": 11,
+      "collapsed": false,
+      "data": {
+        "title": "RAVLT — Teste de Aprendizagem Auditivo Verbal de Rey",
+        "columns": [
+          { "id": "col-medida", "label": "Medida" },
+          { "id": "col-escore", "label": "Escore Bruto" },
+          { "id": "col-percentil", "label": "Percentil" },
+          { "id": "col-class", "label": "Classificação" }
+        ],
+        "rows": [
+          { "id": "r1", "values": { "col-medida": "A1 (1ª tentativa)", "col-escore": "7", "col-percentil": "50", "col-class": "Média" } },
+          { "id": "r2", "values": { "col-medida": "A5 (5ª tentativa)", "col-escore": "13", "col-percentil": "60", "col-class": "Média" } },
+          { "id": "r3", "values": { "col-medida": "Total A1-A5", "col-escore": "52", "col-percentil": "55", "col-class": "Média" } },
+          { "id": "r4", "values": { "col-medida": "Lista B", "col-escore": "6", "col-percentil": "45", "col-class": "Média" } },
+          { "id": "r5", "values": { "col-medida": "A6 (Evocação imediata)", "col-escore": "11", "col-percentil": "45", "col-class": "Média" } },
+          { "id": "r6", "values": { "col-medida": "A7 (Evocação tardia)", "col-escore": "9", "col-percentil": "25", "col-class": "Médio Inferior" } },
+          { "id": "r7", "values": { "col-medida": "Reconhecimento", "col-escore": "14/15", "col-percentil": "70", "col-class": "Média" } }
+        ],
+        "footnote": ""
+      }
+    },
+    {
+      "id": "b-funcexec-013",
+      "type": "text",
+      "order": 12,
+      "collapsed": false,
+      "data": {
+        "title": "",
+        "subtitle": "Funções Executivas",
+        "content": "Na Torre de Londres, o planejamento foi adequado para problemas de baixa e média complexidade, porém houve queda significativa nos itens de maior complexidade, com aumento do tempo de execução e de movimentos excedentes, indicando dificuldade de planejamento estratégico e monitoramento.\n\nNo FDT, as medidas de inibição e flexibilidade cognitiva ficaram rebaixadas, corroborando as dificuldades de controle executivo observadas clinicamente.",
+        "labeledItems": [],
+        "useLabeledItems": false
+      }
+    },
+    {
+      "id": "b-torre-table-014",
+      "type": "score-table",
+      "order": 13,
+      "collapsed": false,
+      "data": {
+        "title": "Torre de Londres",
+        "columns": [
+          { "id": "col-medida", "label": "Medida" },
+          { "id": "col-escore", "label": "Escore" },
+          { "id": "col-percentil", "label": "Percentil" },
+          { "id": "col-class", "label": "Classificação" }
+        ],
+        "rows": [
+          { "id": "r1", "values": { "col-medida": "Pontuação Total", "col-escore": "26", "col-percentil": "30", "col-class": "Média" } },
+          { "id": "r2", "values": { "col-medida": "Tempo Total de Execução", "col-escore": "285s", "col-percentil": "20", "col-class": "Médio Inferior" } },
+          { "id": "r3", "values": { "col-medida": "Tempo de Planejamento", "col-escore": "142s", "col-percentil": "40", "col-class": "Média" } },
+          { "id": "r4", "values": { "col-medida": "Movimentos Excedentes", "col-escore": "12", "col-percentil": "15", "col-class": "Médio Inferior" } }
+        ],
+        "footnote": ""
+      }
+    },
+    {
+      "id": "b-personal-015",
+      "type": "text",
+      "order": 14,
+      "collapsed": false,
+      "data": {
+        "title": "",
+        "subtitle": "Personalidade",
+        "content": "No IFP-II (Inventário Fatorial de Personalidade), Weverton apresentou escores elevados em Autonomia, Mudança e Desempenho, indicando necessidade de independência, busca por novidades e motivação para realização. Os escores mais baixos foram em Deferência, Ordem e Persistência, compatíveis com dificuldades na organização, manutenção de rotinas e submissão a normas rígidas — perfil frequentemente associado ao TDAH em adultos.",
+        "labeledItems": [],
+        "useLabeledItems": false
+      }
+    },
+    {
+      "id": "b-cognicao-016",
+      "type": "text",
+      "order": 15,
+      "collapsed": false,
+      "data": {
+        "title": "",
+        "subtitle": "Cognição Social",
+        "content": "Na SRS-2 (Escala de Responsividade Social), os resultados não indicaram comprometimento significativo na cognição social. O escore total ficou dentro da faixa normal, descartando indicadores de Transtorno do Espectro Autista. Weverton demonstrou boa capacidade de comunicação social, consciência social e motivação social.",
+        "labeledItems": [],
+        "useLabeledItems": false
+      }
+    },
+    {
+      "id": "b-complement-017",
+      "type": "text",
+      "order": 16,
+      "collapsed": false,
+      "data": {
+        "title": "",
+        "subtitle": "Instrumentos Complementares",
+        "content": "A ETDAH-AD (Escala de TDAH para Adultos) confirmou a presença de sintomas clinicamente significativos de desatenção e hiperatividade/impulsividade, com escores acima do ponto de corte em ambas as dimensões.",
+        "labeledItems": [],
+        "useLabeledItems": false
+      }
+    },
+    {
+      "id": "b-etdah-table-018",
+      "type": "score-table",
+      "order": 17,
+      "collapsed": false,
+      "data": {
+        "title": "ETDAH-AD — Escala de TDAH para Adultos",
+        "columns": [
+          { "id": "col-dim", "label": "Dimensão" },
+          { "id": "col-escore", "label": "Escore" },
+          { "id": "col-corte", "label": "Ponto de Corte" },
+          { "id": "col-result", "label": "Resultado" }
+        ],
+        "rows": [
+          { "id": "r1", "values": { "col-dim": "Desatenção", "col-escore": "32", "col-corte": "21", "col-result": "Acima do ponto de corte" } },
+          { "id": "r2", "values": { "col-dim": "Hiperatividade/Impulsividade", "col-escore": "28", "col-corte": "21", "col-result": "Acima do ponto de corte" } },
+          { "id": "r3", "values": { "col-dim": "Total", "col-escore": "60", "col-corte": "42", "col-result": "Acima do ponto de corte" } }
+        ],
+        "footnote": ""
+      }
+    },
+    {
+      "id": "b-conclusao-019",
+      "type": "text",
+      "order": 18,
+      "collapsed": false,
+      "data": {
+        "title": "Conclusão",
+        "subtitle": "",
+        "content": "Os resultados da avaliação neuropsicológica de Weverton da Silva Souza revelam um perfil cognitivo com inteligência na faixa Médio Superior (QI Total = 115), com discrepância significativa entre habilidades verbais/perceptuais (pontos fortes) e velocidade de processamento/memória operacional (pontos relativamente mais fracos).\n\nAs principais dificuldades concentram-se nas funções executivas, especificamente em controle inibitório, flexibilidade cognitiva, planejamento complexo e velocidade de processamento. A memória de evocação tardia também se mostrou vulnerável.\n\nO perfil neuropsicológico, somado aos dados da anamnese, escalas comportamentais (ETDAH-AD) e perfil de personalidade (IFP-II), é consistente com o diagnóstico de Transtorno do Déficit de Atenção e Hiperatividade (TDAH), apresentação combinada, em um adulto com alto potencial intelectual que parcialmente compensa as dificuldades atencionais.",
+        "labeledItems": [],
+        "useLabeledItems": false
+      }
+    },
+    {
+      "id": "b-impdiag-020",
+      "type": "info-box",
+      "order": 19,
+      "collapsed": false,
+      "data": {
+        "label": "Impressão Diagnóstica",
+        "content": "F90.0 — Transtorno do Déficit de Atenção e Hiperatividade, apresentação combinada (CID-11: 6A05.2)\n\nO perfil neuropsicológico é compatível com TDAH em adulto, com prejuízos predominantes em funções executivas (controle inibitório, flexibilidade, planejamento), velocidade de processamento e memória de evocação, parcialmente compensados por alto potencial intelectual."
+      }
+    },
+    {
+      "id": "b-sugestoes-021",
+      "type": "text",
+      "order": 20,
+      "collapsed": false,
+      "data": {
+        "title": "Sugestões e Encaminhamentos",
+        "subtitle": "",
+        "content": "",
+        "labeledItems": [
+          { "id": "li1", "label": "Acompanhamento psiquiátrico", "text": "Manter acompanhamento com psiquiatra para avaliação da necessidade de intervenção farmacológica para TDAH, considerando o impacto funcional dos sintomas." },
+          { "id": "li2", "label": "Psicoterapia", "text": "Terapia Cognitivo-Comportamental (TCC) focada em estratégias de organização, gerenciamento do tempo, regulação emocional e manejo da procrastinação." },
+          { "id": "li3", "label": "Estratégias compensatórias", "text": "Uso de ferramentas externas de organização (agendas, aplicativos, alarmes), divisão de tarefas complexas em etapas menores, técnica Pomodoro para manutenção do foco." },
+          { "id": "li4", "label": "Atividade física", "text": "Prática regular de exercícios físicos aeróbicos, que demonstram benefícios para funções executivas e regulação atencional." },
+          { "id": "li5", "label": "Higiene do sono", "text": "Estabelecimento de rotina de sono regular, com horários fixos e redução de estímulos eletrônicos antes de dormir." },
+          { "id": "li6", "label": "Reavaliação", "text": "Reavaliação neuropsicológica em 12-18 meses para monitoramento da evolução, especialmente após início de intervenções." }
+        ],
+        "useLabeledItems": true
+      }
+    },
+    {
+      "id": "b-refs-022",
+      "type": "references",
+      "order": 21,
+      "collapsed": false,
+      "data": {
+        "title": "Referências Bibliográficas",
+        "references": [
+          "Wechsler, D. (2012). WAIS-IV: Escala Wechsler de Inteligência para Adultos - Manual de administração e avaliação. São Paulo: Casa do Psicólogo.",
+          "Sedó, M., de Paula, J. J., & Malloy-Diniz, L. F. (2015). O Teste dos Cinco Dígitos. São Paulo: Hogrefe.",
+          "De Paula, J. J., & Malloy-Diniz, L. F. (2018). Rey Auditory Verbal Learning Test (RAVLT) - Manual de aplicação. São Paulo: Vetor.",
+          "Krieger, S., Shallice, T. (1984). Torre de Londres - adaptação brasileira. Em L. F. Malloy-Diniz et al. (Orgs.), Avaliação Neuropsicológica. Porto Alegre: Artmed.",
+          "Leme, I. F. A. S., & Rabelo, I. S. (2013). IFP-II: Inventário Fatorial de Personalidade. São Paulo: Casa do Psicólogo.",
+          "Constantino, J. N., & Gruber, C. P. (2012). SRS-2: Social Responsiveness Scale. Torrance: Western Psychological Services.",
+          "Benczik, E. B. P. (2020). ETDAH-AD: Escala de TDAH para Adultos - Manual. São Paulo: Vetor."
+        ]
+      }
+    },
+    {
+      "id": "b-closing-023",
+      "type": "closing-page",
+      "order": 22,
+      "collapsed": false,
+      "data": {
+        "title": "Termo de Entrega e Ciência",
+        "bodyText": "Eu, abaixo assinado(a), declaro que recebi o presente Laudo de Avaliação Neuropsicológica, tendo sido informado(a) sobre os resultados e conclusões nele contidos.",
+        "showPatientSignature": true,
+        "showMotherSignature": false,
+        "showFatherSignature": false,
+        "showGuardianSignature": false,
+        "footerNote": ""
+      }
+    }
+  ]
+}

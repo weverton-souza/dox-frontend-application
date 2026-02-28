@@ -1,0 +1,276 @@
+import { useCallback } from 'react'
+import { IdentificationData, Professional, PatientData, Solicitor } from '@/types'
+import Input from '@/components/ui/Input'
+import Toggle from '@/components/ui/Toggle'
+
+interface IdentificationBlockProps {
+  data: IdentificationData
+  onChange: (data: IdentificationData) => void
+}
+
+const sectionHeaderClass =
+  'text-sm font-semibold text-brand-700 uppercase tracking-wide mb-3 pb-2 border-b border-brand-100'
+
+function calculateAge(birthDate: string, referenceDate: string): string {
+  if (!birthDate) return ''
+  const birth = new Date(birthDate + 'T00:00:00')
+  const ref = referenceDate ? new Date(referenceDate + 'T00:00:00') : new Date()
+
+  if (isNaN(birth.getTime()) || isNaN(ref.getTime())) return ''
+  if (ref < birth) return ''
+
+  let years = ref.getFullYear() - birth.getFullYear()
+  let months = ref.getMonth() - birth.getMonth()
+
+  if (months < 0) {
+    years--
+    months += 12
+  }
+
+  if (ref.getDate() < birth.getDate()) {
+    months--
+    if (months < 0) {
+      years--
+      months += 12
+    }
+  }
+
+  if (years === 0) {
+    return `${months} ${months === 1 ? 'mes' : 'meses'}`
+  }
+
+  if (months === 0) {
+    return `${years} ${years === 1 ? 'ano' : 'anos'}`
+  }
+
+  return `${years} ${years === 1 ? 'ano' : 'anos'} e ${months} ${months === 1 ? 'mes' : 'meses'}`
+}
+
+const IdentificationBlock = ({ data, onChange }: IdentificationBlockProps) => {
+  const hasSolicitor = !!data.solicitor
+
+  const updateProfessional = useCallback(
+    (field: keyof Professional, value: string) => {
+      onChange({
+        ...data,
+        professional: { ...data.professional, [field]: value },
+      })
+    },
+    [data, onChange]
+  )
+
+  const updatePatient = useCallback(
+    (field: keyof PatientData, value: string) => {
+      const updatedPatient = { ...data.patient, [field]: value }
+
+      // Auto-calculate age when birthDate changes
+      if (field === 'birthDate') {
+        updatedPatient.age = calculateAge(value, data.date)
+      }
+
+      onChange({ ...data, patient: updatedPatient })
+    },
+    [data, onChange]
+  )
+
+  const updateSolicitor = useCallback(
+    (field: keyof Solicitor, value: string) => {
+      if (!data.solicitor) return
+      onChange({
+        ...data,
+        solicitor: { ...data.solicitor, [field]: value },
+      })
+    },
+    [data, onChange]
+  )
+
+  const toggleSolicitor = useCallback(
+    (enabled: boolean) => {
+      onChange({
+        ...data,
+        solicitor: enabled
+          ? { name: '', crm: '', rqe: '', specialty: '' }
+          : undefined,
+      })
+    },
+    [data, onChange]
+  )
+
+  const updateField = useCallback(
+    (field: 'date' | 'location', value: string) => {
+      const updated = { ...data, [field]: value }
+
+      // Recalculate age when laudo date changes
+      if (field === 'date' && data.patient.birthDate) {
+        updated.patient = {
+          ...data.patient,
+          age: calculateAge(data.patient.birthDate, value),
+        }
+      }
+
+      onChange(updated)
+    },
+    [data, onChange]
+  )
+
+  return (
+    <div className="space-y-6">
+      {/* Profissional Responsável */}
+      <section>
+        <h3 className={sectionHeaderClass}>Profissional Responsável</h3>
+        <div className="grid grid-cols-2 gap-4">
+          <Input
+            label="Nome"
+            value={data.professional.name}
+            onChange={(e) => updateProfessional('name', e.target.value)}
+            placeholder="Nome do profissional"
+          />
+          <Input
+            label="CRP"
+            value={data.professional.crp}
+            onChange={(e) => updateProfessional('crp', e.target.value)}
+            placeholder="CRP"
+          />
+          <div className="col-span-2">
+            <Input
+              label="Especialização"
+              value={data.professional.specialization}
+              onChange={(e) => updateProfessional('specialization', e.target.value)}
+              placeholder="Especialização"
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* Solicitante */}
+      <section>
+        <div className="flex items-center justify-between mb-3 pb-2 border-b border-brand-100">
+          <h3 className="text-sm font-semibold text-brand-700 uppercase tracking-wide">
+            Solicitante
+          </h3>
+          <Toggle
+            label="Incluir solicitante"
+            checked={hasSolicitor}
+            onChange={toggleSolicitor}
+          />
+        </div>
+        {hasSolicitor && data.solicitor && (
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="Nome"
+              value={data.solicitor.name}
+              onChange={(e) => updateSolicitor('name', e.target.value)}
+              placeholder="Nome do solicitante"
+            />
+            <Input
+              label="CRM"
+              value={data.solicitor.crm ?? ''}
+              onChange={(e) => updateSolicitor('crm', e.target.value)}
+              placeholder="CRM"
+            />
+            <Input
+              label="RQE"
+              value={data.solicitor.rqe ?? ''}
+              onChange={(e) => updateSolicitor('rqe', e.target.value)}
+              placeholder="RQE"
+            />
+            <Input
+              label="Especialidade"
+              value={data.solicitor.specialty ?? ''}
+              onChange={(e) => updateSolicitor('specialty', e.target.value)}
+              placeholder="Especialidade"
+            />
+          </div>
+        )}
+      </section>
+
+      {/* Dados do Paciente */}
+      <section>
+        <h3 className={sectionHeaderClass}>Dados do Paciente</h3>
+        <div className="grid grid-cols-2 gap-4">
+          <Input
+            label="Nome"
+            value={data.patient.name}
+            onChange={(e) => updatePatient('name', e.target.value)}
+            placeholder="Nome completo do paciente"
+          />
+          <Input
+            label="CPF"
+            value={data.patient.cpf}
+            onChange={(e) => updatePatient('cpf', e.target.value)}
+            placeholder="000.000.000-00"
+          />
+          <Input
+            label="Data de Nascimento"
+            type="date"
+            value={data.patient.birthDate}
+            onChange={(e) => updatePatient('birthDate', e.target.value)}
+          />
+          <Input
+            label="Idade"
+            value={data.patient.age}
+            onChange={(e) => updatePatient('age', e.target.value)}
+            placeholder="Ex: 32 anos e 4 meses"
+          />
+          <Input
+            label="Escolaridade"
+            value={data.patient.education}
+            onChange={(e) => updatePatient('education', e.target.value)}
+            placeholder="Escolaridade"
+          />
+          <Input
+            label="Profissão"
+            value={data.patient.profession}
+            onChange={(e) => updatePatient('profession', e.target.value)}
+            placeholder="Profissão"
+          />
+          <Input
+            label="Nome da Mãe"
+            value={data.patient.motherName}
+            onChange={(e) => updatePatient('motherName', e.target.value)}
+            placeholder="Nome da mãe"
+          />
+          <Input
+            label="Nome do Pai"
+            value={data.patient.fatherName}
+            onChange={(e) => updatePatient('fatherName', e.target.value)}
+            placeholder="Nome do pai"
+          />
+          <Input
+            label="Responsável Legal (opcional)"
+            value={data.patient.guardianName ?? ''}
+            onChange={(e) => updatePatient('guardianName', e.target.value)}
+            placeholder="Nome do responsável"
+          />
+          <Input
+            label="Grau de Parentesco"
+            value={data.patient.guardianRelationship ?? ''}
+            onChange={(e) => updatePatient('guardianRelationship', e.target.value)}
+            placeholder="Ex: Avó, Tio, Tutor"
+          />
+        </div>
+      </section>
+
+      {/* Dados do Laudo */}
+      <section>
+        <h3 className={sectionHeaderClass}>Dados do Laudo</h3>
+        <div className="grid grid-cols-2 gap-4">
+          <Input
+            label="Data do Laudo"
+            type="date"
+            value={data.date}
+            onChange={(e) => updateField('date', e.target.value)}
+          />
+          <Input
+            label="Local"
+            value={data.location}
+            onChange={(e) => updateField('location', e.target.value)}
+            placeholder="Ex: Belo Horizonte - MG"
+          />
+        </div>
+      </section>
+    </div>
+  )
+}
+
+export default IdentificationBlock

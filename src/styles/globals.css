@@ -1,0 +1,67 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-gray-50 text-gray-900 font-sans antialiased;
+  }
+}
+
+@layer components {
+  /* Tree connecting lines (file-explorer style) */
+  .tree-children {
+    --tree-pl: 20px;
+    position: relative;
+    margin-left: 16px;
+    padding-left: var(--tree-pl);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-top: 6px;
+  }
+
+  /* Nested level: more padding so leaf items are clearly indented under subsection cards */
+  .tree-children .tree-children {
+    --tree-pl: 28px;
+    margin-left: 20px;
+  }
+
+  .tree-node {
+    position: relative;
+  }
+
+  /* Non-last nodes: full vertical line + horizontal branch (├─) */
+  .tree-node:not(:last-child)::before {
+    content: '';
+    position: absolute;
+    left: calc(-1 * var(--tree-pl));
+    top: 0;
+    bottom: 0;
+    border-left: 1px solid #d1d5db;
+  }
+
+  .tree-node:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    left: calc(-1 * var(--tree-pl));
+    top: 24px;
+    width: var(--tree-pl);
+    border-top: 1px solid #d1d5db;
+  }
+
+  /* Last node: L-shaped connector with rounded corner (└─) */
+  .tree-node:last-child::before {
+    content: '';
+    position: absolute;
+    left: calc(-1 * var(--tree-pl));
+    top: 0;
+    height: 24px;
+    width: var(--tree-pl);
+    border-left: 1px solid #d1d5db;
+    border-bottom: 1px solid #d1d5db;
+    border-bottom-left-radius: 6px;
+  }
+}
