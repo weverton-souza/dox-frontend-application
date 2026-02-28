@@ -105,7 +105,7 @@ function TrashIcon() {
 const SECTION_MENU: SectionMenuItem[] = [
   { key: 'personal', label: 'Dados Pessoais', icon: <PersonIcon /> },
   { key: 'contact', label: 'Contato', icon: <PhoneIcon /> },
-  { key: 'clinical', label: 'Dados Cl\u00ednicos', icon: <ClipboardIcon /> },
+  { key: 'clinical', label: 'Dados Clínicos', icon: <ClipboardIcon /> },
   { key: 'laudos', label: 'Laudos', icon: <FileTextIcon /> },
   { key: 'notes', label: 'Notas', icon: <StickyNoteIcon /> },
 ]
@@ -211,7 +211,7 @@ export default function PatientProfile() {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-gray-500 text-sm">Paciente n\u00e3o encontrado</p>
+          <p className="text-gray-500 text-sm">Paciente não encontrado</p>
           <Button
             variant="ghost"
             size="sm"
@@ -265,12 +265,12 @@ export default function PatientProfile() {
             onChange={(e) => updateField('education', e.target.value)}
           />
           <Input
-            label="Profiss\u00e3o"
+            label="Profissão"
             value={editData!.profession}
             onChange={(e) => updateField('profession', e.target.value)}
           />
           <Input
-            label="Nome da M\u00e3e"
+            label="Nome da Mãe"
             value={editData!.motherName}
             onChange={(e) => updateField('motherName', e.target.value)}
           />
@@ -280,7 +280,7 @@ export default function PatientProfile() {
             onChange={(e) => updateField('fatherName', e.target.value)}
           />
           <Input
-            label="Respons\u00e1vel Legal"
+            label="Responsável Legal"
             value={editData!.guardianName ?? ''}
             onChange={(e) => updateField('guardianName', e.target.value)}
           />
@@ -312,7 +312,7 @@ export default function PatientProfile() {
           />
           <div className="sm:col-span-2">
             <Input
-              label="Rua / Endere\u00e7o"
+              label="Rua / Endereço"
               value={editData!.addressStreet ?? ''}
               onChange={(e) => updateField('addressStreet', e.target.value)}
             />
@@ -340,7 +340,7 @@ export default function PatientProfile() {
 
   function renderClinicalSection() {
     return (
-      <SectionCard title="Dados Cl\u00ednicos" onSave={handleSaveSection} saving={saving}>
+      <SectionCard title="Dados Clínicos" onSave={handleSaveSection} saving={saving}>
         <div className="space-y-4">
           <TextArea
             label="Queixa Principal"
@@ -350,21 +350,21 @@ export default function PatientProfile() {
           />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
-              label="Diagn\u00f3stico"
+              label="Diagnóstico"
               value={editData!.diagnosis ?? ''}
               onChange={(e) => updateField('diagnosis', e.target.value)}
             />
             <Input
-              label="M\u00e9dico Solicitante"
+              label="Médico Solicitante"
               value={editData!.referralDoctor ?? ''}
               onChange={(e) => updateField('referralDoctor', e.target.value)}
             />
           </div>
           <TextArea
-            label="Medica\u00e7\u00f5es"
+            label="Medicações"
             value={editData!.medications ?? ''}
             onChange={(e) => updateField('medications', e.target.value)}
-            placeholder="Liste as medica\u00e7\u00f5es em uso..."
+            placeholder="Liste as medicações em uso..."
           />
         </div>
       </SectionCard>
