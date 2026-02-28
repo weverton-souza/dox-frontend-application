@@ -19,7 +19,7 @@ import {
   getProfessional,
 } from '@/lib/storage'
 import { createBlock } from '@/lib/utils'
-import { formatDateTime } from '@/lib/utils'
+import { formatDateTime, formatDate } from '@/lib/utils'
 import Input from '@/components/ui/Input'
 import TextArea from '@/components/ui/TextArea'
 import Button from '@/components/ui/Button'
@@ -29,36 +29,18 @@ import StatusBadge from '@/components/ui/StatusBadge'
 
 type ProfileSection = 'personal' | 'contact' | 'clinical' | 'laudos' | 'notes'
 
-interface SectionMenuItem {
+interface TabItem {
   key: ProfileSection
   label: string
-  icon: React.ReactNode
 }
 
-// ========== Section Icons (inline SVG) ==========
+// ========== Icons ==========
 
-function PersonIcon() {
+function TrashIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-      <circle cx="12" cy="7" r="4" />
-    </svg>
-  )
-}
-
-function PhoneIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
-    </svg>
-  )
-}
-
-function ClipboardIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
-      <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
     </svg>
   )
 }
@@ -74,41 +56,26 @@ function FileTextIcon() {
   )
 }
 
-function StickyNoteIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M15.5 3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2V8.5L15.5 3Z" />
-      <path d="M14 3v4a2 2 0 0 0 2 2h4" />
-    </svg>
-  )
-}
+// ========== Tabs config ==========
 
-function ChevronLeftIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="15 18 9 12 15 6" />
-    </svg>
-  )
-}
-
-function TrashIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="3 6 5 6 21 6" />
-      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-    </svg>
-  )
-}
-
-// ========== Section menu config ==========
-
-const SECTION_MENU: SectionMenuItem[] = [
-  { key: 'personal', label: 'Dados Pessoais', icon: <PersonIcon /> },
-  { key: 'contact', label: 'Contato', icon: <PhoneIcon /> },
-  { key: 'clinical', label: 'Dados Clínicos', icon: <ClipboardIcon /> },
-  { key: 'laudos', label: 'Laudos', icon: <FileTextIcon /> },
-  { key: 'notes', label: 'Notas', icon: <StickyNoteIcon /> },
+const TABS: TabItem[] = [
+  { key: 'personal', label: 'Dados Pessoais' },
+  { key: 'contact', label: 'Contato' },
+  { key: 'clinical', label: 'Dados Clínicos' },
+  { key: 'laudos', label: 'Laudos' },
+  { key: 'notes', label: 'Notas' },
 ]
+
+// ========== InfoField helper ==========
+
+function InfoField({ label, value }: { label: string; value: string | undefined }) {
+  return (
+    <div>
+      <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">{label}</dt>
+      <dd className="mt-0.5 text-sm text-gray-900">{value || '—'}</dd>
+    </div>
+  )
+}
 
 // ========== Component ==========
 
@@ -383,8 +350,10 @@ export default function PatientProfile() {
 
         {laudos.length === 0 ? (
           <div className="rounded-lg border border-dashed border-gray-300 py-12 text-center">
-            <FileTextIcon />
-            <p className="text-sm text-gray-500 mt-2">
+            <div className="flex justify-center text-gray-400 mb-2">
+              <FileTextIcon />
+            </div>
+            <p className="text-sm text-gray-500">
               Nenhum laudo criado para este paciente
             </p>
             <Button variant="ghost" size="sm" className="mt-3" onClick={handleCreateLaudo}>
@@ -498,87 +467,93 @@ export default function PatientProfile() {
   // ========== Main Render ==========
 
   return (
-    <div className="flex-1 flex flex-col min-h-0">
-      {/* Header */}
-      <header className="sticky top-0 z-10 bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => navigate('/pacientes')}
-            className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
-            title="Voltar"
-          >
-            <ChevronLeftIcon />
-          </button>
-          <div>
-            <h1 className="text-lg font-semibold text-gray-900">
-              {patient.data.name || 'Paciente sem nome'}
-            </h1>
-            <p className="text-xs text-gray-500">
-              Cadastrado em {formatDateTime(patient.createdAt)}
-            </p>
+    <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
+      {/* Breadcrumb header */}
+      <header className="sticky top-0 z-10 bg-white border-b border-gray-200 px-6 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm">
+            <button
+              onClick={() => navigate('/pacientes')}
+              className="text-gray-500 hover:text-brand-700 transition-colors"
+            >
+              Pacientes
+            </button>
+            <span className="text-gray-400">/</span>
+            <span className="text-gray-900 font-medium">
+              {patient.data.name || 'Sem nome'}
+            </span>
           </div>
+          <Button size="sm" variant="secondary" onClick={() => setActiveSection('personal')}>
+            Editar Perfil
+          </Button>
         </div>
       </header>
 
-      {/* 2-column layout */}
-      <div className="flex-1 flex min-h-0 overflow-hidden">
-        {/* Sidebar */}
-        <aside className="w-[280px] shrink-0 border-r border-gray-200 bg-gray-50/50 overflow-y-auto">
-          <div className="p-5">
-            {/* Avatar + info */}
-            <div className="flex flex-col items-center text-center">
-              <div className="w-16 h-16 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center text-2xl font-semibold">
+      {/* Profile card */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-5xl mx-auto px-6 py-6">
+          <div className="flex gap-6">
+            {/* Avatar */}
+            <div className="shrink-0">
+              <div className="w-24 h-24 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center text-3xl font-semibold ring-4 ring-white shadow-sm">
                 {initial}
               </div>
-              <h2 className="mt-3 text-sm font-semibold text-gray-900 leading-tight">
-                {patient.data.name || 'Sem nome'}
-              </h2>
-              {patient.data.cpf && (
-                <p className="text-xs text-gray-500 mt-0.5">
-                  CPF: {patient.data.cpf}
-                </p>
-              )}
-              {patient.data.age && (
-                <p className="text-xs text-gray-500 mt-0.5">
-                  {patient.data.age}
-                </p>
-              )}
             </div>
 
-            {/* Divider */}
-            <hr className="my-4 border-gray-200" />
+            {/* Info grid */}
+            <div className="flex-1 min-w-0">
+              <div className="grid grid-cols-3 gap-x-8 gap-y-3">
+                <InfoField label="Nome" value={patient.data.name} />
+                <InfoField label="CPF" value={patient.data.cpf} />
+                <InfoField label="Idade" value={patient.data.age} />
 
-            {/* Section menu */}
-            <nav className="space-y-0.5">
-              {SECTION_MENU.map((item) => {
-                const isActive = activeSection === item.key
-                return (
-                  <button
-                    key={item.key}
-                    onClick={() => setActiveSection(item.key)}
-                    className={`
-                      w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors text-left
-                      ${isActive
-                        ? 'bg-brand-50 text-brand-700 font-medium'
-                        : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                      }
-                    `.trim()}
-                  >
-                    <span className={isActive ? 'text-brand-600' : 'text-gray-400'}>
-                      {item.icon}
-                    </span>
-                    {item.label}
-                  </button>
-                )
-              })}
-            </nav>
+                <InfoField label="Telefone" value={patient.data.phone} />
+                <InfoField
+                  label="Data de Nascimento"
+                  value={patient.data.birthDate ? formatDate(patient.data.birthDate) : undefined}
+                />
+                <InfoField label="Escolaridade" value={patient.data.education} />
+
+                <InfoField label="Profissão" value={patient.data.profession} />
+                <InfoField label="Cadastrado" value={formatDateTime(patient.createdAt)} />
+                <InfoField label="Atualizado" value={formatDateTime(patient.updatedAt)} />
+              </div>
+            </div>
           </div>
-        </aside>
+        </div>
+      </div>
 
-        {/* Content */}
-        <main className="flex-1 overflow-y-auto p-6">
+      {/* Tabs */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-5xl mx-auto px-6">
+          <nav className="flex gap-0 -mb-px">
+            {TABS.map((tab) => {
+              const isActive = activeSection === tab.key
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveSection(tab.key)}
+                  className={`
+                    px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap
+                    ${isActive
+                      ? 'border-brand-600 text-brand-700'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }
+                  `.trim()}
+                >
+                  {tab.label}
+                </button>
+              )
+            })}
+          </nav>
+        </div>
+      </div>
+
+      {/* Tab content */}
+      <div className="flex-1 bg-gray-50/50">
+        <div className="max-w-5xl mx-auto px-6 py-6">
           {sectionRenderers[activeSection]()}
-        </main>
+        </div>
       </div>
     </div>
   )
@@ -598,8 +573,8 @@ function SectionCard({
   children: React.ReactNode
 }) {
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
+    <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <div className="flex items-center justify-between mb-5">
         <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
         <Button size="sm" onClick={onSave} disabled={saving}>
           {saving ? 'Salvando...' : 'Salvar'}
