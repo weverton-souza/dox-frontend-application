@@ -67,6 +67,18 @@ export interface PatientData {
   fatherName: string
   guardianName?: string         // Nome do responsável legal
   guardianRelationship?: string // Grau de parentesco (Avó, Tio, etc.)
+  // Contato
+  phone?: string
+  email?: string
+  addressStreet?: string
+  addressCity?: string
+  addressState?: string
+  addressZipCode?: string
+  // Clínico
+  chiefComplaint?: string      // queixa principal
+  diagnosis?: string
+  medications?: string
+  referralDoctor?: string      // médico solicitante
 }
 
 export interface Patient {
@@ -74,6 +86,14 @@ export interface Patient {
   createdAt: string
   updatedAt: string
   data: PatientData
+}
+
+export interface PatientNote {
+  id: string
+  patientId: string
+  createdAt: string
+  updatedAt: string
+  content: string
 }
 
 // ========== Block Data Types ==========
@@ -314,6 +334,17 @@ export function createEmptyPatientRecord(): Patient {
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     data: createEmptyPatient(),
+  }
+}
+
+export function createEmptyPatientNote(patientId: string): PatientNote {
+  const now = new Date().toISOString()
+  return {
+    id: crypto.randomUUID(),
+    patientId,
+    createdAt: now,
+    updatedAt: now,
+    content: '',
   }
 }
 
