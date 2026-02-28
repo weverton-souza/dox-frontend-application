@@ -21,6 +21,7 @@ import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
 import Input from '@/components/ui/Input'
 import Pagination from '@/components/ui/Pagination'
+import PageHeader from '@/components/layout/PageHeader'
 
 export default function PatientList() {
   const navigate = useNavigate()
@@ -139,38 +140,15 @@ export default function PatientList() {
   )
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-5 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-brand-700">NeuroHub</h1>
-            <p className="text-sm text-gray-500 mt-0.5">
-              Cadastro de pacientes
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate('/')}
-            >
-              <span className="flex items-center gap-2">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                  <polyline points="14 2 14 8 20 8" />
-                </svg>
-                Laudos
-              </span>
-            </Button>
-            <Button onClick={handleOpenNew}>
-              + Novo Paciente
-            </Button>
-          </div>
-        </div>
-      </header>
+    <>
+      <PageHeader
+        title="Pacientes"
+        subtitle="Cadastro de pacientes"
+        actions={
+          <Button onClick={handleOpenNew}>+ Novo Paciente</Button>
+        }
+      />
 
-      {/* Main */}
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
         {/* Search + filters */}
         {patients.length > 0 && (
@@ -484,6 +462,6 @@ export default function PatientList() {
           </div>
         </div>
       </Modal>
-    </div>
+    </>
   )
 }
