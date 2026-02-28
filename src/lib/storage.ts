@@ -1,10 +1,12 @@
-import { Laudo, Professional, LaudoTemplate, Patient } from '@/types'
+import { Laudo, Professional, LaudoTemplate, Patient, PatientNote, PatientEvent } from '@/types'
 import { deleteVersionHistory } from '@/lib/version-storage'
 
 const LAUDOS_KEY = 'neurohub_laudos'
 const PROFESSIONAL_KEY = 'neurohub_professional'
 const TEMPLATES_KEY = 'neurohub_templates'
 const PATIENTS_KEY = 'neurohub_patients'
+const PATIENT_NOTES_KEY = 'neurohub_patient_notes'
+const PATIENT_EVENTS_KEY = 'neurohub_patient_events'
 
 // ========== Laudos ==========
 
@@ -77,6 +79,116 @@ export function savePatient(patient: Patient): void {
 export function deletePatient(id: string): void {
   const patients = getPatients().filter((p) => p.id !== id)
   localStorage.setItem(PATIENTS_KEY, JSON.stringify(patients))
+  deletePatientNotes(id)
+  deletePatientEvents(id)
+}
+
+// ========== Patient Notes ==========
+
+export function getPatientNotes(patientId: string): PatientNote[] {
+  const raw = localStorage.getItem(PATIENT_NOTES_KEY)
+  if (!raw) return []
+  try {
+    const all = JSON.parse(raw) as PatientNote[]
+    return all
+      .filter((n) => n.patientId === patientId)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+  } catch {
+    return []
+  }
+}
+
+export function savePatientNote(note: PatientNote): void {
+  const raw = localStorage.getItem(PATIENT_NOTES_KEY)
+  let all: PatientNote[] = []
+  try {
+    all = raw ? (JSON.parse(raw) as PatientNote[]) : []
+  } catch { /* ignore */ }
+
+  const index = all.findIndex((n) => n.id === note.id)
+  const updated = { ...note, updatedAt: new Date().toISOString() }
+
+  if (index >= 0) {
+    all[index] = updated
+  } else {
+    all.push(updated)
+  }
+
+  localStorage.setItem(PATIENT_NOTES_KEY, JSON.stringify(all))
+}
+
+export function deletePatientNote(id: string): void {
+  const raw = localStorage.getItem(PATIENT_NOTES_KEY)
+  if (!raw) return
+  try {
+    const all = (JSON.parse(raw) as PatientNote[]).filter((n) => n.id !== id)
+    localStorage.setItem(PATIENT_NOTES_KEY, JSON.stringify(all))
+  } catch { /* ignore */ }
+}
+
+export function deletePatientNotes(patientId: string): void {
+  const raw = localStorage.getItem(PATIENT_NOTES_KEY)
+  if (!raw) return
+  try {
+    const all = (JSON.parse(raw) as PatientNote[]).filter((n) => n.patientId !== patientId)
+    localStorage.setItem(PATIENT_NOTES_KEY, JSON.stringify(all))
+  } catch { /* ignore */ }
+}
+
+// ========== Laudos by Patient ==========
+
+export function getLaudosByPatient(patientId: string): Laudo[] {
+  return getLaudos().filter((l) => l.patientId === patientId)
+}
+
+// ========== Patient Events (Timeline) ==========
+
+export function getPatientEvents(patientId: string): PatientEvent[] {
+  const raw = localStorage.getItem(PATIENT_EVENTS_KEY)
+  if (!raw) return []
+  try {
+    const all = JSON.parse(raw) as PatientEvent[]
+    return all
+      .filter((e) => e.patientId === patientId)
+      .sort((a, b) => b.date.localeCompare(a.date))
+  } catch {
+    return []
+  }
+}
+
+export function savePatientEvent(event: PatientEvent): void {
+  const raw = localStorage.getItem(PATIENT_EVENTS_KEY)
+  let all: PatientEvent[] = []
+  try {
+    all = raw ? (JSON.parse(raw) as PatientEvent[]) : []
+  } catch { /* ignore */ }
+
+  const index = all.findIndex((e) => e.id === event.id)
+  if (index >= 0) {
+    all[index] = event
+  } else {
+    all.push(event)
+  }
+
+  localStorage.setItem(PATIENT_EVENTS_KEY, JSON.stringify(all))
+}
+
+export function deletePatientEvent(id: string): void {
+  const raw = localStorage.getItem(PATIENT_EVENTS_KEY)
+  if (!raw) return
+  try {
+    const all = (JSON.parse(raw) as PatientEvent[]).filter((e) => e.id !== id)
+    localStorage.setItem(PATIENT_EVENTS_KEY, JSON.stringify(all))
+  } catch { /* ignore */ }
+}
+
+export function deletePatientEvents(patientId: string): void {
+  const raw = localStorage.getItem(PATIENT_EVENTS_KEY)
+  if (!raw) return
+  try {
+    const all = (JSON.parse(raw) as PatientEvent[]).filter((e) => e.patientId !== patientId)
+    localStorage.setItem(PATIENT_EVENTS_KEY, JSON.stringify(all))
+  } catch { /* ignore */ }
 }
 
 // ========== Professional ==========
