@@ -19,6 +19,7 @@ import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
 import Pagination from '@/components/ui/Pagination'
 import PageHeader from '@/components/layout/PageHeader'
+import StatusBadge from '@/components/ui/StatusBadge'
 
 export default function LaudoList() {
   const navigate = useNavigate()
@@ -198,15 +199,9 @@ export default function LaudoList() {
                   </div>
                 </div>
 
-                <span
-                  className={`px-2.5 py-1 rounded-full text-xs font-medium shrink-0 ${
-                    laudo.status === 'finalizado'
-                      ? 'bg-green-100 text-green-700'
-                      : 'bg-yellow-100 text-yellow-700'
-                  }`}
-                >
-                  {laudo.status === 'finalizado' ? 'Finalizado' : 'Rascunho'}
-                </span>
+                <div className="shrink-0">
+                  <StatusBadge status={laudo.status} />
+                </div>
 
                 <button
                   type="button"
