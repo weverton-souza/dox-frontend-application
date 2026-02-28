@@ -1,14 +1,18 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Block, BlockType, BlockData, Laudo, LaudoTemplate, TextBlockData, Patient } from '@/types'
+import { Block, BlockType, BlockData, Laudo, LaudoStatus, LaudoTemplate, LaudoVersion, TextBlockData, Patient } from '@/types'
 import { getLaudo, saveLaudo, saveCustomTemplate, getPatients } from '@/lib/storage'
 import { createBlock, computeBlockMetas } from '@/lib/utils'
+import { useVersioning } from '@/hooks/useVersioning'
 import OutlineTree from '@/components/editor/OutlineTree'
 import BlockSelector, { BlockVariant } from '@/components/editor/BlockSelector'
 import BlockEditModal from '@/components/editor/BlockEditModal'
+import VersionHistoryModal from '@/components/editor/VersionHistoryModal'
 import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
 import Input from '@/components/ui/Input'
+import StatusSelector from '@/components/editor/StatusSelector'
+import { HistoryIcon, SaveIcon } from '@/components/icons'
 
 export default function LaudoEditor() {
   const { id } = useParams<{ id: string }>()
@@ -25,6 +29,7 @@ export default function LaudoEditor() {
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null)
   const [showSectionSelector, setShowSectionSelector] = useState(false)
   const [patients, setPatients] = useState<Patient[]>([])
+  const [showVersionHistory, setShowVersionHistory] = useState(false)
   const sectionSelectorRef = useRef<HTMLDivElement>(null)
 
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -40,6 +45,16 @@ export default function LaudoEditor() {
     }
     setPatients(getPatients())
   }, [id, navigate])
+
+  // Versioning
+  const {
+    versions,
+    refreshVersions,
+    createStatusChangeSnapshot,
+    createExportSnapshot,
+    createManualSnapshot,
+    createSnapshot,
+  } = useVersioning(laudo)
 
   // Auto-save with debounce
   const scheduleAutoSave = useCallback(
@@ -195,6 +210,7 @@ export default function LaudoEditor() {
     if (!laudo) return
 
     try {
+      createExportSnapshot('DOCX')
       const finalized = { ...laudo, status: 'finalizado' as const }
       setLaudo(finalized)
       saveLaudo(finalized)
@@ -204,7 +220,7 @@ export default function LaudoEditor() {
     } catch (err) {
       alert(`Erro ao gerar documento: ${(err as Error).message}`)
     }
-  }, [laudo])
+  }, [laudo, createExportSnapshot])
 
   const handleForceSave = useCallback(() => {
     if (!laudo) return
@@ -215,6 +231,30 @@ export default function LaudoEditor() {
     saveLaudo(laudo)
     setSaveStatus('saved')
   }, [laudo])
+
+  const handleStatusChange = useCallback(
+    (newStatus: LaudoStatus) => {
+      if (laudo) createStatusChangeSnapshot(laudo.status)
+      updateLaudo({ status: newStatus })
+    },
+    [laudo, updateLaudo, createStatusChangeSnapshot]
+  )
+
+  const handleRestoreVersion = useCallback(
+    (version: LaudoVersion) => {
+      createSnapshot('Estado antes de restaurar versão')
+      updateLaudo({
+        patientName: version.patientName,
+        blocks: JSON.parse(JSON.stringify(version.blocks)),
+      })
+    },
+    [createSnapshot, updateLaudo]
+  )
+
+  const handleOpenVersionHistory = useCallback(() => {
+    refreshVersions()
+    setShowVersionHistory(true)
+  }, [refreshVersions])
 
   // Section collapse/expand
   const toggleSectionCollapse = useCallback((sectionBlockId: string) => {
@@ -337,6 +377,26 @@ export default function LaudoEditor() {
               </>
             )}
           </div>
+
+          <StatusSelector status={laudo.status} onChange={handleStatusChange} />
+
+          <button
+            type="button"
+            onClick={createManualSnapshot}
+            className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+            title="Salvar versão"
+          >
+            <SaveIcon size={18} />
+          </button>
+
+          <button
+            type="button"
+            onClick={handleOpenVersionHistory}
+            className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+            title="Histórico de versões"
+          >
+            <HistoryIcon size={18} />
+          </button>
 
           <Button variant="secondary" size="sm" onClick={() => setShowSaveTemplate(true)}>
             Salvar como Template
@@ -511,6 +571,14 @@ export default function LaudoEditor() {
           </div>
         </div>
       </Modal>
+
+      {/* Version History Modal */}
+      <VersionHistoryModal
+        isOpen={showVersionHistory}
+        onClose={() => setShowVersionHistory(false)}
+        versions={versions}
+        onRestore={handleRestoreVersion}
+      />
     </div>
   )
 }
