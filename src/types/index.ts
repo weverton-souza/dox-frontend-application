@@ -96,6 +96,36 @@ export interface PatientNote {
   content: string
 }
 
+// ========== Patient Timeline ==========
+
+export type PatientEventType = 'consulta' | 'retorno' | 'avaliacao' | 'laudo' | 'observacao'
+
+export const PATIENT_EVENT_TYPE_LABELS: Record<PatientEventType, string> = {
+  consulta: 'Consulta',
+  retorno: 'Retorno',
+  avaliacao: 'Avaliação',
+  laudo: 'Laudo',
+  observacao: 'Observação',
+}
+
+export const PATIENT_EVENT_TYPE_COLORS: Record<PatientEventType, string> = {
+  consulta: 'bg-blue-500',
+  retorno: 'bg-emerald-500',
+  avaliacao: 'bg-purple-500',
+  laudo: 'bg-amber-500',
+  observacao: 'bg-gray-400',
+}
+
+export interface PatientEvent {
+  id: string
+  patientId: string
+  type: PatientEventType
+  title: string
+  description: string
+  date: string       // ISO datetime — data/hora do evento
+  createdAt: string
+}
+
 // ========== Block Data Types ==========
 
 export interface IdentificationData {
@@ -345,6 +375,19 @@ export function createEmptyPatientNote(patientId: string): PatientNote {
     createdAt: now,
     updatedAt: now,
     content: '',
+  }
+}
+
+export function createEmptyPatientEvent(patientId: string, type: PatientEventType = 'consulta'): PatientEvent {
+  const now = new Date().toISOString()
+  return {
+    id: crypto.randomUUID(),
+    patientId,
+    type,
+    title: '',
+    description: '',
+    date: now,
+    createdAt: now,
   }
 }
 
