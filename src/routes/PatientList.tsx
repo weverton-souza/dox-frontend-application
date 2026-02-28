@@ -217,7 +217,7 @@ export default function PatientList() {
               const isExpanded = expandedId === patient.id
 
               return (
-                <div key={patient.id} className="bg-white rounded-xl border border-gray-200 transition-all">
+                <div key={patient.id} className="bg-white rounded-xl border border-gray-200 transition-all hover:border-brand-300 hover:shadow-sm cursor-pointer" onClick={() => navigate(`/pacientes/${patient.id}`)}>
                   {/* Card row */}
                   <div className="p-4 flex items-center gap-4">
                     {/* Avatar */}
@@ -254,7 +254,7 @@ export default function PatientList() {
                     {/* Laudos badge */}
                     <button
                       type="button"
-                      onClick={() => setExpandedId(isExpanded ? null : patient.id)}
+                      onClick={(e) => { e.stopPropagation(); setExpandedId(isExpanded ? null : patient.id) }}
                       className={`px-2.5 py-1 rounded-full text-xs font-medium shrink-0 transition-colors ${
                         patientLaudos.length > 0
                           ? 'bg-brand-100 text-brand-700 hover:bg-brand-200'
@@ -269,7 +269,7 @@ export default function PatientList() {
                     <div className="flex items-center gap-1 shrink-0">
                       <button
                         type="button"
-                        onClick={() => handleCreateLaudo(patient)}
+                        onClick={(e) => { e.stopPropagation(); handleCreateLaudo(patient) }}
                         className="p-2 rounded-lg hover:bg-brand-50 text-gray-400 hover:text-brand-600 transition-colors"
                         title="Novo laudo para este paciente"
                       >
@@ -282,7 +282,7 @@ export default function PatientList() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleOpenEdit(patient)}
+                        onClick={(e) => { e.stopPropagation(); handleOpenEdit(patient) }}
                         className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
                         title="Editar paciente"
                       >

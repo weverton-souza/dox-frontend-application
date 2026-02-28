@@ -26,6 +26,7 @@ const NAV_ITEMS: NavItemConfig[] = [
     to: '/pacientes',
     label: 'Pacientes',
     icon: UsersIcon,
+    matchPaths: ['/pacientes/'],
   },
 ]
 
