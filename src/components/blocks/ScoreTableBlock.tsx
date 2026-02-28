@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import { ScoreTableData, createEmptyScoreTableRow, createScoreTableColumn } from '@/types'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
+import { CloseIcon, PlusIcon } from '@/components/icons'
 
 interface ScoreTableBlockProps {
   data: ScoreTableData
@@ -134,9 +135,7 @@ export default function ScoreTableBlock({ data, onChange }: ScoreTableBlockProps
                         className="p-0.5 rounded hover:bg-white/20 text-white/40 hover:text-white transition-colors shrink-0 opacity-0 group-hover:opacity-100"
                         title="Remover coluna"
                       >
-                        <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
-                          <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
-                        </svg>
+                        <CloseIcon size={12} />
                       </button>
                     </div>
                   )}
@@ -150,9 +149,7 @@ export default function ScoreTableBlock({ data, onChange }: ScoreTableBlockProps
                   className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium text-white/70 hover:text-white hover:bg-white/20 transition-colors whitespace-nowrap"
                   title="Adicionar coluna"
                 >
-                  <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
-                  </svg>
+                  <PlusIcon size={14} />
                 </button>
               </th>
               {/* Row delete column */}
@@ -195,9 +192,7 @@ export default function ScoreTableBlock({ data, onChange }: ScoreTableBlockProps
                       className="p-1 rounded hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
                       title="Remover linha"
                     >
-                      <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
-                      </svg>
+                      <CloseIcon size={14} />
                     </button>
                   </td>
                 </tr>

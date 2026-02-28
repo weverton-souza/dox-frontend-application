@@ -251,27 +251,8 @@ export interface LaudoTemplate {
   isDefault: boolean
 }
 
-// ========== Block Type Labels ==========
-
-export const BLOCK_TYPE_LABELS: Record<BlockType, string> = {
-  'identification': 'Identificação',
-  'text': 'Texto',
-  'score-table': 'Tabela de Escores',
-  'info-box': 'Info Box',
-  'chart': 'Gráfico',
-  'references': 'Referências',
-  'closing-page': 'Termo de Entrega',
-}
-
-export const BLOCK_TYPE_DESCRIPTIONS: Record<BlockType, string> = {
-  'identification': 'Dados do profissional, solicitante e paciente',
-  'text': 'Seção de texto com título e conteúdo',
-  'score-table': 'Tabela com instrumentos e escores',
-  'info-box': 'Caixa de destaque (impressão diagnóstica, nota clínica)',
-  'chart': 'Gráfico de barras ou linha para visualização de escores',
-  'references': 'Referências bibliográficas com formatação ABNT',
-  'closing-page': 'Termo de entrega e ciência com assinaturas',
-}
+// Re-export block constants so existing imports from '@/types' still work
+export { BLOCK_TYPE_LABELS, BLOCK_TYPE_DESCRIPTIONS } from '@/lib/block-constants'
 
 // ========== Default Score Table Columns ==========
 

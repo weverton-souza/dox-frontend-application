@@ -3,7 +3,6 @@ import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import {
   Block,
-  BlockType,
   BlockData,
   BLOCK_TYPE_LABELS,
   TextBlockData,
@@ -13,6 +12,7 @@ import {
   ReferencesData,
   ClosingPageData,
 } from '@/types'
+import { BLOCK_TYPE_BORDER_COLORS } from '@/lib/block-constants'
 import { BlockMeta } from '@/lib/utils'
 
 // level 0 = section (title), level 1 = subsection (subtitle), level 2 = leaf (table/chart/etc)
@@ -24,16 +24,6 @@ interface OutlineRowProps {
   onDuplicate: (blockId: string) => void
   onRemove: (blockId: string) => void
   onChange: (blockId: string, data: BlockData) => void
-}
-
-const BLOCK_TYPE_BORDER_COLORS: Record<BlockType, string> = {
-  identification: 'border-l-blue-500',
-  text: 'border-l-emerald-500',
-  'score-table': 'border-l-amber-500',
-  'info-box': 'border-l-violet-500',
-  chart: 'border-l-rose-500',
-  references: 'border-l-cyan-500',
-  'closing-page': 'border-l-gray-400',
 }
 
 function getBlockBorderColor(block: Block, meta: BlockMeta): string {

@@ -2,6 +2,7 @@ import { useCallback, useRef } from 'react'
 import { ReferencesData } from '@/types'
 import Input from '@/components/ui/Input'
 import TextArea from '@/components/ui/TextArea'
+import { CloseIcon } from '@/components/icons'
 
 interface ReferencesBlockProps {
   data: ReferencesData
@@ -71,9 +72,7 @@ export default function ReferencesBlock({ data, onChange }: ReferencesBlockProps
                 className="p-2 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors shrink-0 mt-0.5"
                 title="Remover referência"
               >
-                <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
-                </svg>
+                <CloseIcon size={16} />
               </button>
             </div>
           ))}
