@@ -744,6 +744,7 @@ export const MOCK_LAUDO_WEVERTON: Laudo = {
   updatedAt: '2025-03-14T18:00:00.000Z',
   status: 'finalizado',
   patientName: 'Weverton da Silva Souza',
+  patientId: 'patient-weverton',
   blocks: [
     // ── Identificação ──────────────────────────────────────────────
     block(blk(0), 'identification', 0, identificationData),

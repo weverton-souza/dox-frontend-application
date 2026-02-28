@@ -15,6 +15,7 @@ import {
 } from '@dnd-kit/sortable'
 import { Block, BlockData, TextBlockData, BLOCK_TYPE_LABELS } from '@/types'
 import { computeBlockMetas } from '@/lib/utils'
+import { PlusIcon } from '@/components/icons'
 import OutlineRow from '@/components/editor/OutlineRow'
 
 interface OutlineTreeProps {
@@ -288,9 +289,7 @@ export default function OutlineTree({
                         className="p-1 rounded-md text-gray-300 hover:text-brand-600 hover:bg-white/60 transition-all shrink-0 opacity-0 group-hover/section:opacity-100"
                         title="Adicionar bloco na seção"
                       >
-                        <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
-                          <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
-                        </svg>
+                        <PlusIcon size={14} />
                       </button>
                     )}
 

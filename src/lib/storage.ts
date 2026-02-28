@@ -1,8 +1,9 @@
-import { Laudo, Professional, LaudoTemplate } from '@/types'
+import { Laudo, Professional, LaudoTemplate, Patient } from '@/types'
 
 const LAUDOS_KEY = 'neurohub_laudos'
 const PROFESSIONAL_KEY = 'neurohub_professional'
 const TEMPLATES_KEY = 'neurohub_templates'
+const PATIENTS_KEY = 'neurohub_patients'
 
 // ========== Laudos ==========
 
@@ -38,6 +39,42 @@ export function saveLaudo(laudo: Laudo): void {
 export function deleteLaudo(id: string): void {
   const laudos = getLaudos().filter((l) => l.id !== id)
   localStorage.setItem(LAUDOS_KEY, JSON.stringify(laudos))
+}
+
+// ========== Patients ==========
+
+export function getPatients(): Patient[] {
+  const raw = localStorage.getItem(PATIENTS_KEY)
+  if (!raw) return []
+  try {
+    return JSON.parse(raw) as Patient[]
+  } catch {
+    return []
+  }
+}
+
+export function getPatient(id: string): Patient | null {
+  const patients = getPatients()
+  return patients.find((p) => p.id === id) ?? null
+}
+
+export function savePatient(patient: Patient): void {
+  const patients = getPatients()
+  const index = patients.findIndex((p) => p.id === patient.id)
+  const updated = { ...patient, updatedAt: new Date().toISOString() }
+
+  if (index >= 0) {
+    patients[index] = updated
+  } else {
+    patients.push(updated)
+  }
+
+  localStorage.setItem(PATIENTS_KEY, JSON.stringify(patients))
+}
+
+export function deletePatient(id: string): void {
+  const patients = getPatients().filter((p) => p.id !== id)
+  localStorage.setItem(PATIENTS_KEY, JSON.stringify(patients))
 }
 
 // ========== Professional ==========

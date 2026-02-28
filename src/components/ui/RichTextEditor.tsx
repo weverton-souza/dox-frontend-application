@@ -69,7 +69,7 @@ export default function RichTextEditor({
   // Sync external content changes (e.g. undo, load from storage)
   useEffect(() => {
     if (editor && content !== editor.getHTML()) {
-      editor.commands.setContent(content, false)
+      editor.commands.setContent(content, { emitUpdate: false })
     }
   }, [content, editor])
 

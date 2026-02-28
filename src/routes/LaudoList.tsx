@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Laudo,
@@ -19,13 +19,14 @@ import {
   deleteCustomTemplate,
 } from '@/lib/storage'
 import { getAllTemplates } from '@/lib/default-templates'
-import { createBlock } from '@/lib/utils'
+import { createBlock, paginate } from '@/lib/utils'
 import { formatDateTime } from '@/lib/utils'
 import { fileToBase64DataUrl, resizeImageToBase64 } from '@/lib/image-utils'
 import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
 import Input from '@/components/ui/Input'
 import Select from '@/components/ui/Select'
+import Pagination from '@/components/ui/Pagination'
 
 export default function LaudoList() {
   const navigate = useNavigate()
@@ -36,6 +37,8 @@ export default function LaudoList() {
   const [showNewModal, setShowNewModal] = useState(false)
   const [showProfessionalModal, setShowProfessionalModal] = useState(false)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [currentPage, setCurrentPage] = useState(0)
+  const [pageSize, setPageSize] = useState(10)
 
   // Load data
   useEffect(() => {
@@ -115,8 +118,16 @@ export default function LaudoList() {
     setShowProfessionalModal(false)
   }, [professional])
 
-  const sortedLaudos = [...laudos].sort(
-    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+  const sortedLaudos = useMemo(
+    () => [...laudos].sort(
+      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+    ),
+    [laudos]
+  )
+
+  const paginatedPage = useMemo(
+    () => paginate(sortedLaudos, currentPage, pageSize),
+    [sortedLaudos, currentPage, pageSize]
   )
 
   return (
@@ -131,6 +142,21 @@ export default function LaudoList() {
             </p>
           </div>
           <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate('/pacientes')}
+            >
+              <span className="flex items-center gap-2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <line x1="19" y1="8" x2="19" y2="14" />
+                  <line x1="22" y1="11" x2="16" y2="11" />
+                </svg>
+                Pacientes
+              </span>
+            </Button>
             <Button
               variant="ghost"
               size="sm"
@@ -152,7 +178,33 @@ export default function LaudoList() {
 
       {/* Main */}
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
-        {sortedLaudos.length === 0 ? (
+        {/* Filters */}
+        {laudos.length > 0 && (
+          <div className="mb-6 flex items-center justify-end">
+            <div className="flex items-center gap-1.5">
+              <label htmlFor="page-size-laudos" className="text-sm text-gray-400">
+                Por página:
+              </label>
+              <select
+                id="page-size-laudos"
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value))
+                  setCurrentPage(0)
+                }}
+                className="rounded-lg border border-gray-200 bg-white px-2 py-2 text-sm text-gray-700 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none"
+              >
+                {[10, 25, 50].map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
+
+        {laudos.length === 0 ? (
           /* Empty state */
           <div className="text-center py-20">
             <div className="mx-auto w-16 h-16 rounded-full bg-brand-100 flex items-center justify-center mb-4">
@@ -175,8 +227,9 @@ export default function LaudoList() {
           </div>
         ) : (
           /* Laudo list */
+          <>
           <div className="space-y-3">
-            {sortedLaudos.map((laudo) => (
+            {paginatedPage.content.map((laudo) => (
               <div
                 key={laudo.id}
                 className="bg-white rounded-xl border border-gray-200 hover:border-brand-300 hover:shadow-md transition-all p-4 flex items-center gap-4 cursor-pointer"
@@ -223,6 +276,11 @@ export default function LaudoList() {
               </div>
             ))}
           </div>
+          <Pagination
+            page={paginatedPage}
+            onPageChange={setCurrentPage}
+          />
+          </>
         )}
       </main>
 

@@ -29,36 +29,8 @@ import {
   ReferencesData,
   ClosingPageData,
 } from '@/types'
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  LineElement,
-  PointElement,
-  Title as ChartTitle,
-  Tooltip,
-  Legend,
-  BarController,
-  LineController,
-} from 'chart.js'
-import annotationPlugin from 'chartjs-plugin-annotation'
-import ChartDataLabels from 'chartjs-plugin-datalabels'
-
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  LineElement,
-  PointElement,
-  BarController,
-  LineController,
-  ChartTitle,
-  Tooltip,
-  Legend,
-  annotationPlugin,
-  ChartDataLabels
-)
+import { Chart as ChartJS } from 'chart.js'
+import '@/lib/chart-setup'
 import { getProfessional } from '@/lib/storage'
 import { generateSocialIcon, base64ToUint8Array } from '@/lib/social-icons'
 import { getImageDimensions } from '@/lib/image-utils'
