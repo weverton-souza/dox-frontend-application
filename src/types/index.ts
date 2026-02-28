@@ -210,7 +210,25 @@ export interface Block {
 
 // ========== Laudo ==========
 
-export type LaudoStatus = 'rascunho' | 'finalizado'
+export type LaudoStatus = 'rascunho' | 'em_revisao' | 'finalizado'
+
+export const LAUDO_STATUS_LABELS: Record<LaudoStatus, string> = {
+  rascunho: 'Rascunho',
+  em_revisao: 'Em Revisão',
+  finalizado: 'Finalizado',
+}
+
+export const LAUDO_STATUS_COLORS: Record<LaudoStatus, { bg: string; text: string }> = {
+  rascunho: { bg: 'bg-yellow-100', text: 'text-yellow-700' },
+  em_revisao: { bg: 'bg-blue-100', text: 'text-blue-700' },
+  finalizado: { bg: 'bg-green-100', text: 'text-green-700' },
+}
+
+export const LAUDO_STATUS_TRANSITIONS: Record<LaudoStatus, LaudoStatus[]> = {
+  rascunho: ['em_revisao', 'finalizado'],
+  em_revisao: ['rascunho', 'finalizado'],
+  finalizado: ['em_revisao'],
+}
 
 export interface Laudo {
   id: string
@@ -219,6 +237,18 @@ export interface Laudo {
   status: LaudoStatus
   patientName: string
   patientId?: string
+  blocks: Block[]
+}
+
+// ========== Laudo Versioning ==========
+
+export interface LaudoVersion {
+  id: string
+  laudoId: string
+  createdAt: string
+  status: LaudoStatus
+  description: string
+  patientName: string
   blocks: Block[]
 }
 

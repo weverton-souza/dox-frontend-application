@@ -1,4 +1,5 @@
 import { Laudo, Professional, LaudoTemplate, Patient } from '@/types'
+import { deleteVersionHistory } from '@/lib/version-storage'
 
 const LAUDOS_KEY = 'neurohub_laudos'
 const PROFESSIONAL_KEY = 'neurohub_professional'
@@ -39,6 +40,7 @@ export function saveLaudo(laudo: Laudo): void {
 export function deleteLaudo(id: string): void {
   const laudos = getLaudos().filter((l) => l.id !== id)
   localStorage.setItem(LAUDOS_KEY, JSON.stringify(laudos))
+  deleteVersionHistory(id)
 }
 
 // ========== Patients ==========
