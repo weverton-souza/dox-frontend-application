@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Block, BlockType, BlockData, Laudo, LaudoTemplate, TextBlockData } from '@/types'
-import { getLaudo, saveLaudo, saveCustomTemplate } from '@/lib/storage'
+import { Block, BlockType, BlockData, Laudo, LaudoTemplate, TextBlockData, Patient } from '@/types'
+import { getLaudo, saveLaudo, saveCustomTemplate, getPatients } from '@/lib/storage'
 import { createBlock, computeBlockMetas } from '@/lib/utils'
 import OutlineTree from '@/components/editor/OutlineTree'
 import BlockSelector, { BlockVariant } from '@/components/editor/BlockSelector'
@@ -24,11 +24,12 @@ export default function LaudoEditor() {
   const [insertAfterBlockId, setInsertAfterBlockId] = useState<string | null>(null)
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null)
   const [showSectionSelector, setShowSectionSelector] = useState(false)
+  const [patients, setPatients] = useState<Patient[]>([])
   const sectionSelectorRef = useRef<HTMLDivElement>(null)
 
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Load laudo
+  // Load laudo and patients
   useEffect(() => {
     if (!id) return
     const loaded = getLaudo(id)
@@ -37,6 +38,7 @@ export default function LaudoEditor() {
     } else {
       navigate('/')
     }
+    setPatients(getPatients())
   }, [id, navigate])
 
   // Auto-save with debounce
@@ -91,6 +93,13 @@ export default function LaudoEditor() {
       updateLaudo({ blocks: updated })
     },
     [laudo, updateLaudo]
+  )
+
+  const handlePatientSelected = useCallback(
+    (patientId: string) => {
+      updateLaudo({ patientId })
+    },
+    [updateLaudo]
   )
 
   const handleAddBlock = useCallback(
@@ -458,6 +467,8 @@ export default function LaudoEditor() {
         block={editingBlock}
         onClose={() => setEditingBlockId(null)}
         onChange={handleBlockDataChange}
+        patients={patients}
+        onPatientSelected={handlePatientSelected}
       />
 
       {/* Block Selector Modal */}

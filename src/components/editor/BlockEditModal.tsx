@@ -10,6 +10,7 @@ import {
   ChartData,
   ReferencesData,
   ClosingPageData,
+  Patient,
 } from '@/types'
 import Modal from '@/components/ui/Modal'
 import IdentificationBlock from '@/components/blocks/IdentificationBlock'
@@ -24,6 +25,8 @@ interface BlockEditModalProps {
   block: Block | null
   onClose: () => void
   onChange: (blockId: string, data: BlockData) => void
+  patients?: Patient[]
+  onPatientSelected?: (patientId: string) => void
 }
 
 const MODAL_SIZES: Record<BlockType, 'sm' | 'md' | 'lg' | 'xl' | '2xl'> = {
@@ -132,7 +135,7 @@ function getModalTitle(block: Block): string {
   }
 }
 
-export default function BlockEditModal({ block, onClose, onChange }: BlockEditModalProps) {
+export default function BlockEditModal({ block, onClose, onChange, patients, onPatientSelected }: BlockEditModalProps) {
   if (!block) return null
 
   const handleChange = (data: BlockData) => {
@@ -146,6 +149,8 @@ export default function BlockEditModal({ block, onClose, onChange }: BlockEditMo
           <IdentificationBlock
             data={block.data as IdentificationData}
             onChange={handleChange}
+            patients={patients}
+            onPatientSelected={onPatientSelected}
           />
         )
       case 'text':

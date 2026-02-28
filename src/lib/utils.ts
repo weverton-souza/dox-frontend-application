@@ -7,6 +7,7 @@ import {
   InfoBoxData,
   ReferencesData,
   ClosingPageData,
+  Page,
   createEmptyIdentificationData,
   createEmptyTextBlockData,
   createEmptyScoreTableData,
@@ -191,4 +192,25 @@ export function computeBlockMetas(sortedBlocks: Block[]): Record<string, BlockMe
   }
 
   return result
+}
+
+// ========== Pagination ==========
+
+export function paginate<T>(items: T[], page: number, size: number): Page<T> {
+  const totalElements = items.length
+  const totalPages = Math.max(1, Math.ceil(totalElements / size))
+  const safePage = Math.min(Math.max(0, page), totalPages - 1)
+  const start = safePage * size
+  const content = items.slice(start, start + size)
+
+  return {
+    content,
+    totalElements,
+    totalPages,
+    number: safePage,
+    size,
+    first: safePage === 0,
+    last: safePage >= totalPages - 1,
+    empty: content.length === 0,
+  }
 }

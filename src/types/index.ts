@@ -69,6 +69,13 @@ export interface PatientData {
   guardianRelationship?: string // Grau de parentesco (Avó, Tio, etc.)
 }
 
+export interface Patient {
+  id: string
+  createdAt: string
+  updatedAt: string
+  data: PatientData
+}
+
 // ========== Block Data Types ==========
 
 export interface IdentificationData {
@@ -211,7 +218,21 @@ export interface Laudo {
   updatedAt: string
   status: LaudoStatus
   patientName: string
+  patientId?: string
   blocks: Block[]
+}
+
+// ========== Pagination (Spring Boot Page model) ==========
+
+export interface Page<T> {
+  content: T[]
+  totalElements: number
+  totalPages: number
+  number: number        // página atual (0-indexed)
+  size: number          // itens por página
+  first: boolean
+  last: boolean
+  empty: boolean
 }
 
 // ========== Templates ==========
@@ -273,6 +294,15 @@ export function createEmptyPatient(): PatientData {
     profession: '',
     motherName: '',
     fatherName: '',
+  }
+}
+
+export function createEmptyPatientRecord(): Patient {
+  return {
+    id: crypto.randomUUID(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    data: createEmptyPatient(),
   }
 }
 
