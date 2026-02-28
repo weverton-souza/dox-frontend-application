@@ -1,5 +1,6 @@
 import { useCallback } from 'react'
 import { TextBlockData, LabeledItem } from '@/types'
+import RichTextEditor from '@/components/ui/RichTextEditor'
 import TextArea from '@/components/ui/TextArea'
 import Toggle from '@/components/ui/Toggle'
 import Button from '@/components/ui/Button'
@@ -37,10 +38,10 @@ export default function TextBlockModal({ data, onChange }: TextBlockModalProps) 
 
   return (
     <div className="space-y-4">
-      <TextArea
+      <RichTextEditor
         label="Conteúdo"
-        value={data.content}
-        onChange={(e) => onChange({ ...data, content: e.target.value })}
+        content={data.content}
+        onChange={(html) => onChange({ ...data, content: html })}
         placeholder="Conteúdo da seção..."
       />
 

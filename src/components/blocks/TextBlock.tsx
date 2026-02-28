@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { TextBlockData, LabeledItem } from '@/types'
 import Input from '@/components/ui/Input'
 import TextArea from '@/components/ui/TextArea'
+import RichTextEditor from '@/components/ui/RichTextEditor'
 import Toggle from '@/components/ui/Toggle'
 import Button from '@/components/ui/Button'
 
@@ -70,10 +71,10 @@ export default function TextBlock({ data, onChange }: TextBlockProps) {
       {/* Conteúdo → textarea + labeled items (sem título nem subtítulo) */}
       {blockRole === 'content' && (
         <>
-          <TextArea
+          <RichTextEditor
             label="Conteúdo"
-            value={data.content}
-            onChange={(e) => updateField('content', e.target.value)}
+            content={data.content}
+            onChange={(html) => updateField('content', html)}
             placeholder="Conteúdo da seção..."
           />
 

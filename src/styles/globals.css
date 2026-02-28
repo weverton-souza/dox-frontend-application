@@ -33,7 +33,7 @@
     position: relative;
   }
 
-  /* Non-last nodes: full vertical line + horizontal branch (├─) */
+  /* Non-last nodes: full vertical line + horizontal branch */
   .tree-node:not(:last-child)::before {
     content: '';
     position: absolute;
@@ -52,7 +52,7 @@
     border-top: 1px solid #d1d5db;
   }
 
-  /* Last node: L-shaped connector with rounded corner (└─) */
+  /* Last node: L-shaped connector with rounded corner */
   .tree-node:last-child::before {
     content: '';
     position: absolute;
@@ -63,5 +63,27 @@
     border-left: 1px solid #d1d5db;
     border-bottom: 1px solid #d1d5db;
     border-bottom-left-radius: 6px;
+  }
+
+  /* TipTap rich text editor */
+  .rich-text-editor .tiptap {
+    outline: none;
+    min-height: 80px;
+  }
+
+  .rich-text-editor .tiptap p {
+    margin-bottom: 0.5em;
+  }
+
+  .rich-text-editor .tiptap p:last-child {
+    margin-bottom: 0;
+  }
+
+  .rich-text-editor .tiptap p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    float: left;
+    color: #9ca3af;
+    pointer-events: none;
+    height: 0;
   }
 }

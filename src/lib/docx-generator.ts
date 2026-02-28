@@ -401,6 +401,90 @@ function renderIdentification(data: IdentificationData): (Paragraph | Table)[] {
   return elements
 }
 
+/**
+ * Parse HTML content (from TipTap editor) into docx Paragraphs.
+ * Falls back to plain-text splitting for backward compatibility with old laudos.
+ */
+function parseHtmlToDocxParagraphs(html: string): Paragraph[] {
+  // Fallback: if content has no HTML tags, treat as plain text (backward compat)
+  if (!/<[a-z][\s\S]*>/i.test(html)) {
+    const lines = html.split('\n').filter((line) => line.trim() !== '')
+    return lines.map(
+      (line) =>
+        new Paragraph({
+          spacing: { after: 120 },
+          alignment: AlignmentType.JUSTIFIED,
+          children: [new TextRun({ text: line, size: 22, font: 'Calibri' })],
+        })
+    )
+  }
+
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(html, 'text/html')
+  const paragraphs: Paragraph[] = []
+
+  for (const node of Array.from(doc.body.childNodes)) {
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      const el = node as HTMLElement
+      const runs = extractRunsFromNode(el)
+      if (runs.length > 0) {
+        paragraphs.push(
+          new Paragraph({
+            spacing: { after: 120 },
+            alignment: AlignmentType.JUSTIFIED,
+            children: runs,
+          })
+        )
+      }
+    } else if (node.nodeType === Node.TEXT_NODE && node.textContent?.trim()) {
+      paragraphs.push(
+        new Paragraph({
+          spacing: { after: 120 },
+          alignment: AlignmentType.JUSTIFIED,
+          children: [new TextRun({ text: node.textContent, size: 22, font: 'Calibri' })],
+        })
+      )
+    }
+  }
+
+  return paragraphs
+}
+
+/** Recursively extract TextRun objects from an HTML element, preserving bold/italic. */
+function extractRunsFromNode(
+  node: Node,
+  inherited: { bold?: boolean; italics?: boolean } = {}
+): TextRun[] {
+  const runs: TextRun[] = []
+
+  for (const child of Array.from(node.childNodes)) {
+    if (child.nodeType === Node.TEXT_NODE) {
+      const text = child.textContent || ''
+      if (text) {
+        runs.push(
+          new TextRun({
+            text,
+            size: 22,
+            font: 'Calibri',
+            bold: inherited.bold,
+            italics: inherited.italics,
+          })
+        )
+      }
+    } else if (child.nodeType === Node.ELEMENT_NODE) {
+      const el = child as HTMLElement
+      const tag = el.tagName.toLowerCase()
+      const style = {
+        bold: inherited.bold || tag === 'strong' || tag === 'b',
+        italics: inherited.italics || tag === 'em' || tag === 'i',
+      }
+      runs.push(...extractRunsFromNode(el, style))
+    }
+  }
+
+  return runs
+}
+
 function renderText(data: TextBlockData): Paragraph[] {
   const elements: Paragraph[] = []
 
@@ -427,22 +511,8 @@ function renderText(data: TextBlockData): Paragraph[] {
   }
 
   if (data.content) {
-    const paragraphs = data.content.split('\n').filter((line) => line.trim() !== '')
-    for (const para of paragraphs) {
-      elements.push(
-        new Paragraph({
-          spacing: { after: 120 },
-          alignment: AlignmentType.JUSTIFIED,
-          children: [
-            new TextRun({
-              text: para,
-              size: 22,
-              font: 'Calibri',
-            }),
-          ],
-        })
-      )
-    }
+    const contentParagraphs = parseHtmlToDocxParagraphs(data.content)
+    elements.push(...contentParagraphs)
   }
 
   if (data.useLabeledItems && data.labeledItems.length > 0) {
