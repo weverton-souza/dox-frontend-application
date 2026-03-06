@@ -1,0 +1,234 @@
+import type {
+  VariableMap,
+  VariableInfo,
+  PatientData,
+  AnamnesisForm,
+  FormField,
+  FormResponse,
+  Block,
+  TextBlockData,
+  InfoBoxData,
+} from '@/types'
+
+// ========== Regex ==========
+
+const VARIABLE_REGEX = /\{\{(\w+)\}\}/g
+
+// ========== Patient Variables ==========
+
+const PATIENT_VARIABLE_DEFS: { key: string; label: string; field: keyof PatientData }[] = [
+  { key: 'paciente_nome', label: 'Nome do Paciente', field: 'name' },
+  { key: 'paciente_cpf', label: 'CPF', field: 'cpf' },
+  { key: 'paciente_data_nascimento', label: 'Data de Nascimento', field: 'birthDate' },
+  { key: 'paciente_idade', label: 'Idade', field: 'age' },
+  { key: 'paciente_escolaridade', label: 'Escolaridade', field: 'education' },
+  { key: 'paciente_profissao', label: 'Profissão', field: 'profession' },
+  { key: 'paciente_mae', label: 'Nome da Mãe', field: 'motherName' },
+  { key: 'paciente_pai', label: 'Nome do Pai', field: 'fatherName' },
+  { key: 'paciente_responsavel', label: 'Responsável', field: 'guardianName' },
+  { key: 'paciente_telefone', label: 'Telefone', field: 'phone' },
+  { key: 'paciente_email', label: 'E-mail', field: 'email' },
+  { key: 'paciente_endereco', label: 'Endereço', field: 'addressStreet' },
+  { key: 'paciente_cidade', label: 'Cidade', field: 'addressCity' },
+  { key: 'paciente_estado', label: 'Estado', field: 'addressState' },
+  { key: 'paciente_cep', label: 'CEP', field: 'addressZipCode' },
+  { key: 'paciente_queixa', label: 'Queixa Principal', field: 'chiefComplaint' },
+  { key: 'paciente_diagnostico', label: 'Diagnóstico', field: 'diagnosis' },
+  { key: 'paciente_medicamentos', label: 'Medicamentos', field: 'medications' },
+  { key: 'paciente_medico', label: 'Médico Solicitante', field: 'referralDoctor' },
+]
+
+/**
+ * Returns patient variable definitions as VariableInfo items.
+ */
+export function getPatientVariableInfos(): VariableInfo[] {
+  return PATIENT_VARIABLE_DEFS.map((d) => ({
+    key: d.key,
+    label: d.label,
+    source: 'patient' as const,
+  }))
+}
+
+/**
+ * Returns form field variable definitions as VariableInfo items.
+ */
+export function getFormVariableInfos(form: AnamnesisForm): VariableInfo[] {
+  return form.fields
+    .filter((f) => f.type !== 'section-header' && (f.variableKey ?? ''))
+    .map((f) => ({
+      key: f.variableKey,
+      label: f.label || f.variableKey,
+      source: 'form' as const,
+    }))
+}
+
+/**
+ * Returns all available variable infos (patient + form).
+ */
+export function getAllVariableInfos(form: AnamnesisForm | null): VariableInfo[] {
+  const patient = getPatientVariableInfos()
+  const formVars = form ? getFormVariableInfos(form) : []
+  return [...patient, ...formVars]
+}
+
+// ========== Answer Display ==========
+
+/**
+ * Resolves a FormFieldAnswer to a human-readable display string.
+ * Returns empty string when there's no meaningful value.
+ * Used by both variable resolution and prompt building.
+ */
+export function resolveAnswerDisplay(
+  field: FormField,
+  answer: { value: string; selectedOptionIds: string[]; scaleValue: number | null },
+): string {
+  switch (field.type) {
+    case 'short-text':
+    case 'long-text':
+    case 'date':
+      return answer.value || ''
+
+    case 'yes-no':
+      return answer.value === 'sim' ? 'Sim' : answer.value === 'não' ? 'Não' : answer.value || ''
+
+    case 'single-choice':
+    case 'multiple-choice': {
+      if (answer.selectedOptionIds.length === 0) return ''
+      const selectedLabels = answer.selectedOptionIds
+        .map((optId) => field.options.find((o) => o.id === optId)?.label)
+        .filter(Boolean)
+      return selectedLabels.join(', ')
+    }
+
+    case 'scale':
+      return answer.scaleValue != null ? String(answer.scaleValue) : ''
+
+    default:
+      return answer.value || ''
+  }
+}
+
+// ========== Variable Resolution ==========
+
+/**
+ * Builds a VariableMap from patient data.
+ */
+function getPatientVariables(patient: PatientData | null): VariableMap {
+  if (!patient) return {}
+  const map: VariableMap = {}
+  for (const def of PATIENT_VARIABLE_DEFS) {
+    const value = patient[def.field]
+    if (value) map[def.key] = String(value)
+  }
+  return map
+}
+
+/**
+ * Builds a VariableMap from form response answers.
+ * Only fields with variableKey set are included.
+ */
+function getFormVariables(form: AnamnesisForm, response: FormResponse): VariableMap {
+  const map: VariableMap = {}
+
+  for (const field of form.fields) {
+    const varKey = field.variableKey ?? ''
+    if (!varKey || field.type === 'section-header') continue
+
+    const answer = response.answers.find((a) => a.fieldId === field.id)
+    if (!answer) continue
+
+    const value = resolveAnswerDisplay(field, answer)
+    if (value) map[varKey] = value
+  }
+
+  return map
+}
+
+/**
+ * Builds a unified VariableMap from all available sources.
+ * Priority: backendData > form > patient (last wins).
+ */
+export function buildVariableMap(
+  patient: PatientData | null,
+  form: AnamnesisForm | null,
+  response: FormResponse | null,
+  backendData?: Record<string, string>,
+): VariableMap {
+  const map: VariableMap = {
+    ...getPatientVariables(patient),
+    ...(form && response ? getFormVariables(form, response) : {}),
+    ...(backendData ?? {}),
+  }
+  return map
+}
+
+// ========== Template Resolution ==========
+
+/**
+ * Replaces {{key}} placeholders in a string with their values.
+ * Unresolved variables remain as {{key}} for manual editing.
+ */
+function resolveVariables(text: string, variables: VariableMap): string {
+  if (!text) return text
+  return text.replace(VARIABLE_REGEX, (match, key: string) => {
+    return variables[key] ?? match
+  })
+}
+
+/**
+ * Applies variable resolution to all text and info-box blocks.
+ * Returns a new Block[] with resolved content.
+ * Other block types are returned unchanged.
+ */
+export function resolveBlockVariables(blocks: Block[], variables: VariableMap): Block[] {
+  return blocks.map((block) => {
+    switch (block.type) {
+      case 'text': {
+        const data = block.data as TextBlockData
+        return {
+          ...block,
+          data: {
+            ...data,
+            title: resolveVariables(data.title, variables),
+            subtitle: resolveVariables(data.subtitle, variables),
+            content: resolveVariables(data.content, variables),
+            labeledItems: data.labeledItems.map((item) => ({
+              ...item,
+              label: resolveVariables(item.label, variables),
+              text: resolveVariables(item.text, variables),
+            })),
+          },
+        }
+      }
+      case 'info-box': {
+        const data = block.data as InfoBoxData
+        return {
+          ...block,
+          data: {
+            ...data,
+            label: resolveVariables(data.label, variables),
+            content: resolveVariables(data.content, variables),
+          },
+        }
+      }
+      default:
+        return block
+    }
+  })
+}
+
+// ========== Utilities ==========
+
+/**
+ * Sanitizes a user-entered variable key.
+ * Lowercase, no special chars, underscores for spaces.
+ */
+export function sanitizeVariableKey(input: string): string {
+  return input
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // remove accents
+    .replace(/[^a-z0-9_]/g, '_')     // non-alphanumeric → underscore
+    .replace(/_+/g, '_')             // collapse multiple underscores
+    .replace(/^_|_$/g, '')           // trim leading/trailing underscores
+}

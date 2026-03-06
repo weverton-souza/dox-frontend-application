@@ -1,5 +1,6 @@
 import { Laudo, Professional, LaudoTemplate, Patient, PatientNote, PatientEvent } from '@/types'
 import { deleteVersionHistory } from '@/lib/version-storage'
+import { readFromStorage, writeToStorage, upsertInStorage, deleteFromStorage } from '@/lib/storage-utils'
 
 const LAUDOS_KEY = 'neurohub_laudos'
 const PROFESSIONAL_KEY = 'neurohub_professional'
@@ -11,74 +12,38 @@ const PATIENT_EVENTS_KEY = 'neurohub_patient_events'
 // ========== Laudos ==========
 
 export function getLaudos(): Laudo[] {
-  const raw = localStorage.getItem(LAUDOS_KEY)
-  if (!raw) return []
-  try {
-    return JSON.parse(raw) as Laudo[]
-  } catch {
-    return []
-  }
+  return readFromStorage<Laudo>(LAUDOS_KEY)
 }
 
 export function getLaudo(id: string): Laudo | null {
-  const laudos = getLaudos()
-  return laudos.find((l) => l.id === id) ?? null
+  return getLaudos().find((l) => l.id === id) ?? null
 }
 
 export function saveLaudo(laudo: Laudo): void {
-  const laudos = getLaudos()
-  const index = laudos.findIndex((l) => l.id === laudo.id)
-  const updated = { ...laudo, updatedAt: new Date().toISOString() }
-
-  if (index >= 0) {
-    laudos[index] = updated
-  } else {
-    laudos.push(updated)
-  }
-
-  localStorage.setItem(LAUDOS_KEY, JSON.stringify(laudos))
+  upsertInStorage(LAUDOS_KEY, laudo, getLaudos)
 }
 
 export function deleteLaudo(id: string): void {
-  const laudos = getLaudos().filter((l) => l.id !== id)
-  localStorage.setItem(LAUDOS_KEY, JSON.stringify(laudos))
+  writeToStorage(LAUDOS_KEY, getLaudos().filter((l) => l.id !== id))
   deleteVersionHistory(id)
 }
 
 // ========== Patients ==========
 
 export function getPatients(): Patient[] {
-  const raw = localStorage.getItem(PATIENTS_KEY)
-  if (!raw) return []
-  try {
-    return JSON.parse(raw) as Patient[]
-  } catch {
-    return []
-  }
+  return readFromStorage<Patient>(PATIENTS_KEY)
 }
 
 export function getPatient(id: string): Patient | null {
-  const patients = getPatients()
-  return patients.find((p) => p.id === id) ?? null
+  return getPatients().find((p) => p.id === id) ?? null
 }
 
 export function savePatient(patient: Patient): void {
-  const patients = getPatients()
-  const index = patients.findIndex((p) => p.id === patient.id)
-  const updated = { ...patient, updatedAt: new Date().toISOString() }
-
-  if (index >= 0) {
-    patients[index] = updated
-  } else {
-    patients.push(updated)
-  }
-
-  localStorage.setItem(PATIENTS_KEY, JSON.stringify(patients))
+  upsertInStorage(PATIENTS_KEY, patient, getPatients)
 }
 
 export function deletePatient(id: string): void {
-  const patients = getPatients().filter((p) => p.id !== id)
-  localStorage.setItem(PATIENTS_KEY, JSON.stringify(patients))
+  writeToStorage(PATIENTS_KEY, getPatients().filter((p) => p.id !== id))
   deletePatientNotes(id)
   deletePatientEvents(id)
 }
@@ -86,53 +51,21 @@ export function deletePatient(id: string): void {
 // ========== Patient Notes ==========
 
 export function getPatientNotes(patientId: string): PatientNote[] {
-  const raw = localStorage.getItem(PATIENT_NOTES_KEY)
-  if (!raw) return []
-  try {
-    const all = JSON.parse(raw) as PatientNote[]
-    return all
-      .filter((n) => n.patientId === patientId)
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-  } catch {
-    return []
-  }
+  return readFromStorage<PatientNote>(PATIENT_NOTES_KEY)
+    .filter((n) => n.patientId === patientId)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
 }
 
 export function savePatientNote(note: PatientNote): void {
-  const raw = localStorage.getItem(PATIENT_NOTES_KEY)
-  let all: PatientNote[] = []
-  try {
-    all = raw ? (JSON.parse(raw) as PatientNote[]) : []
-  } catch { /* ignore */ }
-
-  const index = all.findIndex((n) => n.id === note.id)
-  const updated = { ...note, updatedAt: new Date().toISOString() }
-
-  if (index >= 0) {
-    all[index] = updated
-  } else {
-    all.push(updated)
-  }
-
-  localStorage.setItem(PATIENT_NOTES_KEY, JSON.stringify(all))
+  upsertInStorage(PATIENT_NOTES_KEY, note, () => readFromStorage<PatientNote>(PATIENT_NOTES_KEY))
 }
 
 export function deletePatientNote(id: string): void {
-  const raw = localStorage.getItem(PATIENT_NOTES_KEY)
-  if (!raw) return
-  try {
-    const all = (JSON.parse(raw) as PatientNote[]).filter((n) => n.id !== id)
-    localStorage.setItem(PATIENT_NOTES_KEY, JSON.stringify(all))
-  } catch { /* ignore */ }
+  deleteFromStorage<PatientNote>(PATIENT_NOTES_KEY, (n) => n.id !== id)
 }
 
 export function deletePatientNotes(patientId: string): void {
-  const raw = localStorage.getItem(PATIENT_NOTES_KEY)
-  if (!raw) return
-  try {
-    const all = (JSON.parse(raw) as PatientNote[]).filter((n) => n.patientId !== patientId)
-    localStorage.setItem(PATIENT_NOTES_KEY, JSON.stringify(all))
-  } catch { /* ignore */ }
+  deleteFromStorage<PatientNote>(PATIENT_NOTES_KEY, (n) => n.patientId !== patientId)
 }
 
 // ========== Laudos by Patient ==========
@@ -144,51 +77,26 @@ export function getLaudosByPatient(patientId: string): Laudo[] {
 // ========== Patient Events (Timeline) ==========
 
 export function getPatientEvents(patientId: string): PatientEvent[] {
-  const raw = localStorage.getItem(PATIENT_EVENTS_KEY)
-  if (!raw) return []
-  try {
-    const all = JSON.parse(raw) as PatientEvent[]
-    return all
-      .filter((e) => e.patientId === patientId)
-      .sort((a, b) => b.date.localeCompare(a.date))
-  } catch {
-    return []
-  }
+  return readFromStorage<PatientEvent>(PATIENT_EVENTS_KEY)
+    .filter((e) => e.patientId === patientId)
+    .sort((a, b) => b.date.localeCompare(a.date))
 }
 
 export function savePatientEvent(event: PatientEvent): void {
-  const raw = localStorage.getItem(PATIENT_EVENTS_KEY)
-  let all: PatientEvent[] = []
-  try {
-    all = raw ? (JSON.parse(raw) as PatientEvent[]) : []
-  } catch { /* ignore */ }
-
-  const index = all.findIndex((e) => e.id === event.id)
-  if (index >= 0) {
-    all[index] = event
-  } else {
-    all.push(event)
-  }
-
-  localStorage.setItem(PATIENT_EVENTS_KEY, JSON.stringify(all))
+  upsertInStorage(
+    PATIENT_EVENTS_KEY,
+    event,
+    () => readFromStorage<PatientEvent>(PATIENT_EVENTS_KEY),
+    false,
+  )
 }
 
 export function deletePatientEvent(id: string): void {
-  const raw = localStorage.getItem(PATIENT_EVENTS_KEY)
-  if (!raw) return
-  try {
-    const all = (JSON.parse(raw) as PatientEvent[]).filter((e) => e.id !== id)
-    localStorage.setItem(PATIENT_EVENTS_KEY, JSON.stringify(all))
-  } catch { /* ignore */ }
+  deleteFromStorage<PatientEvent>(PATIENT_EVENTS_KEY, (e) => e.id !== id)
 }
 
 export function deletePatientEvents(patientId: string): void {
-  const raw = localStorage.getItem(PATIENT_EVENTS_KEY)
-  if (!raw) return
-  try {
-    const all = (JSON.parse(raw) as PatientEvent[]).filter((e) => e.patientId !== patientId)
-    localStorage.setItem(PATIENT_EVENTS_KEY, JSON.stringify(all))
-  } catch { /* ignore */ }
+  deleteFromStorage<PatientEvent>(PATIENT_EVENTS_KEY, (e) => e.patientId !== patientId)
 }
 
 // ========== Professional ==========
@@ -216,29 +124,13 @@ export function saveProfessional(p: Professional): void {
 // ========== Custom Templates ==========
 
 export function getCustomTemplates(): LaudoTemplate[] {
-  const raw = localStorage.getItem(TEMPLATES_KEY)
-  if (!raw) return []
-  try {
-    return JSON.parse(raw) as LaudoTemplate[]
-  } catch {
-    return []
-  }
+  return readFromStorage<LaudoTemplate>(TEMPLATES_KEY)
 }
 
 export function saveCustomTemplate(t: LaudoTemplate): void {
-  const templates = getCustomTemplates()
-  const index = templates.findIndex((tmpl) => tmpl.id === t.id)
-
-  if (index >= 0) {
-    templates[index] = t
-  } else {
-    templates.push(t)
-  }
-
-  localStorage.setItem(TEMPLATES_KEY, JSON.stringify(templates))
+  upsertInStorage(TEMPLATES_KEY, t, getCustomTemplates, false)
 }
 
 export function deleteCustomTemplate(id: string): void {
-  const templates = getCustomTemplates().filter((t) => t.id !== id)
-  localStorage.setItem(TEMPLATES_KEY, JSON.stringify(templates))
+  writeToStorage(TEMPLATES_KEY, getCustomTemplates().filter((t) => t.id !== id))
 }
