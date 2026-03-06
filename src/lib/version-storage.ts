@@ -1,4 +1,5 @@
 import { LaudoVersion } from '@/types'
+import { readFromStorage } from '@/lib/storage-utils'
 
 const VERSION_KEY_PREFIX = 'neurohub_versions_'
 const MAX_VERSIONS_PER_LAUDO = 20
@@ -8,13 +9,7 @@ function getStorageKey(laudoId: string): string {
 }
 
 export function getVersionHistory(laudoId: string): LaudoVersion[] {
-  const raw = localStorage.getItem(getStorageKey(laudoId))
-  if (!raw) return []
-  try {
-    return JSON.parse(raw) as LaudoVersion[]
-  } catch {
-    return []
-  }
+  return readFromStorage<LaudoVersion>(getStorageKey(laudoId))
 }
 
 export function saveVersion(version: LaudoVersion): void {

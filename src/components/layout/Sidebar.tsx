@@ -2,6 +2,7 @@ import { NavLink, useLocation } from 'react-router-dom'
 import {
   DocumentIcon,
   UsersIcon,
+  ClipboardListIcon,
   SettingsIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -27,6 +28,12 @@ const NAV_ITEMS: NavItemConfig[] = [
     label: 'Pacientes',
     icon: UsersIcon,
     matchPaths: ['/pacientes/'],
+  },
+  {
+    to: '/formularios',
+    label: 'Formulários',
+    icon: ClipboardListIcon,
+    matchPaths: ['/formulario/'],
   },
 ]
 

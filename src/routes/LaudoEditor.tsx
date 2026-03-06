@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Block, BlockType, BlockData, Laudo, LaudoStatus, LaudoTemplate, LaudoVersion, TextBlockData, Patient } from '@/types'
 import { getLaudo, saveLaudo, saveCustomTemplate, getPatients } from '@/lib/storage'
+import { getFormById, getFormResponseById } from '@/lib/form-service'
 import { createBlock, computeBlockMetas } from '@/lib/utils'
 import { useVersioning } from '@/hooks/useVersioning'
 import OutlineTree from '@/components/editor/OutlineTree'
@@ -30,6 +31,8 @@ export default function LaudoEditor() {
   const [showSectionSelector, setShowSectionSelector] = useState(false)
   const [patients, setPatients] = useState<Patient[]>([])
   const [showVersionHistory, setShowVersionHistory] = useState(false)
+  const [formProvenanceLabel, setFormProvenanceLabel] = useState<string | null>(null)
+  const [formProvenanceId, setFormProvenanceId] = useState<string | null>(null)
   const sectionSelectorRef = useRef<HTMLDivElement>(null)
 
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -40,6 +43,17 @@ export default function LaudoEditor() {
     const loaded = getLaudo(id)
     if (loaded) {
       setLaudo(loaded)
+
+      // Load provenance info if laudo was generated from a form response
+      if (loaded.formResponseId) {
+        getFormResponseById(loaded.formResponseId).then(async (resp) => {
+          if (resp) {
+            const form = await getFormById(resp.formId)
+            setFormProvenanceLabel(form?.title || 'Formulário')
+            setFormProvenanceId(resp.formId)
+          }
+        })
+      }
     } else {
       navigate('/')
     }
@@ -287,6 +301,15 @@ export default function LaudoEditor() {
     return ids
   }, [sortedBlocks, blockMetas])
 
+  // Default: start with all sections collapsed
+  const initialCollapseRef = useRef(false)
+  useEffect(() => {
+    if (!initialCollapseRef.current && allSectionIds.length > 0) {
+      initialCollapseRef.current = true
+      setCollapsedSections(new Set(allSectionIds))
+    }
+  }, [allSectionIds])
+
   const collapseAll = useCallback(() => {
     setCollapsedSections(new Set(allSectionIds))
   }, [allSectionIds])
@@ -330,8 +353,8 @@ export default function LaudoEditor() {
   return (
     <div className="min-h-[calc(100vh)] bg-gray-100 flex flex-col">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-4">
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-30 h-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-full flex items-center gap-4">
           <button
             type="button"
             onClick={() => {
@@ -413,6 +436,27 @@ export default function LaudoEditor() {
           </Button>
         </div>
       </header>
+
+      {/* Form provenance banner */}
+      {formProvenanceLabel && (
+        <div className="max-w-3xl mx-auto w-full px-4 sm:px-6 pt-3">
+          <div className="flex items-center gap-2 bg-brand-50 rounded-lg px-3 py-2 text-xs text-brand-700">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+            </svg>
+            <span>
+              Gerado a partir do formulário{' '}
+              <button
+                type="button"
+                onClick={() => formProvenanceId && navigate(`/formulario/${formProvenanceId}/respostas`)}
+                className="font-medium underline hover:text-brand-800"
+              >
+                {formProvenanceLabel}
+              </button>
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Toolbar */}
       <div className="max-w-3xl mx-auto w-full px-4 sm:px-6 pt-4 pb-2">
