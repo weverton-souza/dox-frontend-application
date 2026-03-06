@@ -8,6 +8,9 @@ import {
   ReferencesData,
   ClosingPageData,
   Page,
+  FormField,
+  FormFieldMeta,
+  FormSectionGroup,
   createEmptyIdentificationData,
   createEmptyTextBlockData,
   createEmptyScoreTableData,
@@ -192,6 +195,73 @@ export function computeBlockMetas(sortedBlocks: Block[]): Record<string, BlockMe
   }
 
   return result
+}
+
+// ========== Form Field Sections ==========
+
+/**
+ * Computes section metadata for sorted form fields.
+ * section-header fields define sections; all other fields inherit the most recent section.
+ */
+export function computeFormFieldMetas(sortedFields: FormField[]): Record<string, FormFieldMeta> {
+  let currentSectionTitle = ''
+  let currentSectionFieldId = '__orphan__'
+  const result: Record<string, FormFieldMeta> = {}
+
+  for (const field of sortedFields) {
+    if (field.type === 'section-header') {
+      currentSectionTitle = field.label || 'Seção sem título'
+      currentSectionFieldId = field.id
+      result[field.id] = {
+        sectionTitle: currentSectionTitle,
+        sectionFieldId: field.id,
+        isSection: true,
+      }
+    } else {
+      result[field.id] = {
+        sectionTitle: currentSectionTitle,
+        sectionFieldId: currentSectionFieldId,
+        isSection: false,
+      }
+    }
+  }
+
+  return result
+}
+
+/**
+ * Groups sorted form fields into section groups for rendering.
+ * Fields before any section-header go into an "orphan" group (sectionField: null).
+ */
+export function buildFormSectionGroups(sortedFields: FormField[]): FormSectionGroup[] {
+  const groups: FormSectionGroup[] = []
+  let currentGroup: FormSectionGroup | null = null
+
+  for (const field of sortedFields) {
+    if (field.type === 'section-header') {
+      currentGroup = {
+        sectionFieldId: field.id,
+        sectionTitle: field.label || 'Seção sem título',
+        sectionField: field,
+        children: [],
+      }
+      groups.push(currentGroup)
+    } else {
+      if (!currentGroup) {
+        // Orphan group — fields before any section-header
+        currentGroup = {
+          sectionFieldId: '__orphan__',
+          sectionTitle: '',
+          sectionField: null,
+          children: [],
+        }
+        groups.push(currentGroup)
+      }
+      currentGroup.children.push(field)
+    }
+  }
+
+  return groups
 }
 
 // ========== Pagination ==========

@@ -1,4 +1,4 @@
-import { BlockType } from '@/types'
+import { BlockType, TextBlockData, ScoreTableData, ChartData, InfoBoxData, ReferencesData, ClosingPageData } from '@/types'
 
 // ========== Labels & Descriptions ==========
 
@@ -42,6 +42,25 @@ export const BLOCK_TYPE_BORDER_COLORS: Record<BlockType, string> = {
   chart: 'border-l-rose-500',
   references: 'border-l-cyan-500',
   'closing-page': 'border-l-gray-400',
+}
+
+// ========== Block Title Extraction ==========
+
+/**
+ * Extracts a human-readable title from a block's data.
+ * Falls back to BLOCK_TYPE_LABELS when no title is set.
+ */
+export function getBlockTitle(block: { type: string; data: unknown }): string {
+  switch (block.type) {
+    case 'text': return (block.data as TextBlockData).title || BLOCK_TYPE_LABELS.text
+    case 'score-table': return (block.data as ScoreTableData).title || BLOCK_TYPE_LABELS['score-table']
+    case 'chart': return (block.data as ChartData).title || BLOCK_TYPE_LABELS.chart
+    case 'info-box': return (block.data as InfoBoxData).label || BLOCK_TYPE_LABELS['info-box']
+    case 'references': return (block.data as ReferencesData).title || BLOCK_TYPE_LABELS.references
+    case 'closing-page': return (block.data as ClosingPageData).title || BLOCK_TYPE_LABELS['closing-page']
+    case 'identification': return BLOCK_TYPE_LABELS.identification
+    default: return block.type
+  }
 }
 
 // ========== Icons ==========
