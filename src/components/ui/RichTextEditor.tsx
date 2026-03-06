@@ -2,12 +2,15 @@ import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import { useEffect } from 'react'
+import type { VariableInfo } from '@/types'
+import VariablePicker from '@/components/editor/VariablePicker'
 
 interface RichTextEditorProps {
   content: string
   onChange: (html: string) => void
   label?: string
   placeholder?: string
+  variables?: VariableInfo[]
 }
 
 function ToolbarButton({
@@ -44,6 +47,7 @@ export default function RichTextEditor({
   onChange,
   label,
   placeholder = '',
+  variables,
 }: RichTextEditorProps) {
   const editor = useEditor({
     extensions: [
@@ -72,6 +76,11 @@ export default function RichTextEditor({
       editor.commands.setContent(content, { emitUpdate: false })
     }
   }, [content, editor])
+
+  const handleInsertVariable = (variableKey: string) => {
+    if (!editor) return
+    editor.chain().focus().insertContent(`{{${variableKey}}}`).run()
+  }
 
   if (!editor) return null
 
@@ -105,6 +114,17 @@ export default function RichTextEditor({
           >
             <span className="italic">I</span>
           </ToolbarButton>
+
+          {/* Variable picker — only shown when variables are provided */}
+          {variables && variables.length > 0 && (
+            <>
+              <div className="w-px h-4 bg-gray-300 mx-1" />
+              <VariablePicker
+                variables={variables}
+                onInsert={handleInsertVariable}
+              />
+            </>
+          )}
         </div>
 
         {/* Editor area */}

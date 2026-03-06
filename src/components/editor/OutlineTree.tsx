@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import {
   DndContext,
   closestCenter,
@@ -17,6 +17,7 @@ import { Block, BlockData, TextBlockData, BLOCK_TYPE_LABELS } from '@/types'
 import { computeBlockMetas } from '@/lib/utils'
 import { PlusIcon } from '@/components/icons'
 import OutlineRow from '@/components/editor/OutlineRow'
+import SectionDeleteModal from '@/components/ui/SectionDeleteModal'
 
 interface OutlineTreeProps {
   blocks: Block[]
@@ -143,6 +144,13 @@ export default function OutlineTree({
     [blocks, onBlocksChange]
   )
 
+  // --- Section cascading delete ---
+  const [sectionDeleteTarget, setSectionDeleteTarget] = useState<{
+    sectionBlockId: string
+    sectionTitle: string
+    childBlockIds: string[]
+  } | null>(null)
+
   const sortedBlocks = useMemo(
     () => [...blocks].sort((a, b) => a.order - b.order),
     [blocks]
@@ -218,6 +226,105 @@ export default function OutlineTree({
     return count
   }
 
+  // Collect all child IDs for a section group
+  function collectChildIds(group: SectionGroup): string[] {
+    const ids: string[] = []
+    ids.push(...group.directChildren.map((b) => b.id))
+    for (const sub of group.subsections) {
+      ids.push(sub.subsectionBlock.id)
+      ids.push(...sub.children.map((b) => b.id))
+    }
+    return ids
+  }
+
+  // Intercept remove: show modal for sections with children
+  const handleRemoveRequest = useCallback(
+    (blockId: string) => {
+      // Check if it's a section with children
+      const group = sectionGroups.find((g) => g.sectionBlockId === blockId && g.sectionBlock)
+      if (group) {
+        const childCount = countSectionChildren(group)
+        if (childCount > 0) {
+          setSectionDeleteTarget({
+            sectionBlockId: blockId,
+            sectionTitle: group.sectionTitle,
+            childBlockIds: collectChildIds(group),
+          })
+          return
+        }
+      }
+      // Also check subsections with children
+      for (const g of sectionGroups) {
+        const sub = g.subsections.find((s) => s.subsectionBlock.id === blockId)
+        if (sub && sub.children.length > 0) {
+          const d = sub.subsectionBlock.data as TextBlockData
+          setSectionDeleteTarget({
+            sectionBlockId: blockId,
+            sectionTitle: d.subtitle || 'Subseção',
+            childBlockIds: sub.children.map((b) => b.id),
+          })
+          return
+        }
+      }
+      // Not a section or no children — remove directly
+      removeBlock(blockId)
+    },
+    [sectionGroups, removeBlock]
+  )
+
+  // Delete section + all children
+  const handleDeleteAll = useCallback(() => {
+    if (!sectionDeleteTarget) return
+    const idsToRemove = new Set([sectionDeleteTarget.sectionBlockId, ...sectionDeleteTarget.childBlockIds])
+    const filtered = blocks.filter((b) => !idsToRemove.has(b.id))
+    const reordered = filtered.map((b, i) => ({ ...b, order: i }))
+    onBlocksChange(reordered)
+    setSectionDeleteTarget(null)
+  }, [blocks, onBlocksChange, sectionDeleteTarget])
+
+  // Move children to target section, then delete the section block
+  const handleMoveAndDelete = useCallback(
+    (targetSectionId: string) => {
+      if (!sectionDeleteTarget) return
+      const sorted = [...blocks].sort((a, b) => a.order - b.order)
+
+      // Find the last block in the target section
+      const targetGroup = sectionGroups.find((g) => g.sectionBlockId === targetSectionId)
+      if (!targetGroup) return
+
+      const targetAllIds: string[] = [targetGroup.sectionBlockId]
+      targetAllIds.push(...targetGroup.directChildren.map((b) => b.id))
+      for (const sub of targetGroup.subsections) {
+        targetAllIds.push(sub.subsectionBlock.id)
+        targetAllIds.push(...sub.children.map((b) => b.id))
+      }
+      const lastTargetIndex = Math.max(...targetAllIds.map((id) => sorted.findIndex((b) => b.id === id)))
+
+      const childBlockIds = new Set(sectionDeleteTarget.childBlockIds)
+      const childBlocks = sorted.filter((b) => childBlockIds.has(b.id))
+      const remaining = sorted.filter(
+        (b) => b.id !== sectionDeleteTarget.sectionBlockId && !childBlockIds.has(b.id)
+      )
+
+      const lastTargetBlock = sorted[lastTargetIndex]
+      const insertIndex = remaining.findIndex((b) => b.id === lastTargetBlock.id) + 1
+      remaining.splice(insertIndex, 0, ...childBlocks)
+
+      const reordered = remaining.map((b, i) => ({ ...b, order: i }))
+      onBlocksChange(reordered)
+      setSectionDeleteTarget(null)
+    },
+    [blocks, onBlocksChange, sectionGroups, sectionDeleteTarget]
+  )
+
+  // Target sections for move (all sections except the one being deleted)
+  const deleteTargetSections = useMemo(() => {
+    if (!sectionDeleteTarget) return []
+    return sectionGroups
+      .filter((g) => g.sectionBlock && g.sectionBlockId !== sectionDeleteTarget.sectionBlockId)
+      .map((g) => ({ value: g.sectionBlockId, label: g.sectionTitle }))
+  }, [sectionGroups, sectionDeleteTarget])
+
   if (sortedBlocks.length === 0) {
     return (
       <div className="text-center py-16 text-gray-400">
@@ -245,6 +352,7 @@ export default function OutlineTree({
   }
 
   return (
+    <>
     <DndContext
       sensors={sensors}
       collisionDetection={closestCenter}
@@ -300,7 +408,7 @@ export default function OutlineTree({
                         level={0}
                         onEdit={onEditBlock}
                         onDuplicate={duplicateBlock}
-                        onRemove={removeBlock}
+                        onRemove={handleRemoveRequest}
                         onChange={updateBlockData}
                       />
                     </div>
@@ -328,7 +436,7 @@ export default function OutlineTree({
                               level={1}
                               onEdit={onEditBlock}
                               onDuplicate={duplicateBlock}
-                              onRemove={removeBlock}
+                              onRemove={handleRemoveRequest}
                               onChange={updateBlockData}
                             />
                           </div>
@@ -376,7 +484,7 @@ export default function OutlineTree({
                                 level={1}
                                 onEdit={onEditBlock}
                                 onDuplicate={duplicateBlock}
-                                onRemove={removeBlock}
+                                onRemove={handleRemoveRequest}
                                 onChange={updateBlockData}
                               />
                             </div>
@@ -402,7 +510,7 @@ export default function OutlineTree({
                                         level={2}
                                         onEdit={onEditBlock}
                                         onDuplicate={duplicateBlock}
-                                        onRemove={removeBlock}
+                                        onRemove={handleRemoveRequest}
                                         onChange={updateBlockData}
                                       />
                                     </div>
@@ -421,7 +529,7 @@ export default function OutlineTree({
                                 level={2}
                                 onEdit={onEditBlock}
                                 onDuplicate={duplicateBlock}
-                                onRemove={removeBlock}
+                                onRemove={handleRemoveRequest}
                                 onChange={updateBlockData}
                               />
                             </div>
@@ -444,7 +552,7 @@ export default function OutlineTree({
                           level={1}
                           onEdit={onEditBlock}
                           onDuplicate={duplicateBlock}
-                          onRemove={removeBlock}
+                          onRemove={handleRemoveRequest}
                           onChange={updateBlockData}
                         />
                       </div>
@@ -457,7 +565,7 @@ export default function OutlineTree({
                           level={1}
                           onEdit={onEditBlock}
                           onDuplicate={duplicateBlock}
-                          onRemove={removeBlock}
+                          onRemove={handleRemoveRequest}
                           onChange={updateBlockData}
                         />
                         {sub.children.map((leaf) => (
@@ -468,7 +576,7 @@ export default function OutlineTree({
                             level={2}
                             onEdit={onEditBlock}
                             onDuplicate={duplicateBlock}
-                            onRemove={removeBlock}
+                            onRemove={handleRemoveRequest}
                             onChange={updateBlockData}
                           />
                         ))}
@@ -483,5 +591,16 @@ export default function OutlineTree({
         </div>
       </SortableContext>
     </DndContext>
+
+    <SectionDeleteModal
+      isOpen={!!sectionDeleteTarget}
+      onClose={() => setSectionDeleteTarget(null)}
+      sectionTitle={sectionDeleteTarget?.sectionTitle ?? ''}
+      childCount={sectionDeleteTarget?.childBlockIds.length ?? 0}
+      targetSections={deleteTargetSections}
+      onDeleteAll={handleDeleteAll}
+      onMoveAndDelete={handleMoveAndDelete}
+    />
+    </>
   )
 }

@@ -156,14 +156,18 @@ export default function OutlineRow({
   }, [confirmingRemove])
 
   const handleRemoveClick = useCallback(() => {
-    if (confirmingRemove) {
+    if (level === 0) {
+      // Sections: parent handles confirmation via modal
+      onRemove(block.id)
+      setShowMenu(false)
+    } else if (confirmingRemove) {
       onRemove(block.id)
       setShowMenu(false)
       setConfirmingRemove(false)
     } else {
       setConfirmingRemove(true)
     }
-  }, [confirmingRemove, onRemove, block.id])
+  }, [level, confirmingRemove, onRemove, block.id])
 
   const isTextBlock = block.type === 'text'
   const textData = isTextBlock ? (block.data as TextBlockData) : null
@@ -210,7 +214,7 @@ export default function OutlineRow({
       style={style}
       data-block-id={block.id}
       className={`
-        group flex items-center gap-2 px-3 py-3.5 rounded-lg border-l-4 transition-all
+        group flex items-center gap-2.5 px-4 py-4 rounded-lg border-l-4 transition-all
         ${getBlockBorderColor(block, meta)}
         ${isDragging ? 'opacity-50 shadow-lg bg-white z-10' : 'bg-white shadow-sm hover:shadow-md'}
       `}
@@ -381,7 +385,7 @@ export default function OutlineRow({
                     clipRule="evenodd"
                   />
                 </svg>
-                {confirmingRemove ? 'Confirmar remoção' : 'Remover'}
+                {level === 0 ? 'Excluir seção' : confirmingRemove ? 'Confirmar remoção' : 'Remover'}
               </button>
             </div>
           )}
