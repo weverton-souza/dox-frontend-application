@@ -3,7 +3,7 @@ import { Outlet } from 'react-router-dom'
 import Sidebar from '@/components/layout/Sidebar'
 import GlobalTopBar from '@/components/layout/GlobalTopBar'
 import ProfessionalModal from '@/components/ProfessionalModal'
-import { useSidebar } from '@/hooks/useSidebar'
+import { useSidebar } from '@/lib/hooks/use-sidebar'
 
 export default function AppLayout() {
   const { isCollapsed, toggle, isMobile, isMobileOpen, openMobile, closeMobile } = useSidebar()

@@ -25,12 +25,10 @@ export function useSidebar() {
   const openMobile = useCallback(() => setIsMobileOpen(true), [])
   const closeMobile = useCallback(() => setIsMobileOpen(false), [])
 
-  // Fechar drawer ao navegar
   useEffect(() => {
     setIsMobileOpen(false)
   }, [location.pathname])
 
-  // Fechar drawer se redimensionar para desktop
   useEffect(() => {
     if (isDesktop) setIsMobileOpen(false)
   }, [isDesktop])
