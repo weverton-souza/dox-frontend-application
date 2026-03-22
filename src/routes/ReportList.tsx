@@ -1,13 +1,12 @@
-import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import type { Report, ReportTemplate, Block } from '@/types'
+import type { Report, ReportTemplate, Block, Page } from '@/types'
 import { getReports, createReport, deleteReport } from '@/lib/api/report-api'
 import { getReportTemplates, deleteReportTemplate } from '@/lib/api/template-api'
 import { getAllTemplates } from '@/lib/default-templates'
 import { formatDateTime } from '@/lib/utils'
 import { createEmptyReport } from '@/lib/report-utils'
 import { useConfirmDelete } from '@/lib/hooks/use-confirm-delete'
-import { usePagination } from '@/lib/hooks/use-pagination'
 import { useError } from '@/contexts/ErrorContext'
 import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
@@ -23,24 +22,26 @@ export default function ReportList() {
   const navigate = useNavigate()
   const { showError } = useError()
 
-  const [reports, setReports] = useState<Report[]>([])
+  const [reportsPage, setReportsPage] = useState<Page<Report> | null>(null)
+  const [currentPage, setCurrentPage] = useState(0)
+  const [pageSize, setPageSize] = useState(10)
   const [customTemplates, setCustomTemplates] = useState<ReportTemplate[]>([])
   const [showNewModal, setShowNewModal] = useState(false)
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (page: number, size: number) => {
     try {
-      const [reportsPage, templates] = await Promise.all([
-        getReports(0, 100),
+      const [rPage, templates] = await Promise.all([
+        getReports(page, size),
         getReportTemplates(),
       ])
-      setReports(reportsPage.content)
+      setReportsPage(rPage)
       setCustomTemplates(templates)
     } catch (err) {
       showError(err)
     }
   }, [showError])
 
-  useEffect(() => { loadData() }, [loadData])
+  useEffect(() => { loadData(currentPage, pageSize) }, [loadData, currentPage, pageSize])
 
   const allTemplates = getAllTemplates(customTemplates)
 
@@ -83,11 +84,11 @@ export default function ReportList() {
   const handleDeleteReport = useCallback(async (id: string) => {
     try {
       await deleteReport(id)
-      await loadData()
+      await loadData(currentPage, pageSize)
     } catch (err) {
       showError(err)
     }
-  }, [loadData, showError])
+  }, [loadData, currentPage, pageSize, showError])
 
   const { confirmId: confirmDeleteId, requestDelete: setConfirmDeleteId, confirmDelete, cancelDelete } = useConfirmDelete(handleDeleteReport)
 
@@ -104,14 +105,10 @@ export default function ReportList() {
     [showError]
   )
 
-  const sortedReports = useMemo(
-    () => [...reports].sort(
-      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-    ),
-    [reports]
-  )
-
-  const { page: paginatedPage, setCurrentPage, pageSize, changePageSize } = usePagination(sortedReports)
+  const changePageSize = useCallback((size: number) => {
+    setPageSize(size)
+    setCurrentPage(0)
+  }, [])
 
   return (
     <>
@@ -125,13 +122,13 @@ export default function ReportList() {
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
         {/* Filters */}
-        {reports.length > 0 && (
+        {reportsPage && reportsPage.totalElements > 0 && (
           <div className="mb-6 hidden sm:flex items-center justify-end">
             <PageSizeSelector id="page-size-reports" pageSize={pageSize} onChange={changePageSize} />
           </div>
         )}
 
-        {reports.length === 0 ? (
+        {!reportsPage || reportsPage.totalElements === 0 ? (
           <EmptyState
             icon={
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-brand-500">
@@ -150,7 +147,7 @@ export default function ReportList() {
           /* Report list */
           <>
           <div className="space-y-3">
-            {paginatedPage.content.map((report) => (
+            {reportsPage.content.map((report) => (
               <div
                 key={report.id}
                 className="bg-white rounded-xl border border-gray-200 hover:border-brand-300 hover:shadow-md transition-all p-3 sm:p-4 flex items-center gap-3 sm:gap-4 cursor-pointer"
@@ -190,7 +187,7 @@ export default function ReportList() {
             ))}
           </div>
           <Pagination
-            page={paginatedPage}
+            page={reportsPage}
             onPageChange={setCurrentPage}
           />
           </>

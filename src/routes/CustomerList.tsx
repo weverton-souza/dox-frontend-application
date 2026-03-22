@@ -1,13 +1,12 @@
-import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import type { Customer, CustomerData, Report } from '@/types'
+import type { Customer, CustomerData, Report, Page } from '@/types'
 import { createEmptyCustomer } from '@/types'
 import { getCustomers, createCustomer, updateCustomer, deleteCustomer } from '@/lib/api/customer-api'
 import { getReports } from '@/lib/api/report-api'
 import { formatDateTime } from '@/lib/utils'
 import { createReportFromCustomer } from '@/lib/report-utils'
 import { useConfirmDelete } from '@/lib/hooks/use-confirm-delete'
-import { usePagination } from '@/lib/hooks/use-pagination'
 import { useError } from '@/contexts/ErrorContext'
 import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
@@ -23,27 +22,42 @@ export default function CustomerList() {
   const navigate = useNavigate()
   const { showError } = useError()
 
-  const [customers, setCustomers] = useState<Customer[]>([])
+  const [customersPage, setCustomersPage] = useState<Page<Customer> | null>(null)
+  const [currentPage, setCurrentPage] = useState(0)
+  const [pageSize, setPageSize] = useState(10)
   const [reports, setReports] = useState<Report[]>([])
   const [search, setSearch] = useState('')
   const [showFormModal, setShowFormModal] = useState(false)
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
-  const loadData = useCallback(async () => {
+  // Debounce search to avoid firing on every keystroke
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+
+  useEffect(() => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
+    searchTimerRef.current = setTimeout(() => {
+      setDebouncedSearch(search)
+      setCurrentPage(0)
+    }, 300)
+    return () => { if (searchTimerRef.current) clearTimeout(searchTimerRef.current) }
+  }, [search])
+
+  const loadData = useCallback(async (page: number, size: number, searchTerm?: string) => {
     try {
-      const [customersPage, reportsPage] = await Promise.all([
-        getCustomers(0, 200),
+      const [cPage, reportsPage] = await Promise.all([
+        getCustomers(page, size, searchTerm),
         getReports(0, 200),
       ])
-      setCustomers(customersPage.content)
+      setCustomersPage(cPage)
       setReports(reportsPage.content)
     } catch (err) {
       showError(err)
     }
   }, [showError])
 
-  useEffect(() => { loadData() }, [loadData])
+  useEffect(() => { loadData(currentPage, pageSize, debouncedSearch || undefined) }, [loadData, currentPage, pageSize, debouncedSearch])
 
   // Count reports per customer
   const reportCountMap = useMemo(() => {
@@ -57,25 +71,10 @@ export default function CustomerList() {
     return map
   }, [reports])
 
-  const filteredCustomers = useMemo(() => {
-    const sorted = [...customers].sort(
-      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-    )
-    if (!search.trim()) return sorted
-    const term = search.toLowerCase()
-    return sorted.filter(
-      (p) =>
-        p.data.name.toLowerCase().includes(term) ||
-        p.data.cpf.includes(term)
-    )
-  }, [customers, search])
-
-  const { page: paginatedPage, setCurrentPage, pageSize, changePageSize, resetPage } = usePagination(filteredCustomers)
-
-  // Reset page when search changes
-  useEffect(() => {
-    resetPage()
-  }, [search, resetPage])
+  const changePageSize = useCallback((size: number) => {
+    setPageSize(size)
+    setCurrentPage(0)
+  }, [])
 
   const handleOpenNew = useCallback(() => {
     setEditingCustomer(createEmptyCustomer())
@@ -90,28 +89,28 @@ export default function CustomerList() {
   const handleSave = useCallback(async () => {
     if (!editingCustomer) return
     try {
-      const isNew = !customers.find((p) => p.id === editingCustomer.id)
+      const isNew = !customersPage?.content.find((p) => p.id === editingCustomer.id)
       if (isNew) {
         await createCustomer(editingCustomer)
       } else {
         await updateCustomer(editingCustomer)
       }
-      await loadData()
+      await loadData(currentPage, pageSize, debouncedSearch || undefined)
       setShowFormModal(false)
       setEditingCustomer(null)
     } catch (err) {
       showError(err)
     }
-  }, [editingCustomer, customers, loadData, showError])
+  }, [editingCustomer, customersPage, loadData, currentPage, pageSize, debouncedSearch, showError])
 
   const handleDeleteCustomer = useCallback(async (id: string) => {
     try {
       await deleteCustomer(id)
-      await loadData()
+      await loadData(currentPage, pageSize, debouncedSearch || undefined)
     } catch (err) {
       showError(err)
     }
-  }, [loadData, showError])
+  }, [loadData, currentPage, pageSize, debouncedSearch, showError])
 
   const { confirmId: confirmDeleteId, requestDelete: setConfirmDeleteId, confirmDelete, cancelDelete } = useConfirmDelete(handleDeleteCustomer)
 
@@ -150,7 +149,7 @@ export default function CustomerList() {
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
         {/* Search + filters */}
-        {customers.length > 0 && (
+        {customersPage && customersPage.totalElements > 0 && (
           <div className="mb-6 flex items-center gap-3">
             <div className="flex-1">
               <Input
@@ -163,7 +162,7 @@ export default function CustomerList() {
           </div>
         )}
 
-        {customers.length === 0 ? (
+        {!customersPage || (customersPage.totalElements === 0 && !debouncedSearch) ? (
           <EmptyState
             icon={
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-brand-500" strokeLinecap="round" strokeLinejoin="round">
@@ -178,15 +177,15 @@ export default function CustomerList() {
             buttonLabel="+ Novo Cliente"
             onAction={handleOpenNew}
           />
-        ) : filteredCustomers.length === 0 ? (
+        ) : customersPage && customersPage.totalElements === 0 && debouncedSearch ? (
           <div className="text-center py-12">
             <p className="text-sm text-gray-500">Nenhum cliente encontrado para "{search}"</p>
           </div>
-        ) : (
+        ) : customersPage ? (
           /* Customer list */
           <>
           <div className="space-y-3">
-            {paginatedPage.content.map((customer) => {
+            {customersPage.content.map((customer) => {
               const customerReports = reportCountMap[customer.id] ?? []
               const isExpanded = expandedId === customer.id
 
@@ -322,18 +321,18 @@ export default function CustomerList() {
             })}
           </div>
           <Pagination
-            page={paginatedPage}
+            page={customersPage}
             onPageChange={setCurrentPage}
           />
           </>
-        )}
+        ) : null}
       </main>
 
       {/* Customer Form Modal */}
       <Modal
         isOpen={showFormModal}
         onClose={() => { setShowFormModal(false); setEditingCustomer(null) }}
-        title={editingCustomer?.createdAt === editingCustomer?.updatedAt && !customers.find(p => p.id === editingCustomer?.id) ? 'Novo Cliente' : 'Editar Cliente'}
+        title={editingCustomer?.createdAt === editingCustomer?.updatedAt && !customersPage?.content.find(p => p.id === editingCustomer?.id) ? 'Novo Cliente' : 'Editar Cliente'}
         size="lg"
       >
         {editingCustomer && (
