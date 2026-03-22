@@ -39,7 +39,9 @@ export default function Register() {
         <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-4">
           <Input
             label="Nome"
+            name="name"
             type="text"
+            autoComplete="name"
             placeholder="Seu nome completo"
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -49,7 +51,9 @@ export default function Register() {
 
           <Input
             label="E-mail"
+            name="email"
             type="email"
+            autoComplete="email"
             placeholder="seu@email.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -58,12 +62,14 @@ export default function Register() {
 
           <Input
             label="Senha"
+            name="password"
             type="password"
-            placeholder="Mínimo 6 caracteres"
+            autoComplete="new-password"
+            placeholder="Mínimo 8 caracteres"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            minLength={6}
+            minLength={8}
           />
 
           <Button type="submit" disabled={loading} className="w-full">

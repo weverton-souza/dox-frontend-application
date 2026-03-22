@@ -21,6 +21,7 @@ import Modal from '@/components/ui/Modal'
 import Input from '@/components/ui/Input'
 import StatusSelector from '@/components/editor/StatusSelector'
 import { HistoryIcon, SaveIcon } from '@/components/icons'
+import SaveStatusIndicator from '@/components/ui/SaveStatusIndicator'
 
 export default function ReportEditor() {
   const { id } = useParams<{ id: string }>()
@@ -394,21 +395,7 @@ export default function ReportEditor() {
             />
           </div>
 
-          {/* Save status */}
-          <div className="flex items-center gap-1.5 text-xs shrink-0">
-            {saveStatus === 'saved' && (
-              <span className="w-2 h-2 rounded-full bg-green-500" title="Salvo" />
-            )}
-            {saveStatus === 'saving' && (
-              <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" title="Salvando..." />
-            )}
-            {saveStatus === 'unsaved' && (
-              <span className="w-2 h-2 rounded-full bg-orange-500" title="Não salvo" />
-            )}
-            <span className="text-gray-500 hidden sm:inline">
-              {saveStatus === 'saved' ? 'Salvo' : saveStatus === 'saving' ? 'Salvando...' : 'Não salvo'}
-            </span>
-          </div>
+          <SaveStatusIndicator status={saveStatus} />
 
           <StatusSelector status={report.status} onChange={handleStatusChange} />
 
@@ -604,7 +591,6 @@ export default function ReportEditor() {
           <div className="hidden lg:block flex-1 min-w-0 sticky top-16 h-[calc(100vh-4rem)] py-4">
             <DocxPreviewPanel
               report={report}
-              onClose={() => setShowDocxPreview(false)}
               refreshKey={previewRefreshKey}
             />
           </div>

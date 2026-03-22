@@ -14,7 +14,7 @@ interface AuthContextValue {
   user: AuthUser | null
   isAuthenticated: boolean
   isLoading: boolean
-  login: (credentials: LoginRequest) => Promise<void>
+  login: (credentials: LoginRequest, rememberMe?: boolean) => Promise<void>
   register: (data: RegisterRequest) => Promise<void>
   logout: () => Promise<void>
   switchTenant: (tenantId: string) => Promise<void>
@@ -74,8 +74,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => setOnSessionExpired(null)
   }, [])
 
-  const login = useCallback(async (credentials: LoginRequest) => {
-    const response = await apiLogin(credentials)
+  const login = useCallback(async (credentials: LoginRequest, rememberMe = true) => {
+    const response = await apiLogin(credentials, rememberMe)
     setUser(authResponseToUser(response))
   }, [])
 

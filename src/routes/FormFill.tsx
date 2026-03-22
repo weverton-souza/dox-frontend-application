@@ -12,6 +12,8 @@ import { getCustomer } from '@/lib/api/customer-api'
 import { useAutoSave } from '@/lib/hooks/use-auto-save'
 import { useFormValidation } from '@/lib/hooks/use-form-validation'
 import { useSortedFields } from '@/lib/hooks/use-sorted-fields'
+import Spinner from '@/components/ui/Spinner'
+import SaveStatusIndicator from '@/components/ui/SaveStatusIndicator'
 import FormFieldRenderer from '@/components/form-fill/FormFieldRenderer'
 
 export default function FormFill() {
@@ -140,7 +142,7 @@ export default function FormFill() {
   if (!form || !response) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full" />
+        <Spinner />
       </div>
     )
   }
@@ -166,17 +168,7 @@ export default function FormFill() {
             </h1>
           </div>
 
-          {/* Save status */}
-          <div className="shrink-0 flex items-center gap-1.5">
-            <div className={`w-1.5 h-1.5 rounded-full transition-colors ${
-              saveStatus === 'saved' ? 'bg-green-400' :
-              saveStatus === 'saving' ? 'bg-yellow-400 animate-pulse' :
-              'bg-gray-300'
-            }`} />
-            <span className="text-xs text-gray-400">
-              {saveStatus === 'saving' ? 'Salvando...' : saveStatus === 'saved' ? 'Salvo' : ''}
-            </span>
-          </div>
+          <SaveStatusIndicator status={saveStatus} />
         </div>
       </header>
 
