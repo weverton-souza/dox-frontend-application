@@ -8,7 +8,7 @@ import { createReportTemplate, getScoreTableTemplates, getChartTemplates } from 
 import { getFormById, getFormResponseById } from '@/lib/api/form-api'
 import { useError } from '@/contexts/ErrorContext'
 import { createBlock, computeBlockMetas } from '@/lib/utils'
-import { useVersioning } from '@/hooks/useVersioning'
+import { useVersioning } from '@/lib/hooks/use-versioning'
 import { useAutoSave } from '@/lib/hooks/use-auto-save'
 import { useClickOutside } from '@/lib/hooks/use-click-outside'
 import OutlineTree from '@/components/editor/OutlineTree'

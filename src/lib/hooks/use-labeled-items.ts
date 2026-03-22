@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { TextBlockData, LabeledItem } from '@/types'
+import type { TextBlockData, LabeledItem } from '@/types'
 
 export function useLabeledItems(
   data: TextBlockData,

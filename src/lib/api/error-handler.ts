@@ -1,4 +1,5 @@
-import type { ApiErrorCode } from '@/types'
+import { isAxiosError } from 'axios'
+import type { ApiErrorCode, ProblemDetail } from '@/types'
 import { ApiError, NetworkError } from '@/lib/api/api-client'
 
 const ERROR_MESSAGES: Record<ApiErrorCode, string> = {
@@ -71,6 +72,49 @@ export function parseError(error: unknown): ParsedError {
       colorClass: 'bg-red-100 text-red-600',
       iconType: 'error',
       isAuthError: false,
+    }
+  }
+
+  if (isAxiosError(error)) {
+    if (!error.response) {
+      return {
+        title: 'Erro de Conexão',
+        message: 'Não foi possível conectar ao servidor. Verifique sua conexão.',
+        errorCode: 'INTERNAL_ERROR',
+        colorClass: 'bg-red-100 text-red-600',
+        iconType: 'error',
+        isAuthError: false,
+      }
+    }
+
+    const data = error.response.data as Partial<ProblemDetail> | null
+    if (data && typeof data.type === 'string' && data.type.startsWith('urn:dox:error:')) {
+      const code = data.properties?.errorCode ?? 'INTERNAL_ERROR'
+      const icon = ERROR_ICONS[code] ?? ERROR_ICONS.INTERNAL_ERROR
+      return {
+        title: data.title || 'Erro',
+        message: data.detail || ERROR_MESSAGES[code],
+        errorCode: code,
+        colorClass: icon.colorClass,
+        iconType: icon.iconType,
+        validationErrors: data.properties?.errors?.map((e) => ({
+          field: e.field,
+          message: e.message,
+        })),
+        isAuthError: SESSION_EXPIRED_CODES.includes(code),
+      }
+    }
+
+    const detail = (data as Record<string, unknown> | null)?.detail
+    if (typeof detail === 'string') {
+      return {
+        title: 'Erro',
+        message: detail,
+        errorCode: 'INTERNAL_ERROR',
+        colorClass: 'bg-red-100 text-red-600',
+        iconType: 'error',
+        isAuthError: false,
+      }
     }
   }
 
