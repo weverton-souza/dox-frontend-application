@@ -5,7 +5,6 @@ import { generateDocx } from '@/lib/docx-engine'
 
 interface DocxPreviewPanelProps {
   report: Report
-  onClose: () => void
   refreshKey: number
 }
 

@@ -26,6 +26,8 @@ import { useSortedFields } from '@/lib/hooks/use-sorted-fields'
 import { getAllTemplates } from '@/lib/default-templates'
 import { getReportTemplates } from '@/lib/api/template-api'
 import Button from '@/components/ui/Button'
+import Spinner from '@/components/ui/Spinner'
+import SaveStatusIndicator from '@/components/ui/SaveStatusIndicator'
 import QuestionCard from '@/components/form-builder/QuestionCard'
 import FloatingToolbar from '@/components/form-builder/FloatingToolbar'
 import TemplateLinkModal from '@/components/form-builder/TemplateLinkModal'
@@ -324,7 +326,7 @@ export default function FormBuilder() {
   if (!form) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full" />
+        <Spinner />
       </div>
     )
   }
@@ -345,17 +347,7 @@ export default function FormBuilder() {
               </svg>
             </button>
 
-            {/* Save status */}
-            <div className="flex items-center gap-1.5">
-              <div className={`w-2 h-2 rounded-full ${
-                saveStatus === 'saved' ? 'bg-green-400' :
-                saveStatus === 'saving' ? 'bg-yellow-400' :
-                'bg-gray-300'
-              }`} />
-              <span className="text-xs text-gray-400 hidden sm:inline">
-                {saveStatus === 'saved' ? 'Salvo' : saveStatus === 'saving' ? 'Salvando...' : ''}
-              </span>
-            </div>
+            <SaveStatusIndicator status={saveStatus} />
           </div>
 
           {/* Tabs */}

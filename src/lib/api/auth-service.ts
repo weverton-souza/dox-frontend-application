@@ -1,8 +1,9 @@
 import axios from 'axios'
 import type { LoginRequest, RegisterRequest, AuthResponse, AuthUser } from '@/types'
-import { api, setAccessToken, setRefreshToken, clearTokens, getRefreshToken, API_BASE_URL } from '@/lib/api/api-client'
+import { api, setAccessToken, setRefreshToken, setRememberMe, clearTokens, getRefreshToken, API_BASE_URL } from '@/lib/api/api-client'
 
-export async function login(credentials: LoginRequest): Promise<AuthResponse> {
+export async function login(credentials: LoginRequest, rememberMe = true): Promise<AuthResponse> {
+  setRememberMe(rememberMe)
   const { data } = await api.post<AuthResponse>('/auth/login', credentials)
   setAccessToken(data.accessToken)
   setRefreshToken(data.refreshToken)
@@ -66,10 +67,6 @@ export async function switchTenant(tenantId: string): Promise<AuthResponse> {
   setAccessToken(data.accessToken)
   setRefreshToken(data.refreshToken)
   return data
-}
-
-export function isAuthenticated(): boolean {
-  return !!getRefreshToken()
 }
 
 export function authResponseToUser(response: AuthResponse): AuthUser {

@@ -9,8 +9,8 @@ let accessToken: string | null = null
 const REFRESH_TOKEN_KEY = 'dox_refresh_token'
 const ACCESS_TOKEN_KEY = 'dox_access_token'
 const USER_KEY = 'dox_user'
+const REMEMBER_ME_KEY = 'dox_remember_me'
 
-// Restore accessToken from sessionStorage on module load (survives page refresh)
 accessToken = sessionStorage.getItem(ACCESS_TOKEN_KEY)
 
 export function getAccessToken(): string | null {
@@ -26,15 +26,29 @@ export function setAccessToken(token: string | null): void {
   }
 }
 
+export function getRememberMe(): boolean {
+  return localStorage.getItem(REMEMBER_ME_KEY) === 'true'
+}
+
+export function setRememberMe(value: boolean): void {
+  localStorage.setItem(REMEMBER_ME_KEY, String(value))
+}
+
 export function getRefreshToken(): string | null {
   return localStorage.getItem(REFRESH_TOKEN_KEY)
+    ?? sessionStorage.getItem(REFRESH_TOKEN_KEY)
 }
 
 export function setRefreshToken(token: string | null): void {
   if (token) {
-    localStorage.setItem(REFRESH_TOKEN_KEY, token)
+    if (getRememberMe()) {
+      localStorage.setItem(REFRESH_TOKEN_KEY, token)
+    } else {
+      sessionStorage.setItem(REFRESH_TOKEN_KEY, token)
+    }
   } else {
     localStorage.removeItem(REFRESH_TOKEN_KEY)
+    sessionStorage.removeItem(REFRESH_TOKEN_KEY)
   }
 }
 
@@ -53,6 +67,7 @@ export function setStoredUser(json: string | null): void {
 export function clearTokens(): void {
   accessToken = null
   localStorage.removeItem(REFRESH_TOKEN_KEY)
+  sessionStorage.removeItem(REFRESH_TOKEN_KEY)
   sessionStorage.removeItem(ACCESS_TOKEN_KEY)
   sessionStorage.removeItem(USER_KEY)
 }
