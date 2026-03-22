@@ -3,9 +3,10 @@ import { useParams } from 'react-router-dom'
 import type { PublicFormData, FormFieldAnswer } from '@/types'
 import { createEmptyFormFieldAnswer } from '@/types'
 import { getPublicForm, submitPublicForm } from '@/lib/api/public-form-api'
+import { parseError } from '@/lib/api/error-handler'
 import { useFormValidation } from '@/lib/hooks/use-form-validation'
 import { useSortedFields } from '@/lib/hooks/use-sorted-fields'
-import FormFieldRenderer from '@/components/form-fill/FormFieldRenderer'
+import FormSectionFields from '@/components/form-fill/FormSectionFields'
 
 type PageState = 'loading' | 'form' | 'success' | 'error'
 
@@ -30,13 +31,9 @@ export default function PublicFormFill() {
         setAnswers(initialAnswers)
         setPageState('form')
       })
-      .catch((err) => {
-        const detail = err?.response?.data?.detail || err?.response?.data?.message
-        if (detail) {
-          setErrorMessage(detail)
-        } else {
-          setErrorMessage('Este link não é válido ou já expirou.')
-        }
+      .catch((err: unknown) => {
+        const parsed = parseError(err)
+        setErrorMessage(parsed.message || 'Este link não é válido ou já expirou.')
         setPageState('error')
       })
   }, [token])
@@ -63,8 +60,8 @@ export default function PublicFormFill() {
       await submitPublicForm(token, formData.customerName ?? '', answers)
       setPageState('success')
     } catch (err: unknown) {
-      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
-      setErrorMessage(detail || 'Erro ao enviar respostas. Tente novamente.')
+      const parsed = parseError(err)
+      setErrorMessage(parsed.message || 'Erro ao enviar respostas. Tente novamente.')
       setPageState('error')
     } finally {
       setSubmitting(false)
@@ -155,63 +152,12 @@ export default function PublicFormFill() {
           </div>
         </div>
 
-        {sectionGroups.map((group) => (
-          <div key={group.sectionFieldId}>
-            {group.sectionField && (
-              <div className="pt-4">
-                <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-                  <div className="h-1.5 bg-brand-400" />
-                  <div className="px-6 py-4">
-                    <h2 className="text-base font-medium text-gray-800">
-                      {group.sectionField.label || 'Seção sem título'}
-                    </h2>
-                    {group.sectionField.description && (
-                      <p className="text-xs text-gray-400 mt-1">{group.sectionField.description}</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {group.children.map((field) => {
-              const hasError = validationErrors.has(field.id)
-
-              return (
-                <div
-                  key={field.id}
-                  className={`bg-white rounded-lg shadow-sm px-6 py-5 transition-shadow mt-3 ${
-                    hasError
-                      ? 'ring-1 ring-red-400 shadow-red-100'
-                      : 'hover:shadow-md'
-                  }`}
-                >
-                  <label className="block text-sm text-gray-900 mb-3">
-                    {field.label || '(pergunta não definida)'}
-                    {field.required && <span className="text-red-500 ml-0.5">*</span>}
-                  </label>
-                  {field.description && (
-                    <p className="text-xs text-gray-400 mb-4 leading-relaxed">{field.description}</p>
-                  )}
-
-                  <FormFieldRenderer
-                    field={field}
-                    answer={getAnswer(field.id)}
-                    onChange={handleAnswerChange}
-                  />
-
-                  {hasError && (
-                    <p className="text-xs text-red-500 mt-3 flex items-center gap-1">
-                      <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zm0 10a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
-                      </svg>
-                      Este campo é obrigatório
-                    </p>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        ))}
+        <FormSectionFields
+          sectionGroups={sectionGroups}
+          getAnswer={getAnswer}
+          onAnswerChange={handleAnswerChange}
+          validationErrors={validationErrors}
+        />
 
         <div className="flex items-center justify-center pt-6 pb-10">
           <button
