@@ -1,0 +1,72 @@
+name: PR Quality Check
+
+on:
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  validate-pr:
+    name: Validate pull request
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate commit messages
+        run: |
+          FORBIDDEN="claude|anthropic|noreply@anthropic\.com|Co-Authored-By:.*Claude|Generated with Claude|claude\.com/claude-code|claude-code"
+
+          echo "Validando mensagens de commit..."
+
+          COMMITS=$(git log origin/${{ github.base_ref }}..HEAD --format="%H")
+
+          FOUND=0
+          for COMMIT in $COMMITS; do
+            MSG=$(git log -1 --format="%B" "$COMMIT")
+            if echo "$MSG" | grep -qiE "$FORBIDDEN"; then
+              echo "::error::Commit $COMMIT contém termo proibido na mensagem:"
+              echo "$MSG"
+              echo "---"
+              FOUND=1
+            fi
+          done
+
+          if [ "$FOUND" -eq 1 ]; then
+            echo ""
+            echo "============================================"
+            echo "  PR BLOQUEADA"
+            echo "============================================"
+            echo "  Commits contêm termos não permitidos."
+            echo "  Reescreva as mensagens com:"
+            echo "  git rebase -i origin/${{ github.base_ref }}"
+            echo "============================================"
+            exit 1
+          fi
+
+          echo "Mensagens de commit validadas."
+
+      - name: Validate file contents
+        run: |
+          FORBIDDEN="noreply@anthropic\.com|Co-Authored-By:.*Claude|Generated with Claude|claude\.com/claude-code"
+
+          echo "Validando conteúdo dos arquivos alterados..."
+
+          DIFF=$(git diff origin/${{ github.base_ref }}..HEAD)
+          MATCHES=$(echo "$DIFF" | grep -iE "^\+" | grep -v "^+++" | grep -iE "$FORBIDDEN" || true)
+
+          if [ -n "$MATCHES" ]; then
+            echo "::error::Arquivos contêm termos não permitidos:"
+            echo "$MATCHES"
+            echo ""
+            echo "============================================"
+            echo "  PR BLOQUEADA"
+            echo "============================================"
+            echo "  Remova as referências e faça push novamente."
+            echo "============================================"
+            exit 1
+          fi
+
+          echo "Conteúdo dos arquivos validado."
