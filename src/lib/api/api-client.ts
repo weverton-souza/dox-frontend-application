@@ -126,28 +126,49 @@ export function setOnSessionExpired(callback: (() => void) | null): void {
   onSessionExpired = callback
 }
 
-// ========== Response Interceptor (auto-refresh) ==========
+// ========== Shared Refresh Logic ==========
 
-let refreshPromise: Promise<boolean> | null = null
+// The refresh endpoint returns the full AuthResponse (tokens + user info).
+// We type it loosely here to avoid importing AuthResponse into api-client.
+// The auth-service casts the result to AuthResponse.
+type RefreshResult = { accessToken: string; refreshToken: string } & Record<string, unknown>
 
-async function refreshAccessToken(): Promise<boolean> {
+let refreshPromise: Promise<RefreshResult | null> | null = null
+
+/**
+ * Single refresh function used by both the interceptor and AuthContext.
+ * Deduplicates concurrent calls and manages token storage.
+ */
+export function refreshTokens(): Promise<RefreshResult | null> {
+  if (refreshPromise) return refreshPromise
+
   const refresh = getRefreshToken()
-  if (!refresh) return false
+  if (!refresh) return Promise.resolve(null)
 
-  try {
-    const res = await axios.post<{ accessToken: string; refreshToken: string }>(
-      `${API_BASE_URL}/auth/refresh`,
-      { refreshToken: refresh } satisfies RefreshRequest,
-      { headers: { 'Content-Type': 'application/json' } },
-    )
-    setAccessToken(res.data.accessToken)
-    setRefreshToken(res.data.refreshToken)
-    return true
-  } catch {
-    clearTokens()
-    return false
-  }
+  refreshPromise = (async () => {
+    try {
+      const res = await axios.post<RefreshResult>(
+        `${API_BASE_URL}/auth/refresh`,
+        { refreshToken: refresh } satisfies RefreshRequest,
+        { headers: { 'Content-Type': 'application/json' } },
+      )
+      setAccessToken(res.data.accessToken)
+      setRefreshToken(res.data.refreshToken)
+      return res.data
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response && err.response.status < 500) {
+        clearTokens()
+      }
+      return null
+    } finally {
+      refreshPromise = null
+    }
+  })()
+
+  return refreshPromise
 }
+
+// ========== Response Interceptor (auto-refresh) ==========
 
 function forceSessionExpired(): void {
   clearTokens()
@@ -185,15 +206,8 @@ api.interceptors.response.use(
       if (shouldRefresh) {
         (originalRequest as InternalAxiosRequestConfig & { _retry?: boolean })._retry = true
 
-        // Deduplicate concurrent refresh attempts
-        if (!refreshPromise) {
-          refreshPromise = refreshAccessToken().finally(() => {
-            refreshPromise = null
-          })
-        }
-
-        const refreshed = await refreshPromise
-        if (refreshed) {
+        const result = await refreshTokens()
+        if (result) {
           originalRequest.headers.Authorization = `Bearer ${accessToken}`
           return api(originalRequest)
         }

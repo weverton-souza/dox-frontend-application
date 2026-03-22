@@ -94,7 +94,7 @@ export default function ReportEditor() {
     createExportSnapshot,
     createManualSnapshot,
     createSnapshot,
-  } = useVersioning(report)
+  } = useVersioning(report, showError)
 
   const handleUpdateReport = useCallback(
     (updates: Partial<Report>) => {

@@ -3,7 +3,10 @@ import type { Report, ReportVersion } from '@/types'
 import { REPORT_STATUS_LABELS } from '@/types'
 import { getReportVersions, createReportVersion } from '@/lib/api/report-api'
 
-export function useVersioning(report: Report | null) {
+export function useVersioning(
+  report: Report | null,
+  onError?: (err: unknown) => void,
+) {
   const [versions, setVersions] = useState<ReportVersion[]>([])
 
   const refreshVersions = useCallback(async () => {
@@ -11,10 +14,10 @@ export function useVersioning(report: Report | null) {
     try {
       const v = await getReportVersions(report.id)
       setVersions(v)
-    } catch {
-      // ignore
+    } catch (err) {
+      onError?.(err)
     }
-  }, [report])
+  }, [report, onError])
 
   const createSnapshot = useCallback(
     async (description: string) => {
@@ -23,11 +26,11 @@ export function useVersioning(report: Report | null) {
         await createReportVersion(report.id, { description })
         const v = await getReportVersions(report.id)
         setVersions(v)
-      } catch {
-        // ignore
+      } catch (err) {
+        onError?.(err)
       }
     },
-    [report]
+    [report, onError]
   )
 
   const createStatusChangeSnapshot = useCallback(

@@ -1,6 +1,5 @@
-import axios from 'axios'
 import type { LoginRequest, RegisterRequest, AuthResponse, AuthUser } from '@/types'
-import { api, setAccessToken, setRefreshToken, setRememberMe, clearTokens, getRefreshToken, API_BASE_URL } from '@/lib/api/api-client'
+import { api, setAccessToken, setRefreshToken, setRememberMe, clearTokens, getRefreshToken, refreshTokens } from '@/lib/api/api-client'
 
 export async function login(credentials: LoginRequest, rememberMe = true): Promise<AuthResponse> {
   setRememberMe(rememberMe)
@@ -28,38 +27,14 @@ export async function logout(): Promise<void> {
   }
 }
 
-let refreshPromise: Promise<AuthResponse | null> | null = null
-
+/**
+ * Attempts to refresh the session using the shared refreshTokens() from api-client.
+ * Returns the full AuthResponse if successful, null otherwise.
+ */
 export async function refreshSession(): Promise<AuthResponse | null> {
-  // Deduplicate concurrent calls (e.g. React StrictMode double-mount)
-  if (refreshPromise) return refreshPromise
-
-  const refreshToken = getRefreshToken()
-  if (!refreshToken) return null
-
-  refreshPromise = (async () => {
-    try {
-      // Use raw axios to bypass interceptors — avoids recursive refresh loop
-      const { data } = await axios.post<AuthResponse>(
-        `${API_BASE_URL}/auth/refresh`,
-        { refreshToken },
-        { headers: { 'Content-Type': 'application/json' } },
-      )
-      setAccessToken(data.accessToken)
-      setRefreshToken(data.refreshToken)
-      return data
-    } catch (err) {
-      // Only clear tokens on auth rejection (4xx), not on network/server errors
-      if (axios.isAxiosError(err) && err.response && err.response.status < 500) {
-        clearTokens()
-      }
-      return null
-    } finally {
-      refreshPromise = null
-    }
-  })()
-
-  return refreshPromise
+  const result = await refreshTokens()
+  if (!result) return null
+  return result as unknown as AuthResponse
 }
 
 export async function switchTenant(tenantId: string): Promise<AuthResponse> {
