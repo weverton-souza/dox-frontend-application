@@ -25,8 +25,9 @@ import {
 } from '@/lib/api/customer-api'
 import { getReportsByCustomer } from '@/lib/api/report-api'
 import { formatDateTime, formatDate } from '@/lib/utils'
-import { createReportFromCustomer } from '@/lib/report-utils'
+import { createReportFromCustomer, createReportFromTemplate } from '@/lib/report-utils'
 import { useError } from '@/contexts/ErrorContext'
+import NewReportModal from '@/components/NewReportModal'
 import Input from '@/components/ui/Input'
 import TextArea from '@/components/ui/TextArea'
 import Button from '@/components/ui/Button'
@@ -109,6 +110,7 @@ export default function CustomerProfile() {
 
   // Reports
   const [reports, setReports] = useState<Report[]>([])
+  const [showNewReportModal, setShowNewReportModal] = useState(false)
 
   // Notes
   const [notes, setNotes] = useState<CustomerNote[]>([])
@@ -171,10 +173,25 @@ export default function CustomerProfile() {
     }
   }, [customer, editData, showError])
 
-  const handleCreateReport = useCallback(async () => {
+  const handleCreateReport = useCallback(() => {
+    if (!customer) return
+    setShowNewReportModal(true)
+  }, [customer])
+
+  const handleCreateBlankReport = useCallback(async () => {
     if (!customer) return
     try {
       const report = await createReportFromCustomer(customer)
+      navigate(`/reports/${report.id}`)
+    } catch (err) {
+      showError(err)
+    }
+  }, [customer, navigate, showError])
+
+  const handleCreateFromTemplate = useCallback(async (template: import('@/types').ReportTemplate) => {
+    if (!customer) return
+    try {
+      const report = await createReportFromTemplate(customer, template)
       navigate(`/reports/${report.id}`)
     } catch (err) {
       showError(err)
@@ -653,6 +670,16 @@ export default function CustomerProfile() {
           {sectionRenderers[activeSection]()}
         </div>
       </div>
+
+      {customer && (
+        <NewReportModal
+          isOpen={showNewReportModal}
+          onClose={() => setShowNewReportModal(false)}
+          customer={customer}
+          onSelectTemplate={handleCreateFromTemplate}
+          onSelectBlank={handleCreateBlankReport}
+        />
+      )}
     </div>
   )
 }

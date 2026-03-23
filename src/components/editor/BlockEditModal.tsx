@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import type {
   Block,
   BlockData,
@@ -11,11 +11,14 @@ import type {
   ReferencesData,
   ClosingPageData,
   Customer,
+  AiGenerationResponse,
 } from '@/types'
 import { BLOCK_TYPE_LABELS } from '@/types'
 import { BLOCK_TYPE_COLORS, getBlockTypeIcon } from '@/lib/block-constants'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
+import AiGenerateButton from '@/components/ai/AiGenerateButton'
+import AiRegenerateBar from '@/components/ai/AiRegenerateBar'
 import IdentificationBlock from '@/components/blocks/IdentificationBlock'
 import TextBlockModal from '@/components/blocks/TextBlockModal'
 import ScoreTableBlock from '@/components/blocks/ScoreTableBlock'
@@ -30,6 +33,10 @@ interface BlockEditModalProps {
   onChange: (blockId: string, data: BlockData) => void
   customers?: Customer[]
   onCustomerSelected?: (customerId: string) => void
+  aiAvailable?: boolean
+  onGenerateSection?: (sectionType: string) => Promise<AiGenerationResponse | null>
+  onRegenerateSection?: (sectionType: string, generationId: string) => Promise<AiGenerationResponse | null>
+  aiLoading?: boolean
 }
 
 const MODAL_SIZES: Record<BlockType, 'sm' | 'md' | 'lg' | 'xl' | '2xl'> = {
@@ -76,8 +83,12 @@ function getModalTitle(block: Block): string {
   }
 }
 
-export default function BlockEditModal({ block, onClose, onChange, customers, onCustomerSelected }: BlockEditModalProps) {
+export default function BlockEditModal({
+  block, onClose, onChange, customers, onCustomerSelected,
+  aiAvailable = false, onGenerateSection, onRegenerateSection, aiLoading = false,
+}: BlockEditModalProps) {
   const [localData, setLocalData] = useState<BlockData | null>(null)
+  const [generating, setGenerating] = useState(false)
 
   useEffect(() => {
     if (block) {
@@ -86,6 +97,41 @@ export default function BlockEditModal({ block, onClose, onChange, customers, on
       setLocalData(null)
     }
   }, [block])
+
+  const isAiEligible = block?.type === 'text' || block?.type === 'info-box'
+  const showAiButton = aiAvailable && isAiEligible && onGenerateSection
+  const isGeneratedByAi = block?.generatedByAi === true
+
+  const sectionType = block ? (() => {
+    const d = block.data as { title?: string; subtitle?: string; label?: string }
+    return d.title || d.subtitle || d.label || 'Seção'
+  })() : ''
+
+  const handleAiGenerate = useCallback(async () => {
+    if (!onGenerateSection || !block) return
+    setGenerating(true)
+    const result = await onGenerateSection(sectionType)
+    if (result) {
+      setLocalData(prev => {
+        if (!prev) return prev
+        return { ...prev, content: result.text } as BlockData
+      })
+    }
+    setGenerating(false)
+  }, [onGenerateSection, block, sectionType])
+
+  const handleAiRegenerate = useCallback(async () => {
+    if (!onRegenerateSection || !block?.generationId) return
+    setGenerating(true)
+    const result = await onRegenerateSection(sectionType, block.generationId)
+    if (result) {
+      setLocalData(prev => {
+        if (!prev) return prev
+        return { ...prev, content: result.text } as BlockData
+      })
+    }
+    setGenerating(false)
+  }, [onRegenerateSection, block, sectionType])
 
   if (!block || !localData) return null
 
@@ -159,13 +205,25 @@ export default function BlockEditModal({ block, onClose, onChange, customers, on
   }
 
   const footer = (
-    <div className="flex justify-end gap-3">
-      <Button variant="ghost" onClick={handleCancel}>
-        Cancelar
-      </Button>
-      <Button onClick={handleSave}>
-        Salvar
-      </Button>
+    <div className="flex items-center justify-between gap-3">
+      <div>
+        {showAiButton && (
+          <AiGenerateButton
+            onClick={handleAiGenerate}
+            loading={generating || aiLoading}
+            disabled={generating || aiLoading}
+            size="sm"
+          />
+        )}
+      </div>
+      <div className="flex gap-3">
+        <Button variant="ghost" onClick={handleCancel}>
+          Cancelar
+        </Button>
+        <Button onClick={handleSave}>
+          Salvar
+        </Button>
+      </div>
     </div>
   )
 
@@ -182,6 +240,13 @@ export default function BlockEditModal({ block, onClose, onChange, customers, on
       footer={footer}
     >
       {renderContent()}
+      {isGeneratedByAi && isAiEligible && (
+        <AiRegenerateBar
+          regenerationsLeft={3}
+          onRegenerate={handleAiRegenerate}
+          loading={generating}
+        />
+      )}
     </Modal>
   )
 }

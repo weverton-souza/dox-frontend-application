@@ -247,7 +247,7 @@ export async function generateReportFromResponse(
   void request
 
   throw new Error(
-    'O serviço de IA ainda não está configurado. ' +
-    'Configure o backend para utilizar a geração automática de laudos.'
+    'O Assistente ainda não está configurado. ' +
+    'Configure o backend para utilizar a redação automática de laudos.'
   )
 }

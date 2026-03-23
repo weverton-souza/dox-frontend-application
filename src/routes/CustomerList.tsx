@@ -5,9 +5,10 @@ import { createEmptyCustomer } from '@/types'
 import { getCustomers, createCustomer, updateCustomer, deleteCustomer } from '@/lib/api/customer-api'
 import { getReports } from '@/lib/api/report-api'
 import { formatDateTime } from '@/lib/utils'
-import { createReportFromCustomer } from '@/lib/report-utils'
+import { createReportFromCustomer, createReportFromTemplate } from '@/lib/report-utils'
 import { useConfirmDelete } from '@/lib/hooks/use-confirm-delete'
 import { useError } from '@/contexts/ErrorContext'
+import NewReportModal from '@/components/NewReportModal'
 import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
 import Input from '@/components/ui/Input'
@@ -30,6 +31,7 @@ export default function CustomerList() {
   const [showFormModal, setShowFormModal] = useState(false)
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [reportCustomer, setReportCustomer] = useState<Customer | null>(null)
 
   // Debounce search to avoid firing on every keystroke
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
@@ -115,16 +117,31 @@ export default function CustomerList() {
   const { confirmId: confirmDeleteId, requestDelete: setConfirmDeleteId, confirmDelete, cancelDelete } = useConfirmDelete(handleDeleteCustomer)
 
   const handleCreateReport = useCallback(
-    async (customer: Customer) => {
-      try {
-        const report = await createReportFromCustomer(customer)
-        navigate(`/reports/${report.id}`)
-      } catch (err) {
-        showError(err)
-      }
+    (customer: Customer) => {
+      setReportCustomer(customer)
     },
-    [navigate, showError]
+    []
   )
+
+  const handleCreateBlankReport = useCallback(async () => {
+    if (!reportCustomer) return
+    try {
+      const report = await createReportFromCustomer(reportCustomer)
+      navigate(`/reports/${report.id}`)
+    } catch (err) {
+      showError(err)
+    }
+  }, [reportCustomer, navigate, showError])
+
+  const handleCreateFromTemplate = useCallback(async (template: import('@/types').ReportTemplate) => {
+    if (!reportCustomer) return
+    try {
+      const report = await createReportFromTemplate(reportCustomer, template)
+      navigate(`/reports/${report.id}`)
+    } catch (err) {
+      showError(err)
+    }
+  }, [reportCustomer, navigate, showError])
 
   const updateEditingField = useCallback(
     (field: keyof CustomerData, value: string) => {
@@ -415,6 +432,16 @@ export default function CustomerList() {
         onConfirm={confirmDelete}
         message="Tem certeza de que deseja excluir este cliente? Esta ação não pode ser desfeita."
       />
+
+      {reportCustomer && (
+        <NewReportModal
+          isOpen={!!reportCustomer}
+          onClose={() => setReportCustomer(null)}
+          customer={reportCustomer}
+          onSelectTemplate={handleCreateFromTemplate}
+          onSelectBlank={handleCreateBlankReport}
+        />
+      )}
     </>
   )
 }

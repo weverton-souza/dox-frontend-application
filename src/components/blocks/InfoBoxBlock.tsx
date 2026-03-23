@@ -1,5 +1,6 @@
-import { useRef } from 'react'
+import { useRef, useMemo } from 'react'
 import type { InfoBoxData, VariableInfo } from '@/types'
+import { isSlateContent, slateContentToPlainText } from '@/types'
 import Input from '@/components/ui/Input'
 import TextArea from '@/components/ui/TextArea'
 import VariablePicker from '@/components/editor/VariablePicker'
@@ -13,23 +14,29 @@ interface InfoBoxBlockProps {
 export default function InfoBoxBlock({ data, onChange, variables }: InfoBoxBlockProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
+  const contentText = useMemo(() => {
+    if (isSlateContent(data.content)) return slateContentToPlainText(data.content)
+    return typeof data.content === 'string' ? data.content : ''
+  }, [data.content])
+
+  const handleContentChange = (value: string) => {
+    onChange({ ...data, content: value })
+  }
+
   const handleInsertVariable = (key: string) => {
     const el = textareaRef.current
     if (!el) {
-      // Fallback: append
-      onChange({ ...data, content: data.content + `{{${key}}}` })
+      handleContentChange(contentText + `{{${key}}}`)
       return
     }
 
     const start = el.selectionStart
     const end = el.selectionEnd
-    const before = data.content.slice(0, start)
-    const after = data.content.slice(end)
+    const before = contentText.slice(0, start)
+    const after = contentText.slice(end)
     const insertion = `{{${key}}}`
-    const newContent = before + insertion + after
-    onChange({ ...data, content: newContent })
+    handleContentChange(before + insertion + after)
 
-    // Restore cursor after insertion
     requestAnimationFrame(() => {
       el.focus()
       const pos = start + insertion.length
@@ -58,14 +65,14 @@ export default function InfoBoxBlock({ data, onChange, variables }: InfoBoxBlock
         </div>
         <TextArea
           ref={textareaRef}
-          value={data.content}
-          onChange={(e) => onChange({ ...data, content: e.target.value })}
+          value={contentText}
+          onChange={(e) => handleContentChange(e.target.value)}
           placeholder="Conteúdo..."
         />
       </div>
 
       {/* Preview */}
-      {(data.label || data.content) && (
+      {(data.label || contentText) && (
         <div>
           <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
             Pré-visualização
@@ -76,9 +83,9 @@ export default function InfoBoxBlock({ data, onChange, variables }: InfoBoxBlock
                 {data.label}
               </p>
             )}
-            {data.content && (
+            {contentText && (
               <p className="text-sm text-gray-700 whitespace-pre-wrap">
-                {data.content}
+                {contentText}
               </p>
             )}
           </div>

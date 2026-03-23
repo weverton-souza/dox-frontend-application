@@ -18,8 +18,16 @@ export async function createForm(form: Partial<Form>): Promise<Form> {
   return data
 }
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 export async function updateForm(form: Form): Promise<Form> {
-  const { data } = await api.put<Form>(`/forms/${form.id}`, form)
+  const payload = {
+    ...form,
+    linkedTemplateId: form.linkedTemplateId && UUID_REGEX.test(form.linkedTemplateId)
+      ? form.linkedTemplateId
+      : null,
+  }
+  const { data } = await api.put<Form>(`/forms/${form.id}`, payload)
   return data
 }
 
