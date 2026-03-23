@@ -20,6 +20,7 @@ import {
   PageBreak,
 } from 'docx'
 import { saveAs } from 'file-saver'
+import type { Block } from '@/types'
 import {
   Report,
   IdentificationData,
@@ -705,12 +706,78 @@ function renderScoreTable(data: ScoreTableData): (Paragraph | Table)[] {
   return elements
 }
 
-function renderInfoBox(data: InfoBoxData): (Paragraph | Table)[] {
+function renderSkippedWarning(block: Block): (Paragraph | Table)[] {
+  const elements: (Paragraph | Table)[] = []
+
+  const title = block.type === 'text'
+    ? (block.data as TextBlockData).title
+    : (block.data as InfoBoxData).label
+  const content = (block.data as { content?: TextBlockData['content'] }).content
+
+  if (title) {
+    elements.push(createSectionHeader(title.toUpperCase()))
+  }
+
+  const hasContent = content && (typeof content === 'string' ? content.trim() : true)
+  const contentParagraphs = hasContent
+    ? contentToDocxParagraphs(content as TextBlockData['content'])
+    : [new Paragraph({ children: [new TextRun({ text: 'Dados insuficientes para gerar esta seção.', size: 22, font: 'Calibri' })] })]
+
+  const AMBER_BG = 'FFF8E1'
+  const AMBER_BORDER = 'F59E0B'
+  const AMBER_LABEL = '92400E'
+
+  elements.push(
+    new Table({
+      rows: [
+        new TableRow({
+          children: [
+            new TableCell({
+              width: { size: PAGE_CONTENT_WIDTH, type: WidthType.DXA },
+              shading: { fill: AMBER_BG, type: ShadingType.CLEAR, color: 'auto' },
+              borders: {
+                top: NO_BORDER,
+                bottom: NO_BORDER,
+                right: NO_BORDER,
+                left: { color: AMBER_BORDER, space: 0, style: BorderStyle.SINGLE, size: 24 },
+              },
+              children: [
+                new Paragraph({
+                  spacing: { after: 60 },
+                  children: [
+                    new TextRun({ text: '⚠ Seção não gerada', bold: true, size: 22, font: 'Calibri', color: AMBER_LABEL }),
+                  ],
+                }),
+                ...contentParagraphs,
+              ],
+              margins: {
+                top: convertInchesToTwip(0.1),
+                bottom: convertInchesToTwip(0.1),
+                left: convertInchesToTwip(0.15),
+                right: convertInchesToTwip(0.15),
+              },
+            }),
+          ],
+        }),
+      ],
+      width: { size: PAGE_CONTENT_WIDTH, type: WidthType.DXA },
+      columnWidths: [PAGE_CONTENT_WIDTH],
+      borders: { top: NO_BORDER, bottom: NO_BORDER, left: NO_BORDER, right: NO_BORDER, insideHorizontal: NO_BORDER },
+    })
+  )
+
+  return elements
+}
+
+function renderInfoBox(data: InfoBoxData, amber = false): (Paragraph | Table)[] {
   if (!data.label && !data.content) return []
+
+  const fillColor = amber ? 'FFF8E1' : LIGHT_BLUE
+  const borderColor = amber ? 'F59E0B' : MEDIUM_BLUE
+  const labelColor = amber ? '92400E' : DARK_BLUE
 
   const elements: (Paragraph | Table)[] = []
 
-  // Create a table with one cell to simulate the box with left border
   const cellChildren: Paragraph[] = []
 
   if (data.label) {
@@ -723,7 +790,7 @@ function renderInfoBox(data: InfoBoxData): (Paragraph | Table)[] {
             bold: true,
             size: 22,
             font: 'Calibri',
-            color: DARK_BLUE,
+            color: labelColor,
           }),
         ],
       })
@@ -731,20 +798,24 @@ function renderInfoBox(data: InfoBoxData): (Paragraph | Table)[] {
   }
 
   if (data.content) {
-    const paragraphs = data.content.split('\n').filter((l) => l.trim())
-    for (const para of paragraphs) {
-      cellChildren.push(
-        new Paragraph({
-          spacing: { after: 60 },
-          children: [
-            new TextRun({
-              text: para,
-              size: 22,
-              font: 'Calibri',
-            }),
-          ],
-        })
-      )
+    if (isSlateContent(data.content)) {
+      cellChildren.push(...parseSlateToDocxParagraphs(data.content))
+    } else {
+      const paragraphs = data.content.split('\n').filter((l: string) => l.trim())
+      for (const para of paragraphs) {
+        cellChildren.push(
+          new Paragraph({
+            spacing: { after: 60 },
+            children: [
+              new TextRun({
+                text: para,
+                size: 22,
+                font: 'Calibri',
+              }),
+            ],
+          })
+        )
+      }
     }
   }
 
@@ -754,13 +825,13 @@ function renderInfoBox(data: InfoBoxData): (Paragraph | Table)[] {
         children: [
           new TableCell({
             width: { size: PAGE_CONTENT_WIDTH, type: WidthType.DXA },
-            shading: { fill: LIGHT_BLUE, type: ShadingType.CLEAR, color: 'auto' },
+            shading: { fill: fillColor, type: ShadingType.CLEAR, color: 'auto' },
             borders: {
               top: NO_BORDER,
               bottom: NO_BORDER,
               right: NO_BORDER,
               left: {
-                color: MEDIUM_BLUE,
+                color: borderColor,
                 space: 0,
                 style: BorderStyle.SINGLE,
                 size: 24,
@@ -1526,6 +1597,12 @@ export async function generateDocx(report: Report): Promise<Blob> {
 
   // Render each block
   for (const block of sortedBlocks) {
+    if (block.skippedByAi) {
+      sectionChildren.push(...renderSkippedWarning(block))
+      sectionChildren.push(new Paragraph({ spacing: { after: 100 }, children: [] }))
+      continue
+    }
+
     switch (block.type) {
       case 'identification':
         sectionChildren.push(...renderIdentification(block.data as IdentificationData))
