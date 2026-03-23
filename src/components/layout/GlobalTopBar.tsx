@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { SettingsIcon } from '@/components/icons'
+import AiUsageBadge from '@/components/ai/AiUsageBadge'
+import { useAiGeneration } from '@/lib/hooks/use-ai-generation'
 
 interface GlobalTopBarProps {
   onOpenProfessionalModal: () => void
@@ -18,6 +20,7 @@ export default function GlobalTopBar({
   const { user, logout } = useAuth()
   const [showUserMenu, setShowUserMenu] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
+  const ai = useAiGeneration()
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -63,6 +66,14 @@ export default function GlobalTopBar({
 
       {/* Spacer */}
       <div className="flex-1" />
+
+      {/* AI Usage Badge */}
+      {ai.isAvailable && ai.usageSummary && (
+        <AiUsageBadge
+          used={ai.usageSummary.used}
+          limit={ai.usageSummary.limit}
+        />
+      )}
 
       {/* Configurações profissionais */}
       <button

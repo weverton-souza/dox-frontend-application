@@ -31,11 +31,12 @@ interface OutlineRowProps {
 }
 
 function getBlockBorderColor(block: Block, meta: BlockMeta): string {
+  if (block.skippedByAi) return 'border-l-amber-400'
   if (block.type !== 'text') return BLOCK_TYPE_BORDER_COLORS[block.type]
   const d = block.data as TextBlockData
-  if (d.title && meta.isSection) return 'border-l-emerald-500'   // seção (título)
-  if (d.subtitle) return 'border-l-teal-500'                     // subtítulo
-  return 'border-l-sky-400'                                       // texto conteúdo
+  if (d.title && meta.isSection) return 'border-l-emerald-500'
+  if (d.subtitle) return 'border-l-teal-500'
+  return 'border-l-sky-400'
 }
 
 function getBlockSummary(block: Block): string {
@@ -53,7 +54,8 @@ function getBlockSummary(block: Block): string {
     }
     case 'info-box': {
       const d = block.data as InfoBoxData
-      return d.content ? d.content.slice(0, 60) + (d.content.length > 60 ? '…' : '') : ''
+      const infoText = isSlateContent(d.content) ? slateContentToPlainText(d.content) : (typeof d.content === 'string' ? d.content : '')
+      return infoText ? infoText.slice(0, 60) + (infoText.length > 60 ? '…' : '') : ''
     }
     case 'references': {
       const d = block.data as ReferencesData
@@ -225,7 +227,7 @@ export default function OutlineRow({
       className={`
         group flex items-center gap-2.5 px-4 py-4 rounded-lg border-l-4 transition-all
         ${getBlockBorderColor(block, meta)}
-        ${isDragging ? 'opacity-50 shadow-lg bg-white z-10' : 'bg-white shadow-sm hover:shadow-md'}
+        ${isDragging ? 'opacity-50 shadow-lg bg-white z-10' : block.skippedByAi ? 'bg-amber-50 shadow-sm hover:shadow-md' : 'bg-white shadow-sm hover:shadow-md'}
       `}
     >
       {/* Drag handle */}
@@ -308,6 +310,17 @@ export default function OutlineRow({
             </svg>
           </span>
         )}
+
+        {/* AI badge */}
+        {block.skippedByAi ? (
+          <span className="inline-flex items-center px-1.5 py-0.5 bg-amber-50 text-amber-600 text-[10px] font-medium rounded shrink-0" title="Dados insuficientes">
+            ⚠
+          </span>
+        ) : block.generatedByAi ? (
+          <span className="inline-flex items-center px-1.5 py-0.5 bg-brand-50 text-brand-600 text-[10px] font-medium rounded shrink-0" title="Gerado pelo Assistente">
+            ✦
+          </span>
+        ) : null}
 
         {/* Block type badge for leaf blocks */}
         {level === 2 && (

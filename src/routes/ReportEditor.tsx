@@ -22,6 +22,16 @@ import Input from '@/components/ui/Input'
 import StatusSelector from '@/components/editor/StatusSelector'
 import { HistoryIcon, SaveIcon } from '@/components/icons'
 import SaveStatusIndicator from '@/components/ui/SaveStatusIndicator'
+import { useAiGeneration } from '@/lib/hooks/use-ai-generation'
+import { countFillableBlocks } from '@/lib/ai-context-builder'
+import AiSparkleIcon from '@/components/ai/AiSparkleIcon'
+import AiLoadingOverlay from '@/components/ai/AiLoadingOverlay'
+import AiUsageBadge from '@/components/ai/AiUsageBadge'
+import AiQuotaAlert from '@/components/ai/AiQuotaAlert'
+import AiUnavailableBanner from '@/components/ai/AiUnavailableBanner'
+import AiFinalizationModal from '@/components/ai/AiFinalizationModal'
+import AiUsageDashboard from '@/components/ai/AiUsageDashboard'
+import AiSectionChecklist from '@/components/ai/AiSectionChecklist'
 
 export default function ReportEditor() {
   const { id } = useParams<{ id: string }>()
@@ -49,6 +59,12 @@ export default function ReportEditor() {
 
   const saveReportFn = useCallback((data: Report) => updateReport(data), [])
   const { saveStatus, scheduleSave, forceSave } = useAutoSave<Report>(saveReportFn)
+
+  const ai = useAiGeneration()
+  const [showUsageDashboard, setShowUsageDashboard] = useState(false)
+  const [showFinalizationModal, setShowFinalizationModal] = useState(false)
+  const [showSectionChecklist, setShowSectionChecklist] = useState(false)
+  const [pendingStatusChange, setPendingStatusChange] = useState<ReportStatus | null>(null)
 
   // Load report, customers, and templates
   useEffect(() => {
@@ -266,11 +282,70 @@ export default function ReportEditor() {
 
   const handleStatusChange = useCallback(
     (newStatus: ReportStatus) => {
+      if (newStatus === 'finalizado' && report?.blocks.some(b => b.generatedByAi || b.skippedByAi)) {
+        setPendingStatusChange(newStatus)
+        setShowFinalizationModal(true)
+        return
+      }
       if (report) createStatusChangeSnapshot(report.status)
       handleUpdateReport({ status: newStatus })
     },
     [report, handleUpdateReport, createStatusChangeSnapshot]
   )
+
+  const handleConfirmFinalization = useCallback(() => {
+    if (report && pendingStatusChange) {
+      createStatusChangeSnapshot(report.status)
+      handleUpdateReport({ status: pendingStatusChange })
+    }
+    setShowFinalizationModal(false)
+    setPendingStatusChange(null)
+  }, [report, pendingStatusChange, handleUpdateReport, createStatusChangeSnapshot])
+
+  const handleGenerateFullReport = useCallback(() => {
+    if (!report || !id) return
+    setShowSectionChecklist(true)
+  }, [report, id])
+
+  const handleConfirmGeneration = useCallback((selectedSections: string[]) => {
+    if (!report || !id) return
+    setShowSectionChecklist(false)
+    ai.generateFullReport(
+      id,
+      report.formResponseId,
+      report.blocks,
+      () => {},
+      selectedSections,
+    )
+  }, [report, id, ai])
+
+  useEffect(() => {
+    if (ai.generationStatus === 'success' && id) {
+      getReport(id).then(reloaded => {
+        if (reloaded) setReport(reloaded)
+      }).catch(() => {})
+    }
+  }, [ai.generationStatus, id])
+
+  const showAiButton = ai.isAvailable && report?.status !== 'finalizado'
+  const fillableCount = report ? countFillableBlocks(report.blocks) : 0
+  const warningCount = report?.blocks.filter(b => b.skippedByAi).length ?? 0
+
+  const sectionNamesForOverlay = useMemo(() => {
+    if (!report) return []
+    return report.blocks
+      .filter(b => {
+        const d = b.data as { title?: string; subtitle?: string; label?: string }
+        if (b.type === 'text') return !!(d.title?.trim())
+        if (b.type === 'info-box') return true
+        return false
+      })
+      .sort((a, b) => a.order - b.order)
+      .map(b => {
+        const d = b.data as { title?: string; subtitle?: string; label?: string }
+        return d.title || d.subtitle || d.label || 'Seção'
+      })
+  }, [report])
 
   const handleRestoreVersion = useCallback(
     (version: ReportVersion) => {
@@ -369,7 +444,7 @@ export default function ReportEditor() {
       }}
     >
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-30 h-14 lg:h-16">
+      <header className="bg-white border-b border-gray-200 sticky top-12 z-30 h-14 lg:h-16 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.08)]">
         <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 h-full flex items-center gap-2 sm:gap-4">
           <button
             type="button"
@@ -399,54 +474,79 @@ export default function ReportEditor() {
 
           <StatusSelector status={report.status} onChange={handleStatusChange} />
 
-          {/* Botões secundários — hidden no mobile */}
-          <button
-            type="button"
-            onClick={createManualSnapshot}
-            className="hidden md:inline-flex p-2 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
-            title="Salvar versão"
-          >
-            <SaveIcon size={18} />
-          </button>
+          {/* Separador */}
+          <div className="hidden md:block w-px h-5 bg-gray-200" />
 
-          <button
-            type="button"
-            onClick={handleOpenVersionHistory}
-            className="hidden md:inline-flex p-2 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
-            title="Histórico de versões"
-          >
-            <HistoryIcon size={18} />
-          </button>
+          {/* Ações de versão */}
+          <div className="hidden md:flex items-center gap-1">
+            <button
+              type="button"
+              onClick={createManualSnapshot}
+              className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+              title="Salvar versão"
+            >
+              <SaveIcon size={16} />
+            </button>
+            <button
+              type="button"
+              onClick={handleOpenVersionHistory}
+              className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+              title="Histórico de versões"
+            >
+              <HistoryIcon size={16} />
+            </button>
+          </div>
 
-          <Button variant="secondary" size="sm" onClick={() => setShowSaveTemplate(true)} className="hidden lg:inline-flex">
-            Salvar como Template
-          </Button>
+          {/* Separador */}
+          <div className="hidden lg:block w-px h-5 bg-gray-200" />
 
-          <Button variant="secondary" size="md" onClick={() => setShowDocxPreview((v) => !v)} className="hidden lg:inline-flex">
-            <span className="flex items-center gap-2">
-              {showDocxPreview ? (
-                <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M3.28 2.22a.75.75 0 00-1.06 1.06l14.5 14.5a.75.75 0 101.06-1.06l-1.745-1.745a10.029 10.029 0 003.3-4.38 1.651 1.651 0 000-1.186A10.004 10.004 0 0010 3c-1.67 0-3.248.41-4.631 1.13L3.28 2.22zM7.905 6.845l1.74 1.74a2.5 2.5 0 012.77 2.77l1.74 1.74a4 4 0 00-6.25-6.25zM9.553 12.894l-1.447-1.447a2.5 2.5 0 01-.007-2.894L6.382 6.836A10.018 10.018 0 00.664 10.59a1.651 1.651 0 000 1.186A10.004 10.004 0 0010 17c1.075 0 2.112-.168 3.088-.485l-1.747-1.747a4.002 4.002 0 01-1.788-1.874z" clipRule="evenodd" />
-                </svg>
-              ) : (
-                <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+          {/* Ações principais */}
+          <div className="hidden lg:flex items-center gap-2">
+            <Button variant="secondary" size="sm" onClick={() => setShowSaveTemplate(true)}>
+              Salvar como Template
+            </Button>
+
+            {showAiButton && fillableCount > 0 && (
+              <Button variant="primary" size="sm" onClick={handleGenerateFullReport} disabled={ai.isGenerating}>
+                <span className="flex items-center gap-1.5">
+                  {ai.isGenerating ? (
+                    <svg className="animate-spin" width={14} height={14} viewBox="0 0 24 24" fill="none">
+                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="32" strokeLinecap="round" />
+                    </svg>
+                  ) : (
+                    <AiSparkleIcon size={14} />
+                  )}
+                  Redigir com Assistente
+                </span>
+              </Button>
+            )}
+          </div>
+
+          {/* Separador */}
+          <div className="hidden lg:block w-px h-5 bg-gray-200" />
+
+          {/* Export */}
+          <div className="flex items-center gap-2">
+            <Button variant="secondary" size="sm" onClick={() => setShowDocxPreview((v) => !v)} className="hidden lg:inline-flex">
+              <span className="flex items-center gap-1.5">
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
                   <path d="M10 12.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z" />
                   <path fillRule="evenodd" d="M.664 10.59a1.651 1.651 0 010-1.186A10.004 10.004 0 0110 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0110 17c-4.257 0-7.893-2.66-9.336-6.41zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
                 </svg>
-              )}
-              Preview
-            </span>
-          </Button>
+                Preview
+              </span>
+            </Button>
 
-          <Button variant="primary" size="md" onClick={handleGenerateDocx}>
-            <span className="flex items-center gap-2">
-              <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M10.75 2.75a.75.75 0 00-1.5 0v8.614L6.295 8.235a.75.75 0 10-1.09 1.03l4.25 4.5a.75.75 0 001.09 0l4.25-4.5a.75.75 0 00-1.09-1.03l-2.955 3.129V2.75z" />
-                <path d="M3.5 12.75a.75.75 0 00-1.5 0v2.5A2.75 2.75 0 004.75 18h10.5A2.75 2.75 0 0018 15.25v-2.5a.75.75 0 00-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5z" />
-              </svg>
-              <span className="hidden sm:inline">.docx</span>
-            </span>
-          </Button>
+            <Button variant="primary" size="sm" onClick={handleGenerateDocx}>
+              <span className="flex items-center gap-1.5">
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M10.75 2.75a.75.75 0 00-1.5 0v8.614L6.295 8.235a.75.75 0 10-1.09 1.03l4.25 4.5a.75.75 0 001.09 0l4.25-4.5a.75.75 0 00-1.09-1.03l-2.955 3.129V2.75z" />
+                  <path d="M3.5 12.75a.75.75 0 00-1.5 0v2.5A2.75 2.75 0 004.75 18h10.5A2.75 2.75 0 0018 15.25v-2.5a.75.75 0 00-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5z" />
+                </svg>
+                .docx
+              </span>
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -477,17 +577,59 @@ export default function ReportEditor() {
             </div>
           )}
 
+          {/* AI alerts */}
+          {ai.isAvailable && ai.usageSummary?.alertLevel && ai.usageSummary.alertMessage && (
+            <div className="pt-3">
+              <AiQuotaAlert
+                alertLevel={ai.usageSummary.alertLevel}
+                alertMessage={ai.usageSummary.alertMessage}
+                overage={ai.usageSummary.overage}
+              />
+            </div>
+          )}
+          {!ai.isAvailable && ai.aiStatus && ai.aiStatus.tierName && (
+            <div className="pt-3">
+              <AiUnavailableBanner />
+            </div>
+          )}
+
           {/* Toolbar */}
-          <div className="pt-4 pb-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-400">{report.blocks.length} blocos</span>
-              </div>
-              <div className="flex items-center gap-1">
+          <div className="pt-4 pb-2 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {ai.isAvailable && ai.usageSummary && (
+                <AiUsageBadge
+                  used={ai.usageSummary.used}
+                  limit={ai.usageSummary.limit}
+                  onClick={() => setShowUsageDashboard(true)}
+                />
+              )}
+              {warningCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const first = report?.blocks.find(b => b.skippedByAi)
+                    if (first) {
+                      const el = document.querySelector(`[data-block-id="${first.id}"]`)
+                      el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                    }
+                  }}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border border-amber-200 bg-amber-50 text-amber-700 transition-colors hover:bg-amber-100"
+                  title={`${warningCount} seção(ões) não gerada(s) por dados insuficientes`}
+                >
+                  <svg className="w-3 h-3" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                  {warningCount} {warningCount === 1 ? 'aviso' : 'avisos'}
+                </button>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-400">{report.blocks.length} blocos</span>
+              <div className="flex items-center gap-0.5">
                 <button
                   type="button"
                   onClick={collapseAll}
-                  className="p-1.5 rounded-md hover:bg-gray-200 text-gray-400 hover:text-gray-600 transition-colors"
+                  className="p-1.5 rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
                   title="Recolher todas as seções"
                 >
                   <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
@@ -498,7 +640,7 @@ export default function ReportEditor() {
                 <button
                   type="button"
                   onClick={expandAll}
-                  className="p-1.5 rounded-md hover:bg-gray-200 text-gray-400 hover:text-gray-600 transition-colors"
+                  className="p-1.5 rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
                   title="Expandir todas as seções"
                 >
                   <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
@@ -604,6 +746,10 @@ export default function ReportEditor() {
         onChange={handleBlockDataChange}
         customers={customers}
         onCustomerSelected={handleCustomerSelected}
+        aiAvailable={ai.isAvailable && report.status !== 'finalizado'}
+        onGenerateSection={(sectionType) => ai.generateSection(id!, sectionType, report.formResponseId)}
+        onRegenerateSection={(sectionType, generationId) => ai.regenerateSection(id!, sectionType, generationId)}
+        aiLoading={ai.isGenerating}
       />
 
       {/* Block Selector Modal */}
@@ -653,6 +799,45 @@ export default function ReportEditor() {
         onClose={() => setShowVersionHistory(false)}
         versions={versions}
         onRestore={handleRestoreVersion}
+      />
+
+      {/* AI Loading Overlay */}
+      {ai.isGenerating && ai.progress && (
+        <AiLoadingOverlay
+          progress={ai.progress}
+          onCancel={ai.cancelGeneration}
+          sectionNames={sectionNamesForOverlay}
+        />
+      )}
+
+      {/* AI Usage Dashboard */}
+      <AiUsageDashboard
+        isOpen={showUsageDashboard}
+        onClose={() => setShowUsageDashboard(false)}
+      />
+
+      {/* AI Section Checklist */}
+      {report && (
+        <AiSectionChecklist
+          isOpen={showSectionChecklist}
+          onClose={() => setShowSectionChecklist(false)}
+          onConfirm={handleConfirmGeneration}
+          blocks={report.blocks}
+          loading={ai.isGenerating}
+        />
+      )}
+
+      {/* AI Finalization Modal */}
+      <AiFinalizationModal
+        isOpen={showFinalizationModal}
+        onClose={() => {
+          setShowFinalizationModal(false)
+          setPendingStatusChange(null)
+        }}
+        onConfirm={handleConfirmFinalization}
+        used={ai.usageSummary?.used ?? 0}
+        limit={ai.usageSummary?.limit ?? 0}
+        warningCount={warningCount}
       />
 
     </div>
