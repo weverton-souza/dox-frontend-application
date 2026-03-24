@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import type { Block, BlockType, BlockData, Report, ReportStatus, ReportVersion, Customer, ScoreTableTemplate, ChartTemplate } from '@/types'
-import { createScoreTableFromTemplate, createChartFromTemplate } from '@/types'
+import { createScoreTableFromTemplate, createChartFromTemplate, isSlateContent, slateContentToPlainText } from '@/types'
+import type { TextBlockData, SectionData, InfoBoxData } from '@/types'
 import { getReport, updateReport } from '@/lib/api/report-api'
 import { getCustomers } from '@/lib/api/customer-api'
 import { createReportTemplate, getScoreTableTemplates, getChartTemplates } from '@/lib/api/template-api'
@@ -32,6 +33,9 @@ import AiUnavailableBanner from '@/components/ai/AiUnavailableBanner'
 import AiFinalizationModal from '@/components/ai/AiFinalizationModal'
 import AiUsageDashboard from '@/components/ai/AiUsageDashboard'
 import AiSectionChecklist from '@/components/ai/AiSectionChecklist'
+import type { ReviewSectionConfig } from '@/components/ai/AiSectionChecklist'
+import { reviewText as reviewTextApi } from '@/lib/api/ai-api'
+import AiReviewModal from '@/components/ai/AiReviewModal'
 
 export default function ReportEditor() {
   const { id } = useParams<{ id: string }>()
@@ -66,6 +70,7 @@ export default function ReportEditor() {
   const [showFinalizationModal, setShowFinalizationModal] = useState(false)
   const [showSectionChecklist, setShowSectionChecklist] = useState(false)
   const [pendingStatusChange, setPendingStatusChange] = useState<ReportStatus | null>(null)
+  const [reviewingBlockId, setReviewingBlockId] = useState<string | null>(null)
 
   // Load report, customers, and templates
   useEffect(() => {
@@ -313,16 +318,97 @@ export default function ReportEditor() {
     setShowSectionChecklist(true)
   }, [report, id])
 
-  const handleConfirmGeneration = useCallback((selectedSections: string[], formResponseIds: string[]) => {
+  const [isReviewing, setIsReviewing] = useState(false)
+
+  const handleConfirmGeneration = useCallback(async (selectedSections: string[], formResponseIds: string[], reviewSections?: ReviewSectionConfig[]) => {
     if (!report || !id) return
-    setShowSectionChecklist(false)
-    ai.generateFullReport(
-      id,
-      formResponseIds,
-      report.blocks,
-      () => {},
-      selectedSections,
-    )
+
+    const reviewTitles = new Set(reviewSections?.map(r => r.sectionTitle) || [])
+    const generateSections = selectedSections.filter(s => !reviewTitles.has(s))
+    const hasGenerate = generateSections.length > 0
+    const hasReview = reviewSections && reviewSections.length > 0
+
+    if (hasGenerate) {
+      setShowSectionChecklist(false)
+      ai.generateFullReport(
+        id,
+        formResponseIds,
+        report.blocks,
+        () => {},
+        generateSections,
+      )
+    }
+
+    if (hasReview) {
+      setIsReviewing(true)
+
+      for (const reviewConfig of reviewSections!) {
+        const sectionBlock = report.blocks.find(
+          b => (b.type === 'section' || b.type === 'info-box') &&
+            ((b.data as SectionData).title === reviewConfig.sectionTitle ||
+             (b.data as InfoBoxData).label === reviewConfig.sectionTitle)
+        )
+        if (!sectionBlock) continue
+
+        const textChild = report.blocks.find(b => b.parentId === sectionBlock.id && b.type === 'text')
+        if (!textChild) continue
+
+        const textData = textChild.data as TextBlockData
+        const plainText = isSlateContent(textData.content)
+          ? slateContentToPlainText(textData.content)
+          : typeof textData.content === 'string' ? textData.content : ''
+        if (!plainText.trim()) continue
+
+        try {
+          const result = await reviewTextApi(id, {
+            text: plainText,
+            action: reviewConfig.action,
+            sectionType: reviewConfig.sectionTitle,
+            formResponseIds: formResponseIds.length > 0 ? formResponseIds : undefined,
+          })
+
+          const paragraphs = result.revised.split('\n\n').filter(p => p.trim())
+          const slateContent = paragraphs.map(p => ({
+            id: Math.random().toString(36).slice(2, 12),
+            type: 'p' as const,
+            children: [{ text: p.trim() }],
+          }))
+
+          const reloaded = await getReport(id)
+          if (reloaded) {
+            const updatedBlocks = reloaded.blocks.map((b): Block => {
+              if (b.id !== textChild.id) return b
+              const newData: TextBlockData = {
+                ...(b.data as TextBlockData),
+                content: slateContent.length > 0 ? slateContent : [{ id: '0', type: 'p' as const, children: [{ text: '' }] }],
+              }
+              return { ...b, data: newData, generatedByAi: true }
+            })
+            const updated: Report = { ...reloaded, blocks: updatedBlocks }
+            await updateReport(updated)
+            setReport(updated)
+            setPreviewRefreshKey(k => k + 1)
+          }
+        } catch {
+          // review failed for this section, continue with next
+        }
+      }
+
+      setIsReviewing(false)
+      setShowSectionChecklist(false)
+
+      if (!hasGenerate) {
+        const reloaded = await getReport(id)
+        if (reloaded) {
+          setReport(reloaded)
+          setPreviewRefreshKey(k => k + 1)
+        }
+      }
+    }
+
+    if (!hasGenerate && !hasReview) {
+      setShowSectionChecklist(false)
+    }
   }, [report, id, ai])
 
   useEffect(() => {
@@ -429,6 +515,50 @@ export default function ReportEditor() {
     if (!editingBlockId || !report) return null
     return report.blocks.find((b) => b.id === editingBlockId) ?? null
   }, [editingBlockId, report])
+
+  const reviewingBlockText = useMemo(() => {
+    if (!reviewingBlockId || !report) return ''
+    const block = report.blocks.find((b) => b.id === reviewingBlockId)
+    if (!block || block.type !== 'text') return ''
+    const data = block.data as TextBlockData
+    if (isSlateContent(data.content)) return slateContentToPlainText(data.content)
+    return typeof data.content === 'string' ? data.content : ''
+  }, [reviewingBlockId, report])
+
+  const reviewingSectionType = useMemo(() => {
+    if (!reviewingBlockId || !report) return undefined
+    const block = report.blocks.find((b) => b.id === reviewingBlockId)
+    if (!block?.parentId) return undefined
+    const parent = report.blocks.find((b) => b.id === block.parentId)
+    if (parent?.type === 'section') {
+      const parentData = parent.data as { title?: string }
+      return parentData.title || undefined
+    }
+    return undefined
+  }, [reviewingBlockId, report])
+
+  const handleAcceptReview = useCallback((revisedText: string) => {
+    if (!reviewingBlockId || !report) return
+    const updatedBlocks = report.blocks.map((b): Block => {
+      if (b.id !== reviewingBlockId) return b
+      const paragraphs = revisedText.split('\n\n').filter((p) => p.trim())
+      const slateContent = paragraphs.map((p) => ({
+        id: Math.random().toString(36).slice(2, 12),
+        type: 'p' as const,
+        children: [{ text: p.trim() }],
+      }))
+      const textData = b.data as TextBlockData
+      const newData: TextBlockData = {
+        ...textData,
+        content: slateContent.length > 0 ? slateContent : [{ id: '0', type: 'p' as const, children: [{ text: '' }] }],
+      }
+      return { ...b, data: newData }
+    })
+    const updated: Report = { ...report, blocks: updatedBlocks }
+    setReport(updated)
+    scheduleSave(updated)
+    setPreviewRefreshKey((k) => k + 1)
+  }, [reviewingBlockId, report, scheduleSave])
 
   // Check if closing-page already exists (only allow one)
   const hasClosingPage = useMemo(() => {
@@ -674,6 +804,7 @@ export default function ReportEditor() {
               onToggleSectionCollapse={toggleSectionCollapse}
               onRequestAddBlock={handleRequestAddBlock}
               onEditBlock={setEditingBlockId}
+              onReviewBlock={ai.isAvailable && report.status !== 'finalizado' ? setReviewingBlockId : undefined}
               insertAfterBlockId={insertAfterBlockId}
             />
 
@@ -839,9 +970,22 @@ export default function ReportEditor() {
           onClose={() => setShowSectionChecklist(false)}
           onConfirm={handleConfirmGeneration}
           blocks={report.blocks}
-          loading={ai.isGenerating}
+          loading={ai.isGenerating || isReviewing}
           customerId={report.customerId}
           currentFormResponseId={report.formResponseId}
+        />
+      )}
+
+      {/* AI Review Modal */}
+      {report && (
+        <AiReviewModal
+          isOpen={!!reviewingBlockId && !!reviewingBlockText}
+          onClose={() => setReviewingBlockId(null)}
+          reportId={report.id}
+          customerId={report.customerId}
+          blockText={reviewingBlockText}
+          sectionType={reviewingSectionType}
+          onAccept={handleAcceptReview}
         />
       )}
 
