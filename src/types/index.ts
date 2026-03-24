@@ -1166,6 +1166,24 @@ export interface AiGenerationSource {
   createdAt: string
 }
 
+export type ReviewAction = 'corrigir' | 'melhorar' | 'resumir' | 'expandir'
+
+export interface ReviewTextRequest {
+  text: string
+  action: ReviewAction
+  sectionType?: string
+  instruction?: string
+  formResponseIds?: string[]
+}
+
+export interface ReviewTextResponse {
+  original: string
+  revised: string
+  generationId: string
+  tokensUsed: number
+  model: string
+}
+
 export type AiGenerationStatus = 'idle' | 'loading' | 'success' | 'error' | 'quota-exceeded'
 
 export interface AiGenerationProgress {

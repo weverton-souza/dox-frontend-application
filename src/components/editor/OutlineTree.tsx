@@ -33,6 +33,7 @@ interface OutlineTreeProps {
   onToggleSectionCollapse: (sectionBlockId: string, childContainerIds?: string[]) => void
   onRequestAddBlock: (afterBlockId: string, parentId?: string | null) => void
   onEditBlock: (blockId: string) => void
+  onReviewBlock?: (blockId: string) => void
   insertAfterBlockId?: string | null
 }
 
@@ -84,6 +85,7 @@ export default function OutlineTree({
   onToggleSectionCollapse,
   onRequestAddBlock,
   onEditBlock,
+  onReviewBlock,
   insertAfterBlockId,
 }: OutlineTreeProps) {
   const sensors = useSensors(
@@ -532,6 +534,7 @@ export default function OutlineTree({
               siblingIndex={siblingIndex}
               onEdit={onEditBlock}
               onRequestAdd={isContainer && !isLocked ? onRequestAddBlock : undefined}
+              onReviewBlock={onReviewBlock}
               childCount={children.length}
               onDuplicate={duplicateBlock}
               onRemove={handleRemoveRequest}

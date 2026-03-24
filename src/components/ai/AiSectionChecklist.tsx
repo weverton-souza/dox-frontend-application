@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
-import type { Block, SectionData, InfoBoxData, FormResponse } from '@/types'
-import { FORM_RESPONSE_STATUS_LABELS, FORM_RESPONSE_STATUS_COLORS } from '@/types'
+import type { Block, SectionData, InfoBoxData, TextBlockData, FormResponse, ReviewAction } from '@/types'
+import { FORM_RESPONSE_STATUS_LABELS, FORM_RESPONSE_STATUS_COLORS, isSlateContent, slateContentToPlainText } from '@/types'
 import { getFormResponsesByCustomerId } from '@/lib/api/form-api'
 import { listForms } from '@/lib/api/form-api'
 import { formatDateTime } from '@/lib/utils'
@@ -8,17 +8,22 @@ import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import AiSparkleIcon from '@/components/ai/AiSparkleIcon'
 
-type SectionStatus = 'empty' | 'ai-generated' | 'skipped'
+type SectionStatus = 'empty' | 'ai-generated' | 'skipped' | 'has-content'
 
 interface SectionItem {
   title: string
   status: SectionStatus
 }
 
+export interface ReviewSectionConfig {
+  sectionTitle: string
+  action: ReviewAction
+}
+
 interface AiSectionChecklistProps {
   isOpen: boolean
   onClose: () => void
-  onConfirm: (selectedSections: string[], formResponseIds: string[]) => void
+  onConfirm: (selectedSections: string[], formResponseIds: string[], reviewSections?: ReviewSectionConfig[]) => void
   blocks: Block[]
   loading?: boolean
   customerId?: string | null
@@ -31,6 +36,13 @@ function getSectionStatus(sectionBlock: Block, blocks: Block[]): SectionStatus {
   const firstChild = children[0]
   if (firstChild.skippedByAi) return 'skipped'
   if (firstChild.generatedByAi) return 'ai-generated'
+  if (firstChild.type === 'text') {
+    const textData = firstChild.data as TextBlockData
+    const content = isSlateContent(textData.content)
+      ? slateContentToPlainText(textData.content)
+      : typeof textData.content === 'string' ? textData.content : ''
+    if (content.trim()) return 'has-content'
+  }
   return 'empty'
 }
 
@@ -138,9 +150,24 @@ export default function AiSectionChecklist({ isOpen, onClose, onConfirm, blocks,
     switch (status) {
       case 'empty': return { text: 'Vazio', bg: 'bg-gray-100', text_color: 'text-gray-400' }
       case 'ai-generated': return { text: 'Gerado', bg: 'bg-brand-50', text_color: 'text-brand-600' }
+      case 'has-content': return { text: 'Com texto', bg: 'bg-emerald-50', text_color: 'text-emerald-600' }
       case 'skipped': return { text: 'Requer dados', bg: 'bg-amber-50', text_color: 'text-amber-600' }
     }
   }
+
+  const REVIEW_ACTIONS: { value: ReviewAction; label: string }[] = [
+    { value: 'melhorar', label: 'Melhorar' },
+    { value: 'corrigir', label: 'Corrigir' },
+    { value: 'resumir', label: 'Resumir' },
+    { value: 'expandir', label: 'Expandir' },
+  ]
+
+  const [reviewActions, setReviewActions] = useState<Record<string, ReviewAction>>({})
+
+  const setReviewAction = (title: string, action: ReviewAction) => {
+    setReviewActions(prev => ({ ...prev, [title]: action }))
+  }
+
 
   const hasFormResponses = formResponses.length > 0
   const selectedSourceCount = selectedFormResponseIds.size
@@ -223,9 +250,51 @@ export default function AiSectionChecklist({ isOpen, onClose, onConfirm, blocks,
                   )}
                 </div>
 
-                {/* Expanded data sources */}
-                {isExpanded && hasFormResponses && (
+                {/* Expanded: review actions + data sources */}
+                {isExpanded && (
                   <div className="bg-gray-50/80 px-4 pb-3 pt-1">
+                    {/* Review action selector for sections with content */}
+                    {isChecked && (section.status === 'has-content' || section.status === 'ai-generated') && (
+                      <>
+                        <span className="text-[11px] text-gray-400 font-medium uppercase tracking-wide">
+                          Revisar
+                        </span>
+                        <div className="mt-1.5 mb-3 flex gap-1.5">
+                          {REVIEW_ACTIONS.map(ra => {
+                            const isActive = (reviewActions[section.title] || 'melhorar') === ra.value
+                            return (
+                              <div
+                                key={ra.value}
+                                className={`flex items-center gap-2.5 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
+                                  isActive ? 'bg-white shadow-sm' : 'hover:bg-white/60'
+                                }`}
+                                onClick={(e) => { e.stopPropagation(); setReviewAction(section.title, ra.value) }}
+                              >
+                                <div className={`w-[18px] h-[18px] rounded-full flex items-center justify-center shrink-0 transition-colors ${
+                                  isActive ? 'bg-emerald-500' : 'border-[1.5px] border-gray-300'
+                                }`}>
+                                  {isActive && (
+                                    <svg width="10" height="10" viewBox="0 0 20 20" fill="white">
+                                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                    </svg>
+                                  )}
+                                </div>
+                                <span className={`text-[13px] ${isActive ? 'text-gray-800' : 'text-gray-500'}`}>
+                                  {ra.label}
+                                </span>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </>
+                    )}
+
+                    {/* Data sources */}
+                    {hasFormResponses && (
+                      <>
+                        <span className="text-[11px] text-gray-400 font-medium uppercase tracking-wide">
+                          Fontes de dados
+                        </span>
                     <span className="text-[11px] text-gray-400 font-medium uppercase tracking-wide">
                       Fontes de dados
                     </span>
@@ -265,6 +334,8 @@ export default function AiSectionChecklist({ isOpen, onClose, onConfirm, blocks,
                         )
                       })}
                     </div>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
@@ -300,13 +371,41 @@ export default function AiSectionChecklist({ isOpen, onClose, onConfirm, blocks,
             Cancelar
           </Button>
           <Button
-            onClick={() => onConfirm(Array.from(selected), Array.from(selectedFormResponseIds))}
+            onClick={() => {
+              const reviewConfigs: ReviewSectionConfig[] = []
+              selected.forEach(title => {
+                const section = sections.find(s => s.title === title)
+                if (section && (section.status === 'has-content' || section.status === 'ai-generated')) {
+                  reviewConfigs.push({
+                    sectionTitle: title,
+                    action: reviewActions[title] || 'melhorar',
+                  })
+                }
+              })
+              onConfirm(
+                Array.from(selected),
+                Array.from(selectedFormResponseIds),
+                reviewConfigs.length > 0 ? reviewConfigs : undefined,
+              )
+            }}
             disabled={selected.size === 0 || loading}
             className="flex-1"
           >
             <span className="flex items-center justify-center gap-2">
-              <AiSparkleIcon size={16} />
-              Redigir {selected.size} {selected.size === 1 ? 'seção' : 'seções'}
+              {loading ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  Processando...
+                </>
+              ) : (
+                <>
+                  <AiSparkleIcon size={16} />
+                  Redigir {selected.size} {selected.size === 1 ? 'seção' : 'seções'}
+                </>
+              )}
             </span>
           </Button>
         </div>

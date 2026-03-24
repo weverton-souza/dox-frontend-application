@@ -31,6 +31,7 @@ interface OutlineRowProps {
   onRemove: (blockId: string) => void
   onChange: (blockId: string, data: BlockData) => void
   onRequestAdd?: (afterBlockId: string, parentId?: string | null) => void
+  onReviewBlock?: (blockId: string) => void
   childCount?: number
   dragDisabled?: boolean
 }
@@ -98,6 +99,7 @@ export default function OutlineRow({
   onRemove,
   onChange,
   onRequestAdd,
+  onReviewBlock,
   childCount = 0,
   dragDisabled,
 }: OutlineRowProps) {
@@ -366,6 +368,23 @@ export default function OutlineRow({
                     <path d="M2.695 14.763l-1.262 3.154a.5.5 0 00.65.65l3.155-1.262a4 4 0 001.343-.885L17.5 5.5a2.121 2.121 0 00-3-3L3.58 13.42a4 4 0 00-.885 1.343z" />
                   </svg>
                   Editar conteúdo
+                </button>
+              )}
+
+              {/* Review with AI */}
+              {isTextBlock && hasContent && onReviewBlock && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onReviewBlock(block.id)
+                    setShowMenu(false)
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-brand-700 hover:bg-brand-50 text-left"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 3l1.912 5.813a2 2 0 0 0 1.275 1.275L21 12l-5.813 1.912a2 2 0 0 0-1.275 1.275L12 21l-1.912-5.813a2 2 0 0 0-1.275-1.275L3 12l5.813-1.912a2 2 0 0 0 1.275-1.275L12 3z" />
+                  </svg>
+                  Revisar com Assistente
                 </button>
               )}
 

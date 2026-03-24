@@ -9,6 +9,8 @@ import type {
   AiUsageDetailResponse,
   GenerateFullReportRequest,
   SectionProgressEvent,
+  ReviewTextRequest,
+  ReviewTextResponse,
 } from '@/types'
 import { api, API_BASE_URL } from '@/lib/api/api-client'
 import { getAccessToken } from '@/lib/api/api-client'
@@ -120,6 +122,19 @@ export function generateFullReport(
   return {
     abort: () => controller.abort(),
   }
+}
+
+// ========== Text Review ==========
+
+export async function reviewText(
+  reportId: string,
+  request: ReviewTextRequest,
+): Promise<ReviewTextResponse> {
+  const { data } = await api.post<ReviewTextResponse>(
+    `/reports/${reportId}/review-text`,
+    request,
+  )
+  return data
 }
 
 // ========== Generation Sources ==========
