@@ -24,10 +24,10 @@
     padding-top: 6px;
   }
 
-  /* Nested level: more padding so leaf items are clearly indented under subsection cards */
+  /* Nested levels: same indentation for consistent hierarchy */
   .tree-children .tree-children {
-    --tree-pl: 28px;
-    margin-left: 20px;
+    --tree-pl: 20px;
+    margin-left: 16px;
   }
 
   .tree-node {
@@ -64,6 +64,21 @@
     border-left: 1px solid var(--color-gray-300);
     border-bottom: 1px solid var(--color-gray-300);
     border-bottom-left-radius: 6px;
+  }
+
+  /* Collapsible section containers */
+  .collapse-container {
+    display: grid;
+    grid-template-rows: 1fr;
+    transition: grid-template-rows 200ms ease-out;
+  }
+
+  .collapse-container.collapsed {
+    grid-template-rows: 0fr;
+  }
+
+  .collapse-container.collapsed > .collapse-content {
+    overflow: hidden;
   }
 
   /* Plate.js rich text editor */

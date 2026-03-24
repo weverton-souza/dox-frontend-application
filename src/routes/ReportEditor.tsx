@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import type { Block, BlockType, BlockData, Report, ReportStatus, ReportVersion, TextBlockData, Customer, ScoreTableTemplate, ChartTemplate } from '@/types'
+import type { Block, BlockType, BlockData, Report, ReportStatus, ReportVersion, Customer, ScoreTableTemplate, ChartTemplate } from '@/types'
 import { createScoreTableFromTemplate, createChartFromTemplate } from '@/types'
 import { getReport, updateReport } from '@/lib/api/report-api'
 import { getCustomers } from '@/lib/api/customer-api'
@@ -12,7 +12,7 @@ import { useVersioning } from '@/lib/hooks/use-versioning'
 import { useAutoSave } from '@/lib/hooks/use-auto-save'
 import { useClickOutside } from '@/lib/hooks/use-click-outside'
 import OutlineTree from '@/components/editor/OutlineTree'
-import BlockSelector, { BlockVariant } from '@/components/editor/BlockSelector'
+import BlockSelector from '@/components/editor/BlockSelector'
 import BlockEditModal from '@/components/editor/BlockEditModal'
 import VersionHistoryModal from '@/components/editor/VersionHistoryModal'
 import DocxPreviewPanel from '@/components/editor/DocxPreviewPanel'
@@ -45,6 +45,7 @@ export default function ReportEditor() {
   const [templateDesc, setTemplateDesc] = useState('')
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set())
   const [insertAfterBlockId, setInsertAfterBlockId] = useState<string | null>(null)
+  const [insertParentId, setInsertParentId] = useState<string | null>(null)
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null)
   const [showSectionSelector, setShowSectionSelector] = useState(false)
   const [customers, setCustomers] = useState<Customer[]>([])
@@ -118,6 +119,9 @@ export default function ReportEditor() {
       const updated = { ...report, ...updates }
       setReport(updated)
       scheduleSave(updated)
+      if (updates.blocks) {
+        setPreviewRefreshKey((k) => k + 1)
+      }
     },
     [report, scheduleSave]
   )
@@ -149,11 +153,17 @@ export default function ReportEditor() {
   )
 
   const handleAddBlock = useCallback(
-    (type: BlockType, variant?: BlockVariant, templateId?: string) => {
+    (type: BlockType, templateId?: string) => {
       if (!report) return
 
       const sorted = [...report.blocks].sort((a, b) => a.order - b.order)
-      const newBlock = createBlock(type, 0)
+
+      const newBlock = createBlock(type, 0, undefined, insertParentId)
+
+      // Subseção: usar título contextual quando criado dentro de outra seção
+      if (type === 'section' && insertParentId) {
+        ;(newBlock.data as { title: string }).title = 'Subseção'
+      }
 
       // Score table com template: preencher dados do template
       if (type === 'score-table' && templateId) {
@@ -171,11 +181,6 @@ export default function ReportEditor() {
         }
       }
 
-      // Subtitle variant: set subtitle field so it's recognized as a subsection
-      if (type === 'text' && variant === 'subtitle') {
-        ;(newBlock.data as TextBlockData).subtitle = 'Novo Subtítulo'
-      }
-
       let newBlocks: Block[]
       if (insertAfterBlockId) {
         const afterIndex = sorted.findIndex((b) => b.id === insertAfterBlockId)
@@ -190,6 +195,7 @@ export default function ReportEditor() {
       }
 
       setInsertAfterBlockId(null)
+      setInsertParentId(null)
       handleUpdateReport({ blocks: newBlocks })
 
       // Abrir edição automaticamente para tabelas e gráficos
@@ -197,12 +203,13 @@ export default function ReportEditor() {
         setEditingBlockId(newBlock.id)
       }
     },
-    [report, handleUpdateReport, insertAfterBlockId, scoreTableTemplates, chartTemplatesState]
+    [report, handleUpdateReport, insertAfterBlockId, insertParentId, scoreTableTemplates, chartTemplatesState]
   )
 
   const handleRequestAddBlock = useCallback(
-    (afterBlockId: string) => {
+    (afterBlockId: string, parentId?: string | null) => {
       setInsertAfterBlockId(afterBlockId)
+      setInsertParentId(parentId ?? null)
       setShowBlockSelector(true)
     },
     []
@@ -212,8 +219,7 @@ export default function ReportEditor() {
     if (!report) return
 
     const sorted = [...report.blocks].sort((a, b) => a.order - b.order)
-    const newBlock = createBlock('text', 0)
-    ;(newBlock.data as TextBlockData).title = 'Nova Seção'
+    const newBlock = createBlock('section', 0, undefined, null)
 
     // Insert before closing-page so it always stays last
     const closingIdx = sorted.findIndex((b) => b.type === 'closing-page')
@@ -307,12 +313,12 @@ export default function ReportEditor() {
     setShowSectionChecklist(true)
   }, [report, id])
 
-  const handleConfirmGeneration = useCallback((selectedSections: string[]) => {
+  const handleConfirmGeneration = useCallback((selectedSections: string[], formResponseIds: string[]) => {
     if (!report || !id) return
     setShowSectionChecklist(false)
     ai.generateFullReport(
       id,
-      report.formResponseId,
+      formResponseIds,
       report.blocks,
       () => {},
       selectedSections,
@@ -322,7 +328,10 @@ export default function ReportEditor() {
   useEffect(() => {
     if (ai.generationStatus === 'success' && id) {
       getReport(id).then(reloaded => {
-        if (reloaded) setReport(reloaded)
+        if (reloaded) {
+          setReport(reloaded)
+          setPreviewRefreshKey((k) => k + 1)
+        }
       }).catch(() => {})
     }
   }, [ai.generationStatus, id])
@@ -334,16 +343,11 @@ export default function ReportEditor() {
   const sectionNamesForOverlay = useMemo(() => {
     if (!report) return []
     return report.blocks
-      .filter(b => {
-        const d = b.data as { title?: string; subtitle?: string; label?: string }
-        if (b.type === 'text') return !!(d.title?.trim())
-        if (b.type === 'info-box') return true
-        return false
-      })
+      .filter(b => b.type === 'section' || b.type === 'info-box')
       .sort((a, b) => a.order - b.order)
       .map(b => {
-        const d = b.data as { title?: string; subtitle?: string; label?: string }
-        return d.title || d.subtitle || d.label || 'Seção'
+        const d = b.data as { title?: string; label?: string }
+        return d.title || d.label || 'Seção'
       })
   }, [report])
 
@@ -363,14 +367,16 @@ export default function ReportEditor() {
     setShowVersionHistory(true)
   }, [refreshVersions])
 
-  // Section collapse/expand
-  const toggleSectionCollapse = useCallback((sectionBlockId: string) => {
+  // Section collapse/expand (with cascade for subsections)
+  const toggleSectionCollapse = useCallback((sectionBlockId: string, subsectionIds?: string[]) => {
     setCollapsedSections((prev) => {
       const next = new Set(prev)
       if (next.has(sectionBlockId)) {
         next.delete(sectionBlockId)
       } else {
         next.add(sectionBlockId)
+        // Cascade: colapsar todas as subseções junto
+        subsectionIds?.forEach(id => next.add(id))
       }
       return next
     })
@@ -410,6 +416,13 @@ export default function ReportEditor() {
   const expandAll = useCallback(() => {
     setCollapsedSections(new Set())
   }, [])
+
+  // Compute target section name for BlockSelector context
+  const insertTargetSection = useMemo(() => {
+    if (!insertAfterBlockId || !report) return undefined
+    const meta = blockMetas[insertAfterBlockId]
+    return meta?.section || undefined
+  }, [insertAfterBlockId, report, blockMetas])
 
   // Find the block being edited
   const editingBlock = useMemo(() => {
@@ -661,6 +674,7 @@ export default function ReportEditor() {
               onToggleSectionCollapse={toggleSectionCollapse}
               onRequestAddBlock={handleRequestAddBlock}
               onEditBlock={setEditingBlockId}
+              insertAfterBlockId={insertAfterBlockId}
             />
 
             <div className="mt-6 flex justify-center">
@@ -758,8 +772,10 @@ export default function ReportEditor() {
         onClose={() => {
           setShowBlockSelector(false)
           setInsertAfterBlockId(null)
+          setInsertParentId(null)
         }}
         onSelect={handleAddBlock}
+        contextLabel={insertTargetSection}
       />
 
       {/* Save Template Modal */}
@@ -824,6 +840,8 @@ export default function ReportEditor() {
           onConfirm={handleConfirmGeneration}
           blocks={report.blocks}
           loading={ai.isGenerating}
+          customerId={report.customerId}
+          currentFormResponseId={report.formResponseId}
         />
       )}
 

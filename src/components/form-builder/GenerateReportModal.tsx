@@ -52,6 +52,7 @@ export default function GenerateReportModal({
     return getEmptyDataBlocks(template.blocks.map((b, i) => ({
       id: String(i),
       type: b.type,
+      parentId: b.parentId ?? null,
       order: b.order,
       data: b.data,
       collapsed: false,
@@ -65,6 +66,7 @@ export default function GenerateReportModal({
     return countFillableBlocks(template.blocks.map((b, i) => ({
       id: String(i),
       type: b.type,
+      parentId: b.parentId ?? null,
       order: b.order,
       data: b.data,
       collapsed: false,
@@ -101,6 +103,7 @@ export default function GenerateReportModal({
         template.blocks.map((tb, i) => ({
           id: crypto.randomUUID(),
           type: tb.type,
+          parentId: tb.parentId ?? null,
           order: tb.order ?? i,
           data: tb.data,
           collapsed: false,
@@ -126,15 +129,14 @@ export default function GenerateReportModal({
 
       const sectionNames = resolvedBlocks
         .filter(b => {
-          const d = b.data as { title?: string; subtitle?: string; label?: string }
-          if (b.type === 'text') return !!(d.title?.trim())
+          if (b.type === 'section') return true
           if (b.type === 'info-box') return true
           return false
         })
         .sort((a, b) => a.order - b.order)
         .map(b => {
-          const d = b.data as { title?: string; subtitle?: string; label?: string }
-          return d.title || d.subtitle || d.label || 'Seção'
+          const d = b.data as { title?: string; label?: string }
+          return d.title || d.label || 'Seção'
         })
 
       setSections(sectionNames.map(name => ({ name, status: 'pending' })))
@@ -387,7 +389,7 @@ export default function GenerateReportModal({
                   }`}>
                     {section.status === 'completed' && 'pronto'}
                     {section.status === 'error' && 'erro'}
-                    {section.status === 'skipped' && 'pulado'}
+                    {section.status === 'skipped' && 'requer mais informações'}
                     {section.status === 'generating' && 'redigindo'}
                     {section.status === 'pending' && 'pendente'}
                   </span>

@@ -5,6 +5,7 @@ import type {
   Block,
   BlockData,
   TextBlockData,
+  SectionData,
   ScoreTableData,
   ChartData,
   InfoBoxData,
@@ -15,28 +16,29 @@ import {
   BLOCK_TYPE_LABELS,
   isSlateContent,
   slateContentToPlainText,
+  isContainerBlock,
 } from '@/types'
-import { BLOCK_TYPE_BORDER_COLORS } from '@/lib/block-constants'
+import { BLOCK_TYPE_BORDER_COLORS, BLOCK_TYPE_COLORS, getSectionBorderColor, getBlockTypeIcon, getBlockTitle } from '@/lib/block-constants'
 import type { BlockMeta } from '@/lib/utils'
 
-// level 0 = section (title), level 1 = subsection (subtitle), level 2 = leaf (table/chart/etc)
 interface OutlineRowProps {
   block: Block
   meta: BlockMeta
-  level: 0 | 1 | 2
+  depth: number
+  siblingIndex?: number
   onEdit: (blockId: string) => void
   onDuplicate: (blockId: string) => void
   onRemove: (blockId: string) => void
   onChange: (blockId: string, data: BlockData) => void
+  onRequestAdd?: (afterBlockId: string, parentId?: string | null) => void
+  childCount?: number
+  dragDisabled?: boolean
 }
 
-function getBlockBorderColor(block: Block, meta: BlockMeta): string {
+function getBlockBorderColor(block: Block, depth: number): string {
   if (block.skippedByAi) return 'border-l-amber-400'
-  if (block.type !== 'text') return BLOCK_TYPE_BORDER_COLORS[block.type]
-  const d = block.data as TextBlockData
-  if (d.title && meta.isSection) return 'border-l-emerald-500'
-  if (d.subtitle) return 'border-l-teal-500'
-  return 'border-l-sky-400'
+  if (block.type === 'section') return getSectionBorderColor(depth)
+  return BLOCK_TYPE_BORDER_COLORS[block.type]
 }
 
 function getBlockSummary(block: Block): string {
@@ -77,39 +79,6 @@ function getBlockSummary(block: Block): string {
   }
 }
 
-function getBlockDisplayTitle(block: Block): string {
-  switch (block.type) {
-    case 'identification':
-      return 'Identificação'
-    case 'text': {
-      const d = block.data as TextBlockData
-      return d.title || d.subtitle || 'Texto'
-    }
-    case 'score-table': {
-      const d = block.data as ScoreTableData
-      return d.title || 'Tabela de Escores'
-    }
-    case 'chart': {
-      const d = block.data as ChartData
-      return d.title || 'Gráfico'
-    }
-    case 'info-box': {
-      const d = block.data as InfoBoxData
-      return d.label || 'Info Box'
-    }
-    case 'references': {
-      const d = block.data as ReferencesData
-      return d.title || 'Referências'
-    }
-    case 'closing-page': {
-      const d = block.data as ClosingPageData
-      return d.title || 'Termo de Entrega'
-    }
-    default:
-      return BLOCK_TYPE_LABELS[block.type]
-  }
-}
-
 function getContentPlainText(data: TextBlockData): string {
   if (isSlateContent(data.content)) return slateContentToPlainText(data.content)
   return typeof data.content === 'string' ? data.content : ''
@@ -121,12 +90,16 @@ function textBlockHasContent(data: TextBlockData): boolean {
 
 export default function OutlineRow({
   block,
-  meta,
-  level,
+  meta: _meta,
+  depth,
+  siblingIndex = 0,
   onEdit,
   onDuplicate,
   onRemove,
   onChange,
+  onRequestAdd,
+  childCount = 0,
+  dragDisabled,
 }: OutlineRowProps) {
   const [showMenu, setShowMenu] = useState(false)
   const [confirmingRemove, setConfirmingRemove] = useState(false)
@@ -139,14 +112,13 @@ export default function OutlineRow({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: block.id })
+  } = useSortable({ id: block.id, disabled: dragDisabled })
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
   }
 
-  // Close menu on outside click
   useEffect(() => {
     if (!showMenu) return
     const handleClick = (e: MouseEvent) => {
@@ -159,7 +131,6 @@ export default function OutlineRow({
     return () => document.removeEventListener('mousedown', handleClick)
   }, [showMenu])
 
-  // Auto-reset confirm after 3 seconds
   useEffect(() => {
     if (!confirmingRemove) return
     const timer = setTimeout(() => setConfirmingRemove(false), 3000)
@@ -167,8 +138,7 @@ export default function OutlineRow({
   }, [confirmingRemove])
 
   const handleRemoveClick = useCallback(() => {
-    if (level === 0) {
-      // Sections: parent handles confirmation via modal
+    if (isContainerBlock(block.type)) {
       onRemove(block.id)
       setShowMenu(false)
     } else if (confirmingRemove) {
@@ -178,41 +148,40 @@ export default function OutlineRow({
     } else {
       setConfirmingRemove(true)
     }
-  }, [level, confirmingRemove, onRemove, block.id])
+  }, [block.type, confirmingRemove, onRemove, block.id])
 
   const isTextBlock = block.type === 'text'
+  const isSectionBlock = block.type === 'section'
   const textData = isTextBlock ? (block.data as TextBlockData) : null
   const hasContent = textData ? textBlockHasContent(textData) : false
 
-  // Subtitle-only blocks are pure inline headers — no modal editing
-  const isSubtitleOnly = isTextBlock && textData && !textData.title && !!textData.subtitle
-  const showEditButton = isSubtitleOnly ? false : (!isTextBlock || hasContent)
+  const showEditButton = isSectionBlock ? false : (!isTextBlock || hasContent)
 
-  const displayTitle = getBlockDisplayTitle(block)
+  const displayTitle = getBlockTitle(block)
   const summary = getBlockSummary(block)
 
-  // Inline title editing for text blocks
-  const handleTitleChange = useCallback(
+  const handleSectionTitleChange = useCallback(
     (value: string) => {
-      if (!textData) return
-      onChange(block.id, { ...textData, title: value })
+      if (!isSectionBlock) return
+      const sectionData = block.data as SectionData
+      onChange(block.id, { ...sectionData, title: value })
     },
-    [block.id, textData, onChange]
+    [block.id, block.data, isSectionBlock, onChange]
   )
 
-  const handleSubtitleChange = useCallback(
-    (value: string) => {
-      if (!textData) return
-      onChange(block.id, { ...textData, subtitle: value })
-    },
-    [block.id, textData, onChange]
-  )
+  const handleSectionTitleBlur = useCallback(() => {
+    if (!isSectionBlock) return
+    const sectionData = block.data as SectionData
+    if (!sectionData.title.trim()) {
+      const defaultTitle = depth > 0 ? 'Subseção' : 'Nova Seção'
+      onChange(block.id, { ...sectionData, title: defaultTitle })
+    }
+  }, [block.id, block.data, isSectionBlock, depth, onChange])
 
-  // Title style based on level
   const titleClass =
-    level === 0
+    depth === 0
       ? 'text-sm font-semibold text-gray-800 uppercase tracking-wide'
-      : level === 1 && isTextBlock
+      : depth === 1
         ? 'text-sm font-medium text-gray-700'
         : 'text-sm text-gray-700'
 
@@ -225,15 +194,22 @@ export default function OutlineRow({
       style={style}
       data-block-id={block.id}
       className={`
-        group flex items-center gap-2.5 px-4 py-4 rounded-lg border-l-4 transition-all
-        ${getBlockBorderColor(block, meta)}
-        ${isDragging ? 'opacity-50 shadow-lg bg-white z-10' : block.skippedByAi ? 'bg-amber-50 shadow-sm hover:shadow-md' : 'bg-white shadow-sm hover:shadow-md'}
+        group flex items-center gap-2.5 pl-1.5 pr-4 py-3 rounded-lg border-l-4 transition-all
+        ${getBlockBorderColor(block, depth)}
+        ${isDragging ? 'opacity-50 shadow-lg bg-white z-10' : block.skippedByAi ? 'bg-amber-50 shadow-sm hover:shadow-md' : isContainerBlock(block.type) && siblingIndex % 2 === 1 ? 'bg-gray-100 shadow-sm hover:shadow-md' : isContainerBlock(block.type) ? 'bg-[#FAFAFA] shadow-sm hover:shadow-md' : 'bg-white shadow-sm hover:shadow-md'}
       `}
     >
+      {/* Block type icon — flush with left border */}
+      <div className={`p-1.5 rounded-md shrink-0 ${BLOCK_TYPE_COLORS[block.type]}`}>
+        {getBlockTypeIcon(block.type, 14)}
+      </div>
+
       {/* Drag handle */}
       <button
         type="button"
-        className="cursor-grab text-gray-300 hover:text-gray-500 focus:outline-none shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+        className={`focus:outline-none shrink-0 transition-opacity ${
+          dragDisabled ? 'invisible' : 'cursor-grab text-gray-300 hover:text-gray-500 opacity-0 group-hover:opacity-100'
+        }`}
         {...attributes}
         {...listeners}
       >
@@ -249,44 +225,35 @@ export default function OutlineRow({
 
       {/* Title / Content area */}
       <div className="flex-1 min-w-0 flex items-center gap-2">
-        {isTextBlock && textData ? (
-          /* Text blocks: inline editable title, subtitle, or content preview */
+        {isSectionBlock ? (
           <div className="flex-1 min-w-0">
-            {meta.isSection ? (
-              <input
-                type="text"
-                value={textData.title}
-                onChange={(e) => handleTitleChange(e.target.value)}
-                placeholder="Título da seção"
-                className={`w-full bg-transparent border-0 p-0 ${titleClass} ${placeholderClass} focus:outline-none focus:ring-0`}
-              />
-            ) : textData.subtitle ? (
-              <input
-                type="text"
-                value={textData.subtitle}
-                onChange={(e) => handleSubtitleChange(e.target.value)}
-                placeholder="Subtítulo"
-                className={`w-full bg-transparent border-0 p-0 ${titleClass} ${placeholderClass} focus:outline-none focus:ring-0`}
-              />
-            ) : (
-              (() => {
-                const plainText = getContentPlainText(textData)
-                return (
-                  <span
-                    className="text-sm text-gray-500 italic truncate block cursor-pointer"
-                    onDoubleClick={() => onEdit(block.id)}
-                    title={plainText}
-                  >
-                    {plainText
-                      ? plainText.slice(0, 80) + (plainText.length > 80 ? '…' : '')
-                      : 'Texto vazio'}
-                  </span>
-                )
-              })()
-            )}
+            <input
+              type="text"
+              value={(block.data as SectionData).title}
+              onChange={(e) => handleSectionTitleChange(e.target.value)}
+              onBlur={handleSectionTitleBlur}
+              placeholder="Título da seção"
+              className={`w-full bg-transparent border-0 p-0 ${titleClass} ${placeholderClass} focus:outline-none focus:ring-0`}
+            />
+          </div>
+        ) : isTextBlock && textData ? (
+          <div className="flex-1 min-w-0">
+            {(() => {
+              const plainText = getContentPlainText(textData)
+              return (
+                <span
+                  className="text-sm text-gray-500 italic truncate block cursor-pointer"
+                  onDoubleClick={() => onEdit(block.id)}
+                  title={plainText}
+                >
+                  {plainText
+                    ? plainText.slice(0, 80) + (plainText.length > 80 ? '…' : '')
+                    : 'Texto vazio'}
+                </span>
+              )
+            })()}
           </div>
         ) : (
-          /* Non-text blocks: static display */
           <div className="flex-1 min-w-0">
             <span
               className={`${titleClass} truncate block`}
@@ -323,12 +290,35 @@ export default function OutlineRow({
         ) : null}
 
         {/* Block type badge for leaf blocks */}
-        {level === 2 && (
+        {!isContainerBlock(block.type) && (
           <span className="text-xs text-gray-400 shrink-0 hidden group-hover:inline">
             {BLOCK_TYPE_LABELS[block.type]}
           </span>
         )}
       </div>
+
+      {/* Section pill: shows count, hover switches to "+", click adds block */}
+      {isSectionBlock && onRequestAdd && (
+        <button
+          type="button"
+          onClick={() => onRequestAdd(block.id, block.id)}
+          className="group/pill min-w-8 h-8 px-2 rounded-full bg-gray-100 hover:bg-brand-100 text-gray-400 hover:text-brand-600 transition-all hover:-translate-y-0.5 shrink-0 flex items-center justify-center"
+          title="Adicionar bloco na seção"
+        >
+          {childCount > 0 ? (
+            <>
+              <span className="text-[10px] font-medium group-hover/pill:hidden">{childCount}</span>
+              <svg className="hidden group-hover/pill:block" width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+              </svg>
+            </>
+          ) : (
+            <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+            </svg>
+          )}
+        </button>
+      )}
 
       {/* Actions (visible on hover) */}
       <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -362,8 +352,8 @@ export default function OutlineRow({
           {/* Dropdown menu */}
           {showMenu && (
             <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-              {/* Edit content option for text blocks without content (not subtitle-only) */}
-              {isTextBlock && !hasContent && !isSubtitleOnly && (
+              {/* Edit content option for text blocks without content */}
+              {isTextBlock && !hasContent && (
                 <button
                   type="button"
                   onClick={() => {
@@ -412,7 +402,7 @@ export default function OutlineRow({
                     clipRule="evenodd"
                   />
                 </svg>
-                {level === 0 ? 'Excluir seção' : confirmingRemove ? 'Confirmar remoção' : 'Remover'}
+                {isContainerBlock(block.type) ? 'Excluir seção' : confirmingRemove ? 'Confirmar remoção' : 'Remover'}
               </button>
             </div>
           )}

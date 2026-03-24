@@ -220,8 +220,6 @@ export function resolveBlockVariables(blocks: Block[], variables: VariableMap): 
           ...block,
           data: {
             ...data,
-            title: resolveVariables(data.title, variables),
-            subtitle: resolveVariables(data.subtitle, variables),
             content: resolveContentVariables(data.content, variables),
             labeledItems: data.labeledItems.map((item) => ({
               ...item,

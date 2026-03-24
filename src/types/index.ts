@@ -143,9 +143,7 @@ export type SlateNode = Record<string, any>
 export type SlateContent = SlateNode[]
 
 export interface TextBlockData {
-  title: string
-  subtitle: string
-  content: string | SlateContent  // HTML (legado) ou Slate JSON (novo)
+  content: string | SlateContent
   labeledItems: LabeledItem[]
   useLabeledItems: boolean
 }
@@ -383,19 +381,53 @@ export interface ClosingPageData {
 
 // ========== Block ==========
 
-export type BlockType = 'identification' | 'text' | 'score-table' | 'info-box' | 'chart' | 'references' | 'closing-page'
+export type BlockType = 'identification' | 'section' | 'text' | 'score-table' | 'info-box' | 'chart' | 'references' | 'closing-page'
 
-export type BlockData = IdentificationData | TextBlockData | ScoreTableData | InfoBoxData | ChartData | ReferencesData | ClosingPageData
+export interface SectionData {
+  title: string
+  description?: string
+  icon?: string
+  color?: string
+}
+
+export type BlockData = IdentificationData | SectionData | TextBlockData | ScoreTableData | InfoBoxData | ChartData | ReferencesData | ClosingPageData
 
 export interface Block {
   id: string
   type: BlockType
+  parentId: string | null
   order: number
   data: BlockData
   collapsed: boolean
   generatedByAi?: boolean
   generationId?: string
   skippedByAi?: boolean
+}
+
+// ========== Block Hierarchy Helpers ==========
+
+const CONTAINER_TYPES: BlockType[] = ['identification', 'section', 'closing-page']
+
+export function isContainerBlock(type: BlockType): boolean {
+  return CONTAINER_TYPES.includes(type)
+}
+
+export function isLockedBlock(type: BlockType): boolean {
+  return type === 'identification' || type === 'closing-page'
+}
+
+// ========== Report Theme ==========
+
+export interface ReportTheme {
+  primaryColor?: string
+  headingFont?: string
+  bodyFont?: string
+}
+
+export const DEFAULT_REPORT_THEME: Required<ReportTheme> = {
+  primaryColor: '#007AFF',
+  headingFont: 'Inter',
+  bodyFont: 'Inter',
 }
 
 // ========== Report ==========
@@ -427,9 +459,10 @@ export interface Report {
   status: ReportStatus
   customerName: string
   customerId?: string
-  formId?: string           // link para formulário de origem
-  formResponseId?: string   // link para resposta de formulário que gerou este relatório
+  formId?: string
+  formResponseId?: string
   blocks: Block[]
+  theme?: ReportTheme
 }
 
 // ========== Report Versioning ==========
@@ -460,7 +493,9 @@ export interface Page<T> {
 // ========== Templates ==========
 
 export interface TemplateBlock {
+  id?: string
   type: BlockType
+  parentId?: string | null
   order: number
   data: BlockData
 }
@@ -552,12 +587,14 @@ export function createEmptyIdentificationData(professional?: Professional): Iden
 
 export function createEmptyTextBlockData(): TextBlockData {
   return {
-    title: '',
-    subtitle: '',
     content: '',
     labeledItems: [],
     useLabeledItems: false,
   }
+}
+
+export function createEmptySectionData(title: string = 'Nova Seção'): SectionData {
+  return { title }
 }
 
 export function createEmptyScoreTableData(): ScoreTableData {
@@ -1024,6 +1061,7 @@ export interface AiGenerationResponse {
 
 export interface GenerateFullReportRequest {
   formResponseId?: string
+  formResponseIds?: string[]
   quantitativeData?: QuantitativeDataPayload
   selectedSections?: string[]
 }
@@ -1114,6 +1152,18 @@ export interface AiQuotaResponse {
   monthlyLimit: number
   overagePriceCents: number
   enabled: boolean
+}
+
+export interface AiGenerationSource {
+  id: string
+  reportId: string
+  generationId: string
+  sourceType: 'form_response' | 'customer_file'
+  sourceId: string
+  sourceLabel: string | null
+  included: boolean
+  displayOrder: number
+  createdAt: string
 }
 
 export type AiGenerationStatus = 'idle' | 'loading' | 'success' | 'error' | 'quota-exceeded'

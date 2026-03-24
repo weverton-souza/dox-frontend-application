@@ -1,10 +1,11 @@
 import React from 'react'
-import { BlockType, TextBlockData, ScoreTableData, ChartData, InfoBoxData, ReferencesData, ClosingPageData } from '@/types'
+import { BlockType, SectionData, ScoreTableData, ChartData, InfoBoxData, ReferencesData, ClosingPageData } from '@/types'
 
 // ========== Labels & Descriptions ==========
 
 export const BLOCK_TYPE_LABELS: Record<BlockType, string> = {
   'identification': 'Identificação',
+  'section': 'Seção',
   'text': 'Texto',
   'score-table': 'Tabela de Escores',
   'info-box': 'Info Box',
@@ -15,7 +16,8 @@ export const BLOCK_TYPE_LABELS: Record<BlockType, string> = {
 
 export const BLOCK_TYPE_DESCRIPTIONS: Record<BlockType, string> = {
   'identification': 'Dados do profissional, solicitante e paciente',
-  'text': 'Seção de texto com título e conteúdo',
+  'section': 'Título de seção ou subseção do relatório',
+  'text': 'Bloco de texto com conteúdo editável',
   'score-table': 'Tabela com instrumentos e escores',
   'info-box': 'Caixa de destaque (impressão diagnóstica, nota clínica)',
   'chart': 'Gráfico de barras ou linha para visualização de escores',
@@ -26,23 +28,37 @@ export const BLOCK_TYPE_DESCRIPTIONS: Record<BlockType, string> = {
 // ========== Colors ==========
 
 export const BLOCK_TYPE_COLORS: Record<BlockType, string> = {
-  identification: 'bg-blue-100 text-blue-600',
-  text: 'bg-emerald-100 text-emerald-600',
-  'score-table': 'bg-amber-100 text-amber-600',
-  'info-box': 'bg-violet-100 text-violet-600',
-  chart: 'bg-amber-100 text-amber-600',
-  references: 'bg-cyan-100 text-cyan-600',
-  'closing-page': 'bg-gray-100 text-gray-600',
+  identification: 'bg-slate-100 text-slate-500',
+  section: 'bg-slate-100 text-slate-500',
+  text: 'bg-blue-50 text-blue-600',
+  'score-table': 'bg-amber-50 text-amber-600',
+  'info-box': 'bg-purple-50 text-purple-600',
+  chart: 'bg-rose-50 text-rose-600',
+  references: 'bg-slate-50 text-slate-500',
+  'closing-page': 'bg-gray-100 text-gray-500',
 }
 
+// Border color for sections varies by depth — this is the default/fallback
 export const BLOCK_TYPE_BORDER_COLORS: Record<BlockType, string> = {
-  identification: 'border-l-blue-500',
-  text: 'border-l-emerald-500',
-  'score-table': 'border-l-amber-500',
-  'info-box': 'border-l-violet-500',
-  chart: 'border-l-amber-500',
-  references: 'border-l-cyan-500',
+  identification: 'border-l-slate-400',
+  section: 'border-l-slate-400',
+  text: 'border-l-blue-400',
+  'score-table': 'border-l-amber-400',
+  'info-box': 'border-l-purple-400',
+  chart: 'border-l-rose-400',
+  references: 'border-l-slate-300',
   'closing-page': 'border-l-gray-400',
+}
+
+// Section border color by depth in the tree (same hue, decreasing intensity)
+export const SECTION_DEPTH_BORDER_COLORS = [
+  'border-l-slate-400',  // depth 0
+  'border-l-slate-300',  // depth 1
+  'border-l-slate-200',  // depth 2+
+]
+
+export function getSectionBorderColor(depth: number): string {
+  return SECTION_DEPTH_BORDER_COLORS[Math.min(depth, SECTION_DEPTH_BORDER_COLORS.length - 1)]
 }
 
 // ========== Block Title Extraction ==========
@@ -53,7 +69,8 @@ export const BLOCK_TYPE_BORDER_COLORS: Record<BlockType, string> = {
  */
 export function getBlockTitle(block: { type: string; data: unknown }): string {
   switch (block.type) {
-    case 'text': return (block.data as TextBlockData).title || BLOCK_TYPE_LABELS.text
+    case 'section': return (block.data as SectionData).title || BLOCK_TYPE_LABELS.section
+    case 'text': return BLOCK_TYPE_LABELS.text
     case 'score-table': return (block.data as ScoreTableData).title || BLOCK_TYPE_LABELS['score-table']
     case 'chart': return (block.data as ChartData).title || BLOCK_TYPE_LABELS.chart
     case 'info-box': return (block.data as InfoBoxData).label || BLOCK_TYPE_LABELS['info-box']
@@ -80,6 +97,12 @@ export function getBlockTypeIcon(type: BlockType, size: number = 24): React.Reac
       return blockIcon(size, <>
         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
         <circle cx="12" cy="7" r="4" />
+      </>)
+    case 'section':
+      return blockIcon(size, <>
+        <path d="M4 6h16" />
+        <path d="M4 12h10" />
+        <path d="M4 18h7" />
       </>)
     case 'text':
       return blockIcon(size, <>
