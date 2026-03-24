@@ -36,6 +36,13 @@ export async function getReportsByCustomer(customerId: string): Promise<Report[]
   return data
 }
 
+// ========== Export ==========
+
+export async function getExportData(id: string): Promise<Report> {
+  const { data } = await api.get<Report>(`/reports/${id}/export-data`)
+  return data
+}
+
 // ========== Report Versions ==========
 
 export async function getReportVersions(reportId: string): Promise<ReportVersion[]> {

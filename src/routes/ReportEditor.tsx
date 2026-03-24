@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import type { Block, BlockType, BlockData, Report, ReportStatus, ReportVersion, Customer, ScoreTableTemplate, ChartTemplate } from '@/types'
 import { createScoreTableFromTemplate, createChartFromTemplate, isSlateContent, slateContentToPlainText } from '@/types'
 import type { TextBlockData, SectionData, InfoBoxData } from '@/types'
-import { getReport, updateReport } from '@/lib/api/report-api'
+import { getReport, updateReport, getExportData } from '@/lib/api/report-api'
 import { getCustomers } from '@/lib/api/customer-api'
 import { createReportTemplate, getScoreTableTemplates, getChartTemplates } from '@/lib/api/template-api'
 import { getFormById, getFormResponseById } from '@/lib/api/form-api'
@@ -271,20 +271,17 @@ export default function ReportEditor() {
   }, [report, templateName, templateDesc, showError])
 
   const handleGenerateDocx = useCallback(async () => {
-    if (!report) return
+    if (!report || !id) return
 
     try {
+      const exportReport = await getExportData(id)
       createExportSnapshot('DOCX')
-      const finalized = { ...report, status: 'finalizado' as const }
-      setReport(finalized)
-      await updateReport(finalized)
-
       const { downloadDocx } = await import('@/lib/docx-engine')
-      await downloadDocx(finalized)
+      await downloadDocx(exportReport)
     } catch (err) {
       showError(err)
     }
-  }, [report, createExportSnapshot, showError])
+  }, [report, id, createExportSnapshot, showError])
 
   const handleForceSave = useCallback(() => {
     if (!report) return
@@ -670,7 +667,12 @@ export default function ReportEditor() {
 
           {/* Export */}
           <div className="flex items-center gap-2">
-            <Button variant="secondary" size="sm" onClick={() => setShowDocxPreview((v) => !v)} className="hidden lg:inline-flex">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setShowDocxPreview((v) => !v)}
+              className="hidden lg:inline-flex"
+            >
               <span className="flex items-center gap-1.5">
                 <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
                   <path d="M10 12.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z" />
@@ -680,7 +682,13 @@ export default function ReportEditor() {
               </span>
             </Button>
 
-            <Button variant="primary" size="sm" onClick={handleGenerateDocx}>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleGenerateDocx}
+              disabled={report.status !== 'finalizado'}
+              title={report.status !== 'finalizado' ? 'Finalize o relatório para baixar' : 'Baixar documento'}
+            >
               <span className="flex items-center gap-1.5">
                 <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
                   <path d="M10.75 2.75a.75.75 0 00-1.5 0v8.614L6.295 8.235a.75.75 0 10-1.09 1.03l4.25 4.5a.75.75 0 001.09 0l4.25-4.5a.75.75 0 00-1.09-1.03l-2.955 3.129V2.75z" />

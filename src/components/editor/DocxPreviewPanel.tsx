@@ -14,18 +14,15 @@ export default function DocxPreviewPanel({ report, refreshKey }: DocxPreviewPane
   const [state, setState] = useState<PreviewState>('loading')
   const [errorMessage, setErrorMessage] = useState('')
   const containerRef = useRef<HTMLDivElement>(null)
-  const docxBlobRef = useRef<Blob | null>(null)
   const reportRef = useRef(report)
   reportRef.current = report
 
   const loadPreview = useCallback(async () => {
     setState('loading')
     setErrorMessage('')
-    docxBlobRef.current = null
 
     try {
       const blob = await generateDocx(reportRef.current)
-      docxBlobRef.current = blob
 
       if (containerRef.current) {
         containerRef.current.innerHTML = ''
@@ -51,7 +48,6 @@ export default function DocxPreviewPanel({ report, refreshKey }: DocxPreviewPane
 
   useEffect(() => {
     return () => {
-      docxBlobRef.current = null
       if (containerRef.current) {
         containerRef.current.innerHTML = ''
       }
@@ -99,9 +95,13 @@ export default function DocxPreviewPanel({ report, refreshKey }: DocxPreviewPane
 
         <div
           ref={containerRef}
-          className={`h-full overflow-auto bg-transparent docx-preview-panel ${state !== 'ready' ? 'invisible' : ''}`}
+          className={`h-full overflow-auto bg-transparent docx-preview-panel select-none ${state !== 'ready' ? 'invisible' : ''}`}
         />
-        <style>{`.docx-preview-panel .docx-wrapper { background: transparent !important; }`}</style>
+        <style>{`
+          .docx-preview-panel .docx-wrapper { background: transparent !important; }
+          .docx-preview-panel * { user-select: none !important; -webkit-user-select: none !important; }
+          @media print { .docx-preview-panel { display: none !important; } }
+        `}</style>
       </div>
     </div>
   )

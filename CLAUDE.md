@@ -19,8 +19,12 @@
 
 ### Relatórios (Reports)
 - Editor de blocos com drag-and-drop (dnd-kit) e auto-save via API
-- 7 tipos de bloco: identification, text, score-table, info-box, chart, references, closing-page
-- Sistema de seções derivado dos blocos (não armazenado) com collapse/expand
+- 8 tipos de bloco: identification, section, text, score-table, info-box, chart, references, closing-page
+- Hierarquia explícita com `parentId` — blocos section podem conter outros blocos (multinível)
+- DnD com projeção de profundidade: arrastar horizontal muda nível (esquerda=subir, direita=descer)
+- Blocos não-section impedidos de ir para raiz (apenas sections no depth 0)
+- Ícones coloridos por tipo nos cards: cinza (estrutura), azul (texto), âmbar (tabela), rose (gráfico), roxo (info-box)
+- Seções com fundo zebra alternado e pill combinado contagem/adicionar
 - Sidebar com árvore de navegação (OutlineTree) e IntersectionObserver para destaque ativo
 - Criação a partir de templates (2 padrões: Adulto e Breve) ou do zero
 - Versionamento com snapshots manuais e automáticos (máx. 20 por relatório)
@@ -83,9 +87,14 @@
 
 ### Geração de Relatório a partir de Respostas
 - Pipeline de geração via IA: buildPrompt → generateReportFromResponse → parseAIResponse
+- Suporte a múltiplos formulários por geração (formResponseIds)
+- Fontes de dados expandíveis por seção no checklist de geração (Apple-style)
+- Rastreamento de fontes usadas em cada geração (ai_generation_sources)
 - Sistema de variáveis com sintaxe {{chave}} resolvidas de dados do cliente e respostas do formulário
 - Mapeamento campo→seção com hints para a IA
 - Resolução de variáveis (variable-service) em blocos text e info-box
+- Preview do relatório atualiza automaticamente após geração
+- Status "requer mais informações" para seções com dados insuficientes
 
 ### Configurações Profissionais
 - Modal para nome, CRP, especialização, logo (base64)
@@ -122,39 +131,34 @@
 | ReportVersion | ReportVersion | `reportId`, `customerName` |
 | Professional | ProfessionalSettings | Campos top-level (não nested) |
 
-## Próximas Features (roadmap até abril/2026)
+## Próximas Features
 
-### Formulários Públicos (Link de Resposta para Clientes)
-- Página pública acessada via URL pré-gerada pelo backend (sem autenticação)
-- Rota pública `/forms/{token}` com layout limpo (sem sidebar/auth)
-- Profissional gera link com validade configurável, vinculado a um Form + Customer
-- Renderiza campos do formulário, valida respostas, envia e exibe confirmação
-- Expiração automática: link inválido após tempo limite ou após envio
-- API: `GET /public/forms/{token}` (carrega form) e `POST /public/forms/{token}/submit` (envia respostas)
+### Revisão de Texto por IA
+- Botão "Revisar com Assistente" no menu de ações do bloco de texto
+- Opções: correção gramatical, melhoria técnica, resumir, expandir
+- Modal com texto original + opções → IA processa → diff antes/depois → aceitar ou descartar
+
+### Upload de Arquivos do Cliente
+- Tabela `customer_files` já criada (S3 key, tipo, categoria)
+- Upload de exames, laudos anteriores, encaminhamentos
+- Integração como fonte de dados na geração por IA (extração de texto via PDFBox)
 
 ### Templates Locked/Unlocked
 - Modo template (locked): estrutura fixa, profissional só preenche dados
 - Modo livre (unlocked): edição completa como hoje
 
-### Preview e Download em PDF
-- Preview do relatório: conversão .docx → PDF via LibreOffice headless no backend
-- Download em PDF além do .docx atual
+### Download em PDF
+- Conversão .docx → PDF via LibreOffice headless no backend
 
 ### Acompanhamento do Cliente
 - Perguntas configuráveis por cliente (profissional define quais perguntas acompanhar)
 - Tela PWA/webview para o cliente: formulário diário com layout limpo
 - Rota separada para o cliente (`/p/:id`) com layout sem sidebar/menu do profissional
 - Painel da profissional: timeline de respostas + gráficos de evolução
-- Resumo por IA: chamada à API Claude para sintetizar dados de acompanhamento
+- Resumo pelo Assistente: sintetizar dados de acompanhamento
 
 ### Tabelas de Escores — Melhorias
 - Redimensionar largura das colunas (arrastar borda do header)
-
-### Polish Geral
-- Ajustes visuais e de UX para demo na convenção
-- Login: layout centralizado com card glassmorphism (esquerda) + slogan (direita), background SVG com dot pattern radial
-- Dot pattern sutil (radial-gradient) no background do ReportEditor e FormBuilder (opacity 0.065)
-- DocxPreviewPanel com backgrounds transparentes para exibir dots por trás
 
 ## Organização de Arquivos
 
