@@ -39,7 +39,20 @@ import {
 import { Chart as ChartJS } from 'chart.js'
 import './chart/setup'
 import { getProfessional } from '@/lib/api/professional-api'
-import { generateSocialIcon, base64ToUint8Array } from './shared/social-icons'
+import { base64ToUint8Array } from './shared/social-icons'
+import type { ContactType } from '@/types'
+
+function getContactPrefix(type: ContactType): string {
+  const prefixes: Record<ContactType, string> = {
+    instagram: 'Instagram: ',
+    linkedin: 'LinkedIn: ',
+    facebook: 'Facebook: ',
+    website: 'Site: ',
+    phone: 'Telefone: ',
+    email: 'E-mail: ',
+  }
+  return prefixes[type] ?? ''
+}
 import { getImageDimensions } from './shared/image-utils'
 import { computeCellResult } from './table/formula-engine'
 import {
@@ -167,127 +180,64 @@ async function createDocFooter(): Promise<Footer> {
 
   const children: (Paragraph | Table)[] = []
 
-  // Contact info as a table (if any items exist)
+  // Contact info — one line per item, left-aligned, sorted by string length
   if (contactItems.length > 0) {
-    const noBorders = {
-      top: NO_BORDER,
-      bottom: NO_BORDER,
-      left: NO_BORDER,
-      right: NO_BORDER,
-    }
-
-    const cells: TableCell[] = []
-
-    contactItems.forEach((item, index) => {
-      // Icon + text cell
-      const iconBytes = generateSocialIcon(item.type)
-      cells.push(
-        new TableCell({
-          borders: noBorders,
-          verticalAlign: 'center' as never,
-          children: [
-            new Paragraph({
-              alignment: AlignmentType.CENTER,
-              children: [
-                new ImageRun({
-                  type: 'png',
-                  data: iconBytes,
-                  transformation: { width: 10, height: 10 },
-                }),
-                new TextRun({
-                  text: ` ${item.value}`,
-                  size: 14,
-                  font: 'Calibri',
-                  color: '666666',
-                }),
-              ],
-            }),
-          ],
-        })
-      )
-
-      // Separator cell between items
-      if (index < contactItems.length - 1) {
-        cells.push(
-          new TableCell({
-            borders: noBorders,
-            verticalAlign: 'center' as never,
-            width: { size: 300, type: WidthType.DXA },
-            children: [
-              new Paragraph({
-                alignment: AlignmentType.CENTER,
-                children: [
-                  new TextRun({
-                    text: '|',
-                    size: 14,
-                    font: 'Calibri',
-                    color: 'BBBBBB',
-                  }),
-                ],
-              }),
-            ],
-          })
-        )
-      }
+    const sortedItems = [...contactItems].sort((a, b) => {
+      const lenA = (getContactPrefix(a.type) + a.value).length
+      const lenB = (getContactPrefix(b.type) + b.value).length
+      return lenA - lenB
     })
+    sortedItems.forEach((item) => {
+      const prefix = getContactPrefix(item.type)
 
-    // Compute column widths: distribute evenly for content cells, fixed for separators
-    const separatorCount = contactItems.length - 1
-    const separatorWidth = 300
-    const contentWidth = PAGE_CONTENT_WIDTH - separatorCount * separatorWidth
-    const contentCellWidth = Math.floor(contentWidth / contactItems.length)
-    const columnWidths: number[] = []
-    contactItems.forEach((_, index) => {
-      columnWidths.push(contentCellWidth)
-      if (index < contactItems.length - 1) {
-        columnWidths.push(separatorWidth)
-      }
+      children.push(new Paragraph({
+        alignment: AlignmentType.LEFT,
+        spacing: { before: 0, after: 0 },
+        children: [
+          ...(prefix ? [new TextRun({
+            text: prefix,
+            size: 16,
+            font: 'Calibri',
+            color: '999999',
+          })] : []),
+          new TextRun({
+            text: item.value,
+            size: 16,
+            font: 'Calibri',
+            color: '666666',
+          }),
+        ],
+      }))
     })
-
-    const contactTable = new Table({
-      rows: [new TableRow({ children: cells })],
-      width: { size: PAGE_CONTENT_WIDTH, type: WidthType.DXA },
-      columnWidths,
-      borders: {
-        top: NO_BORDER,
-        bottom: NO_BORDER,
-        left: NO_BORDER,
-        right: NO_BORDER,
-        insideHorizontal: NO_BORDER,
-        insideVertical: NO_BORDER,
-      },
-    })
-
-    children.push(contactTable)
   }
 
   // Page number
   children.push(
     new Paragraph({
       style: 'FooterPageNum',
-      spacing: { before: 20 },
+      spacing: { before: 60 },
       children: [
         new TextRun({
           text: 'Página ',
-          size: 14,
+          size: 16,
           font: 'Calibri',
           color: 'AAAAAA',
         }),
         new TextRun({
           children: [PageNumber.CURRENT],
-          size: 14,
+          size: 16,
           font: 'Calibri',
           color: 'AAAAAA',
         }),
         new TextRun({
           text: ' de ',
-          size: 14,
+          size: 16,
           font: 'Calibri',
           color: 'AAAAAA',
         }),
         new TextRun({
           children: [PageNumber.TOTAL_PAGES],
-          size: 14,
+          size: 16,
           font: 'Calibri',
           color: 'AAAAAA',
         }),
