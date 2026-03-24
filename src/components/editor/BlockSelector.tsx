@@ -5,12 +5,11 @@ import Modal from '@/components/ui/Modal'
 import ScoreTableTemplatePicker from '@/components/editor/ScoreTableTemplatePicker'
 import ChartTemplatePicker from '@/components/editor/ChartTemplatePicker'
 
-export type BlockVariant = 'subtitle'
-
 interface BlockSelectorProps {
   isOpen: boolean
   onClose: () => void
-  onSelect: (type: BlockType, variant?: BlockVariant, templateId?: string) => void
+  onSelect: (type: BlockType, templateId?: string) => void
+  contextLabel?: string
 }
 
 // Subtitle icon
@@ -23,7 +22,6 @@ const SUBTITLE_ICON = (
 
 interface BlockOption {
   type: BlockType
-  variant?: BlockVariant
   label: string
   description: string
   icon: React.ReactNode
@@ -31,7 +29,7 @@ interface BlockOption {
 }
 
 const blockOptions: BlockOption[] = [
-  { type: 'text', variant: 'subtitle', label: 'Subtítulo', description: 'Subseção com apenas um título menor', icon: SUBTITLE_ICON, colorClass: 'bg-teal-100 text-teal-600' },
+  { type: 'section', label: 'Subseção', description: 'Título de subseção dentro da seção atual', icon: SUBTITLE_ICON, colorClass: 'bg-slate-100 text-slate-500' },
   { type: 'text', label: BLOCK_TYPE_LABELS.text, description: BLOCK_TYPE_DESCRIPTIONS.text, icon: getBlockTypeIcon('text'), colorClass: BLOCK_TYPE_COLORS.text },
   { type: 'score-table', label: BLOCK_TYPE_LABELS['score-table'], description: BLOCK_TYPE_DESCRIPTIONS['score-table'], icon: getBlockTypeIcon('score-table'), colorClass: BLOCK_TYPE_COLORS['score-table'] },
   { type: 'info-box', label: BLOCK_TYPE_LABELS['info-box'], description: BLOCK_TYPE_DESCRIPTIONS['info-box'], icon: getBlockTypeIcon('info-box'), colorClass: BLOCK_TYPE_COLORS['info-box'] },
@@ -39,7 +37,7 @@ const blockOptions: BlockOption[] = [
   { type: 'references', label: BLOCK_TYPE_LABELS.references, description: BLOCK_TYPE_DESCRIPTIONS.references, icon: getBlockTypeIcon('references'), colorClass: BLOCK_TYPE_COLORS.references },
 ]
 
-export default function BlockSelector({ isOpen, onClose, onSelect }: BlockSelectorProps) {
+export default function BlockSelector({ isOpen, onClose, onSelect, contextLabel }: BlockSelectorProps) {
   const [showTemplatePicker, setShowTemplatePicker] = useState<'score-table' | 'chart' | null>(null)
 
   const handleSelect = (option: BlockOption) => {
@@ -51,7 +49,7 @@ export default function BlockSelector({ isOpen, onClose, onSelect }: BlockSelect
       setShowTemplatePicker('chart')
       return
     }
-    onSelect(option.type, option.variant)
+    onSelect(option.type)
     handleClose()
   }
 
@@ -61,7 +59,7 @@ export default function BlockSelector({ isOpen, onClose, onSelect }: BlockSelect
   }
 
   const handleSelectScoreTemplate = (templateId: string) => {
-    onSelect('score-table', undefined, templateId)
+    onSelect('score-table', templateId)
     handleClose()
   }
 
@@ -71,7 +69,7 @@ export default function BlockSelector({ isOpen, onClose, onSelect }: BlockSelect
   }
 
   const handleSelectChartTemplate = (templateId: string) => {
-    onSelect('chart', undefined, templateId)
+    onSelect('chart', templateId)
     handleClose()
   }
 
@@ -95,10 +93,16 @@ export default function BlockSelector({ isOpen, onClose, onSelect }: BlockSelect
           onBack={() => setShowTemplatePicker(null)}
         />
       ) : (
+        <div className="space-y-0">
+          {contextLabel && (
+            <p className="text-sm text-gray-500 px-4 pt-3 pb-1">
+              Inserindo em: <span className="font-medium text-gray-700">{contextLabel}</span>
+            </p>
+          )}
         <div className="grid grid-cols-2 gap-3 p-4">
           {blockOptions.map((option) => (
             <button
-              key={`${option.type}-${option.variant ?? 'default'}`}
+              key={option.type}
               type="button"
               onClick={() => handleSelect(option)}
               className="flex items-start gap-3 p-4 rounded-xl border border-gray-200 hover:border-brand-300 hover:bg-brand-50/50 transition-all text-left group"
@@ -116,6 +120,7 @@ export default function BlockSelector({ isOpen, onClose, onSelect }: BlockSelect
               </div>
             </button>
           ))}
+        </div>
         </div>
       )}
     </Modal>

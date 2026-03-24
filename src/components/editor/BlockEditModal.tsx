@@ -41,6 +41,7 @@ interface BlockEditModalProps {
 
 const MODAL_SIZES: Record<BlockType, 'sm' | 'md' | 'lg' | 'xl' | '2xl'> = {
   identification: '2xl',
+  section: 'sm',
   text: 'xl',
   'score-table': 'xl',
   'info-box': 'lg',
@@ -53,10 +54,11 @@ function getModalTitle(block: Block): string {
   const typeLabel = BLOCK_TYPE_LABELS[block.type]
 
   switch (block.type) {
+    case 'section': {
+      return 'Seção'
+    }
     case 'text': {
-      const d = block.data as TextBlockData
-      const name = d.title || d.subtitle || ''
-      return name ? `${typeLabel} — ${name}` : typeLabel
+      return typeLabel
     }
     case 'score-table': {
       const d = block.data as ScoreTableData
@@ -103,8 +105,8 @@ export default function BlockEditModal({
   const isGeneratedByAi = block?.generatedByAi === true
 
   const sectionType = block ? (() => {
-    const d = block.data as { title?: string; subtitle?: string; label?: string }
-    return d.title || d.subtitle || d.label || 'Seção'
+    const d = block.data as { title?: string; label?: string }
+    return d.title || d.label || 'Seção'
   })() : ''
 
   const handleAiGenerate = useCallback(async () => {
@@ -201,6 +203,8 @@ export default function BlockEditModal({
             onChange={handleLocalChange}
           />
         )
+      case 'section':
+        return null
     }
   }
 

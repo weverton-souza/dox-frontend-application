@@ -1,6 +1,7 @@
 import type {
   AiGenerationRequest,
   AiGenerationResponse,
+  AiGenerationSource,
   AiRegenerationRequest,
   AiQuotaResponse,
   AiStatusResponse,
@@ -119,6 +120,13 @@ export function generateFullReport(
   return {
     abort: () => controller.abort(),
   }
+}
+
+// ========== Generation Sources ==========
+
+export async function getGenerationSources(reportId: string): Promise<AiGenerationSource[]> {
+  const { data } = await api.get<AiGenerationSource[]>(`/reports/${reportId}/generation-sources`)
+  return data
 }
 
 // ========== Usage & Quota ==========

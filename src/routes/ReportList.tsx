@@ -61,6 +61,7 @@ export default function ReportList() {
         const blocks: Block[] = template.blocks.map((tb) => ({
           id: crypto.randomUUID(),
           type: tb.type,
+          parentId: tb.parentId ?? null,
           order: tb.order,
           data: JSON.parse(JSON.stringify(tb.data)),
           collapsed: false,

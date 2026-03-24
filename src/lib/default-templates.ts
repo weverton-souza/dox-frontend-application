@@ -8,48 +8,47 @@ import {
   createEmptyChartData,
   createEmptyReferencesData,
   createEmptyClosingPageData,
+  createEmptySectionData,
 } from '@/types'
 
 // ========== Helper to build blocks ==========
 
-function textBlock(order: number, title: string): TemplateBlock {
-  const data = createEmptyTextBlockData()
-  data.title = title
-  return { type: 'text', order, data }
+function sectionBlock(id: string, order: number, title: string, parentId: string | null = null): TemplateBlock {
+  return { id, type: 'section', order, data: createEmptySectionData(title), parentId }
 }
 
-function scoreTableBlock(order: number, title: string): TemplateBlock {
+function contentBlock(id: string, order: number, parentId: string | null): TemplateBlock {
+  return { id, type: 'text', order, data: createEmptyTextBlockData(), parentId }
+}
+
+function scoreTableBlock(id: string, order: number, title: string, parentId: string | null = null): TemplateBlock {
   const data = createEmptyScoreTableData()
   data.title = title
-  return { type: 'score-table', order, data }
+  return { id, type: 'score-table', order, data, parentId }
 }
 
-function infoBoxBlock(order: number, label: string): TemplateBlock {
+function infoBoxBlock(id: string, order: number, label: string, parentId: string | null = null): TemplateBlock {
   const data = createEmptyInfoBoxData()
   data.label = label
-  return { type: 'info-box', order, data }
+  return { id, type: 'info-box', order, data, parentId }
 }
 
-function chartBlock(order: number, title: string): TemplateBlock {
+function chartBlock(id: string, order: number, title: string, parentId: string | null = null): TemplateBlock {
   const data = createEmptyChartData()
   data.title = title
-  return { type: 'chart', order, data }
+  return { id, type: 'chart', order, data, parentId }
 }
 
-function identificationBlock(order: number): TemplateBlock {
-  return {
-    type: 'identification',
-    order,
-    data: createEmptyIdentificationData(),
-  }
+function identificationBlock(id: string, order: number, parentId: string | null = null): TemplateBlock {
+  return { id, type: 'identification', order, data: createEmptyIdentificationData(), parentId }
 }
 
-function referencesBlock(order: number): TemplateBlock {
-  return { type: 'references', order, data: createEmptyReferencesData() }
+function referencesBlock(id: string, order: number, parentId: string | null = null): TemplateBlock {
+  return { id, type: 'references', order, data: createEmptyReferencesData(), parentId }
 }
 
-function closingPageBlock(order: number): TemplateBlock {
-  return { type: 'closing-page', order, data: createEmptyClosingPageData() }
+function closingPageBlock(id: string, order: number, parentId: string | null = null): TemplateBlock {
+  return { id, type: 'closing-page', order, data: createEmptyClosingPageData(), parentId }
 }
 
 // ========== Default Templates ==========
@@ -60,20 +59,27 @@ const TEMPLATE_ADULTO: ReportTemplate = {
   description: 'Estrutura completa para avaliação de adultos',
   isDefault: true,
   blocks: [
-    identificationBlock(0),
-    textBlock(1, 'DESCRIÇÃO DA DEMANDA E OBJETIVOS DA AVALIAÇÃO'),
-    textBlock(2, 'PROCEDIMENTOS'),
-    textBlock(3, 'ANAMNESE'),
-    scoreTableBlock(4, 'RESULTADOS - ATENÇÃO'),
-    scoreTableBlock(5, 'RESULTADOS - MEMÓRIA'),
-    scoreTableBlock(6, 'RESULTADOS - FUNÇÕES EXECUTIVAS'),
-    chartBlock(7, 'GRÁFICO DE DESEMPENHO'),
-    textBlock(8, 'ANÁLISE E OBSERVAÇÕES'),
-    infoBoxBlock(9, 'IMPRESSÃO DIAGNÓSTICA'),
-    textBlock(10, 'SUGESTÕES E ENCAMINHAMENTOS'),
-    textBlock(11, 'CONCLUSÃO'),
-    referencesBlock(12),
-    closingPageBlock(13),
+    identificationBlock('tpl-adulto-id', 0),
+    sectionBlock('tpl-adulto-s1', 1, 'DESCRIÇÃO DA DEMANDA E OBJETIVOS DA AVALIAÇÃO'),
+    contentBlock('tpl-adulto-s1-t1', 2, 'tpl-adulto-s1'),
+    sectionBlock('tpl-adulto-s2', 3, 'PROCEDIMENTOS'),
+    contentBlock('tpl-adulto-s2-t1', 4, 'tpl-adulto-s2'),
+    sectionBlock('tpl-adulto-s3', 5, 'ANAMNESE'),
+    contentBlock('tpl-adulto-s3-t1', 6, 'tpl-adulto-s3'),
+    sectionBlock('tpl-adulto-s4', 7, 'RESULTADOS'),
+    scoreTableBlock('tpl-adulto-s4-st1', 8, 'ATENÇÃO', 'tpl-adulto-s4'),
+    scoreTableBlock('tpl-adulto-s4-st2', 9, 'MEMÓRIA', 'tpl-adulto-s4'),
+    scoreTableBlock('tpl-adulto-s4-st3', 10, 'FUNÇÕES EXECUTIVAS', 'tpl-adulto-s4'),
+    chartBlock('tpl-adulto-s4-ch1', 11, 'DESEMPENHO', 'tpl-adulto-s4'),
+    sectionBlock('tpl-adulto-s5', 12, 'ANÁLISE E OBSERVAÇÕES'),
+    contentBlock('tpl-adulto-s5-t1', 13, 'tpl-adulto-s5'),
+    infoBoxBlock('tpl-adulto-ib1', 14, 'IMPRESSÃO DIAGNÓSTICA'),
+    sectionBlock('tpl-adulto-s6', 15, 'SUGESTÕES E ENCAMINHAMENTOS'),
+    contentBlock('tpl-adulto-s6-t1', 16, 'tpl-adulto-s6'),
+    sectionBlock('tpl-adulto-s7', 17, 'CONCLUSÃO'),
+    contentBlock('tpl-adulto-s7-t1', 18, 'tpl-adulto-s7'),
+    referencesBlock('tpl-adulto-ref', 19),
+    closingPageBlock('tpl-adulto-cp', 20),
   ],
 }
 
@@ -83,13 +89,17 @@ const TEMPLATE_BREVE: ReportTemplate = {
   description: 'Estrutura resumida para laudos mais curtos',
   isDefault: true,
   blocks: [
-    identificationBlock(0),
-    textBlock(1, 'DESCRIÇÃO DA DEMANDA'),
-    textBlock(2, 'PROCEDIMENTOS'),
-    scoreTableBlock(3, 'RESULTADOS'),
-    infoBoxBlock(4, 'IMPRESSÃO DIAGNÓSTICA'),
-    textBlock(5, 'CONCLUSÃO'),
-    closingPageBlock(6),
+    identificationBlock('tpl-breve-id', 0),
+    sectionBlock('tpl-breve-s1', 1, 'DESCRIÇÃO DA DEMANDA'),
+    contentBlock('tpl-breve-s1-t1', 2, 'tpl-breve-s1'),
+    sectionBlock('tpl-breve-s2', 3, 'PROCEDIMENTOS'),
+    contentBlock('tpl-breve-s2-t1', 4, 'tpl-breve-s2'),
+    sectionBlock('tpl-breve-s3', 5, 'RESULTADOS'),
+    scoreTableBlock('tpl-breve-s3-st1', 6, 'RESULTADOS', 'tpl-breve-s3'),
+    infoBoxBlock('tpl-breve-ib1', 7, 'IMPRESSÃO DIAGNÓSTICA'),
+    sectionBlock('tpl-breve-s4', 8, 'CONCLUSÃO'),
+    contentBlock('tpl-breve-s4-t1', 9, 'tpl-breve-s4'),
+    closingPageBlock('tpl-breve-cp', 10),
   ],
 }
 

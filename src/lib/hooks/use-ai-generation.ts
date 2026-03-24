@@ -29,7 +29,7 @@ interface UseAiGenerationReturn {
 
   generateFullReport: (
     reportId: string,
-    formResponseId: string | undefined,
+    formResponseIds: string[],
     blocks: Block[],
     onBlockGenerated: (sectionType: string, text: string, generationId: string) => void,
     selectedSections?: string[],
@@ -102,7 +102,7 @@ export function useAiGeneration(): UseAiGenerationReturn {
   const generateFullReport = useCallback(
     (
       reportId: string,
-      formResponseId: string | undefined,
+      formResponseIds: string[],
       blocks: Block[],
       onBlockGenerated: (sectionType: string, text: string, generationId: string) => void,
       selectedSections?: string[],
@@ -123,7 +123,8 @@ export function useAiGeneration(): UseAiGenerationReturn {
       setProgress(newProgress)
 
       const request: GenerateFullReportRequest = {
-        formResponseId,
+        formResponseId: formResponseIds[0],
+        formResponseIds,
         quantitativeData,
         selectedSections,
       }

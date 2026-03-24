@@ -1,7 +1,7 @@
 import {
   Block,
   BlockType,
-  TextBlockData,
+  SectionData,
   ScoreTableData,
   ChartData,
   InfoBoxData,
@@ -17,16 +17,75 @@ import {
   createEmptyChartData,
   createEmptyReferencesData,
   createEmptyClosingPageData,
+  createEmptySectionData,
 } from '@/types'
 import type { Professional } from '@/types'
 
-export function createBlock(type: BlockType, order: number, professional?: Professional): Block {
+// ========== Tree Node (runtime hierarchy, not persisted) ==========
+
+export interface TreeNode {
+  block: Block
+  children: TreeNode[]
+  depth: number
+}
+
+export function buildBlockTree(blocks: Block[]): TreeNode[] {
+  const childrenMap = new Map<string | null, Block[]>()
+  for (const block of blocks) {
+    const pid = block.parentId ?? null
+    if (!childrenMap.has(pid)) childrenMap.set(pid, [])
+    childrenMap.get(pid)!.push(block)
+  }
+  for (const arr of childrenMap.values()) arr.sort((a, b) => a.order - b.order)
+
+  function build(block: Block, depth: number): TreeNode {
+    const children = (childrenMap.get(block.id) || []).map(c => build(c, depth + 1))
+    return { block, children, depth }
+  }
+  return (childrenMap.get(null) || []).map(b => build(b, 0))
+}
+
+export function flattenTree(nodes: TreeNode[]): Block[] {
+  const result: Block[] = []
+  for (const node of nodes) {
+    result.push(node.block)
+    result.push(...flattenTree(node.children))
+  }
+  return result
+}
+
+export function getDescendantIds(blocks: Block[], blockId: string): string[] {
+  const childrenMap = new Map<string, Block[]>()
+  for (const block of blocks) {
+    const pid = block.parentId ?? ''
+    if (!childrenMap.has(pid)) childrenMap.set(pid, [])
+    childrenMap.get(pid)!.push(block)
+  }
+
+  const result: string[] = []
+  function collect(id: string) {
+    const children = childrenMap.get(id) || []
+    for (const child of children) {
+      result.push(child.id)
+      collect(child.id)
+    }
+  }
+  collect(blockId)
+  return result
+}
+
+// ========== Block Factory ==========
+
+export function createBlock(type: BlockType, order: number, professional?: Professional, parentId: string | null = null): Block {
   const id = crypto.randomUUID()
   let data
 
   switch (type) {
     case 'identification':
       data = createEmptyIdentificationData(professional ?? { name: '', crp: '', specialization: '' })
+      break
+    case 'section':
+      data = createEmptySectionData()
       break
     case 'text':
       data = createEmptyTextBlockData()
@@ -51,6 +110,7 @@ export function createBlock(type: BlockType, order: number, professional?: Profe
   return {
     id,
     type,
+    parentId,
     order,
     data,
     collapsed: false,
@@ -103,96 +163,84 @@ export interface BlockMeta {
   isSection: boolean
 }
 
-export function computeBlockMetas(sortedBlocks: Block[]): Record<string, BlockMeta> {
-  let lastTitle = ''
-  let lastSectionBlockId = ''
+export function computeBlockMetas(blocks: Block[]): Record<string, BlockMeta> {
+  const tree = buildBlockTree(blocks)
   const result: Record<string, BlockMeta> = {}
 
-  for (const block of sortedBlocks) {
-    let label = ''
-    let sectionTitle = ''
-    let isSection = false
+  function walk(nodes: TreeNode[], parentTitle: string, parentSectionId: string) {
+    for (const node of nodes) {
+      const { block, children, depth: _depth } = node
+      let label = ''
+      let sectionTitle = ''
+      let isSection = false
 
-    switch (block.type) {
-      case 'identification': {
-        label = 'Identificação'
-        sectionTitle = 'Identificação'
-        isSection = true
-        lastSectionBlockId = block.id
-        break
-      }
-      case 'text': {
-        const d = block.data as TextBlockData
-        if (d.title && d.subtitle) {
-          label = `${d.title} > ${d.subtitle}`
-          sectionTitle = d.title
-          lastTitle = d.title
-          lastSectionBlockId = block.id
+      switch (block.type) {
+        case 'identification': {
+          label = 'Identificação'
+          sectionTitle = 'Identificação'
           isSection = true
-        } else if (d.title) {
-          label = d.title
-          sectionTitle = d.title
-          lastTitle = d.title
-          lastSectionBlockId = block.id
+          break
+        }
+        case 'section': {
+          const d = block.data as SectionData
+          const title = d.title || 'Seção'
+          label = parentTitle ? `${parentTitle} > ${title}` : title
+          sectionTitle = title
           isSection = true
-        } else if (d.subtitle) {
-          label = lastTitle ? `${lastTitle} > ${d.subtitle}` : d.subtitle
+          break
         }
-        break
-      }
-      case 'score-table': {
-        const d = block.data as ScoreTableData
-        if (d.title) {
-          label = lastTitle ? `${lastTitle} > ${d.title}` : d.title
-        } else if (lastTitle) {
-          label = lastTitle
+        case 'closing-page': {
+          const d = block.data as ClosingPageData
+          label = d.title || 'Termo de Entrega'
+          sectionTitle = d.title || 'Termo de Entrega'
+          isSection = true
+          break
         }
-        break
-      }
-      case 'chart': {
-        const d = block.data as ChartData
-        if (d.title) {
-          label = lastTitle ? `${lastTitle} > ${d.title}` : d.title
-        } else if (lastTitle) {
-          label = lastTitle
+        case 'score-table': {
+          const d = block.data as ScoreTableData
+          label = d.title ? (parentTitle ? `${parentTitle} > ${d.title}` : d.title) : parentTitle
+          break
         }
-        break
-      }
-      case 'info-box': {
-        const d = block.data as InfoBoxData
-        const boxLabel = d.label || ''
-        if (boxLabel) {
-          label = lastTitle ? `${lastTitle} > ${boxLabel}` : boxLabel
-        } else if (lastTitle) {
-          label = lastTitle
+        case 'chart': {
+          const d = block.data as ChartData
+          label = d.title ? (parentTitle ? `${parentTitle} > ${d.title}` : d.title) : parentTitle
+          break
         }
-        break
+        case 'info-box': {
+          const d = block.data as InfoBoxData
+          label = d.label ? (parentTitle ? `${parentTitle} > ${d.label}` : d.label) : parentTitle
+          break
+        }
+        case 'references': {
+          const d = block.data as ReferencesData
+          const t = d.title || 'Referências'
+          label = parentTitle ? `${parentTitle} > ${t}` : t
+          break
+        }
+        default: {
+          label = parentTitle
+          break
+        }
       }
-      case 'references': {
-        const d = block.data as ReferencesData
-        const refTitle = d.title || 'Referências'
-        label = lastTitle ? `${lastTitle} > ${refTitle}` : refTitle
-        break
-      }
-      case 'closing-page': {
-        const d = block.data as ClosingPageData
-        label = d.title || 'Termo de Entrega'
-        sectionTitle = d.title || 'Termo de Entrega'
-        isSection = true
-        lastSectionBlockId = block.id
-        break
-      }
-    }
 
-    result[block.id] = {
-      label,
-      sectionTitle,
-      section: lastTitle,
-      sectionBlockId: isSection ? block.id : lastSectionBlockId,
-      isSection,
+      const currentSectionId = isSection ? block.id : parentSectionId
+      const currentTitle = isSection ? (sectionTitle || label) : parentTitle
+
+      result[block.id] = {
+        label,
+        sectionTitle: isSection ? sectionTitle : parentTitle,
+        section: parentTitle,
+        sectionBlockId: currentSectionId,
+        isSection,
+      }
+
+      if (children.length > 0) {
+        walk(children, currentTitle, currentSectionId)
+      }
     }
   }
 
+  walk(tree, '', '')
   return result
 }
 

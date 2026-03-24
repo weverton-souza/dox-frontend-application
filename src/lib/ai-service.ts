@@ -177,6 +177,7 @@ export function parseAIResponse(raw: string, template: ReportTemplate): ReportGe
       blocks: template.blocks.map((tb, i) => ({
         id: crypto.randomUUID(),
         type: tb.type,
+        parentId: tb.parentId ?? null,
         order: i,
         data: JSON.parse(JSON.stringify(tb.data)),
         collapsed: false,
@@ -189,15 +190,15 @@ export function parseAIResponse(raw: string, template: ReportTemplate): ReportGe
     const block: Block = {
       id: crypto.randomUUID(),
       type: tb.type,
+      parentId: tb.parentId ?? null,
       order: i,
       data: JSON.parse(JSON.stringify(tb.data)),
       collapsed: false,
     }
 
     if (tb.type === 'text') {
-      const tbTitle = (tb.data as TextBlockData).title
       const aiBlock = parsed.blocks.find(
-        (ab) => ab.type === 'text' && ab.title === tbTitle
+        (ab) => ab.type === 'text'
       )
       if (aiBlock?.content) {
         (block.data as TextBlockData).content = aiBlock.content

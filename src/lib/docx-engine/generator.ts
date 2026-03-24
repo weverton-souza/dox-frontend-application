@@ -18,6 +18,7 @@ import {
   ISectionOptions,
   ImageRun,
   PageBreak,
+  UnderlineType,
 } from 'docx'
 import { saveAs } from 'file-saver'
 import type { Block } from '@/types'
@@ -25,6 +26,7 @@ import {
   Report,
   IdentificationData,
   TextBlockData,
+  SectionData,
   ScoreTableData,
   InfoBoxData,
   ChartData,
@@ -526,30 +528,20 @@ function contentToDocxParagraphs(content: string | SlateContent): Paragraph[] {
   return parseHtmlToDocxParagraphs(content)
 }
 
+function renderSection(data: SectionData, depth: number): Paragraph[] {
+  const elements: Paragraph[] = []
+  if (data.title) {
+    if (depth === 0) {
+      elements.push(createSectionHeader(data.title.toUpperCase()))
+    } else {
+      elements.push(createSubsectionHeader(data.title.toUpperCase()))
+    }
+  }
+  return elements
+}
+
 function renderText(data: TextBlockData): Paragraph[] {
   const elements: Paragraph[] = []
-
-  if (data.title) {
-    elements.push(createSectionHeader(data.title.toUpperCase()))
-  }
-
-  if (data.subtitle) {
-    elements.push(
-      new Paragraph({
-        spacing: { before: 100, after: 100 },
-        children: [
-          new TextRun({
-            text: data.subtitle,
-            bold: true,
-            italics: true,
-            size: 22,
-            font: 'Calibri',
-            color: MEDIUM_BLUE,
-          }),
-        ],
-      })
-    )
-  }
 
   if (data.content && (typeof data.content === 'string' ? data.content.trim() : true)) {
     const contentParagraphs = contentToDocxParagraphs(data.content)
@@ -709,8 +701,8 @@ function renderScoreTable(data: ScoreTableData): (Paragraph | Table)[] {
 function renderSkippedWarning(block: Block): (Paragraph | Table)[] {
   const elements: (Paragraph | Table)[] = []
 
-  const title = block.type === 'text'
-    ? (block.data as TextBlockData).title
+  const title = block.type === 'section'
+    ? (block.data as SectionData).title
     : (block.data as InfoBoxData).label
   const content = (block.data as { content?: TextBlockData['content'] }).content
 
@@ -1503,6 +1495,23 @@ function createSectionHeader(text: string): Paragraph {
   })
 }
 
+function createSubsectionHeader(text: string): Paragraph {
+  return new Paragraph({
+    keepNext: true,
+    spacing: { before: 240, after: 120 },
+    children: [
+      new TextRun({
+        text,
+        bold: true,
+        size: 22,
+        font: 'Calibri',
+        color: DARK_BLUE,
+        underline: { type: UnderlineType.SINGLE, color: MEDIUM_BLUE },
+      }),
+    ],
+  })
+}
+
 function createKeyValueTable(rows: string[][]): Table {
   const labelWidth = Math.floor(PAGE_CONTENT_WIDTH * 0.3)
   const valueWidth = PAGE_CONTENT_WIDTH - labelWidth
@@ -1595,6 +1604,20 @@ export async function generateDocx(report: Report): Promise<Blob> {
 
   const sectionChildren: (Paragraph | Table)[] = []
 
+  // Build depth map: count parent chain length for each block
+  const blockMap = new Map(sortedBlocks.map(b => [b.id, b]))
+  function getBlockDepth(block: Block): number {
+    let depth = 0
+    let current = block
+    while (current.parentId) {
+      depth++
+      const parent = blockMap.get(current.parentId)
+      if (!parent) break
+      current = parent
+    }
+    return depth
+  }
+
   // Render each block
   for (const block of sortedBlocks) {
     if (block.skippedByAi) {
@@ -1606,6 +1629,9 @@ export async function generateDocx(report: Report): Promise<Blob> {
     switch (block.type) {
       case 'identification':
         sectionChildren.push(...renderIdentification(block.data as IdentificationData))
+        break
+      case 'section':
+        sectionChildren.push(...renderSection(block.data as SectionData, getBlockDepth(block)))
         break
       case 'text':
         sectionChildren.push(...renderText(block.data as TextBlockData))

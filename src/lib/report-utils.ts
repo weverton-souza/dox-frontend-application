@@ -42,6 +42,7 @@ export async function createReportFromTemplate(
       return {
         id: crypto.randomUUID(),
         type: tb.type,
+        parentId: tb.parentId ?? null,
         order: i,
         data: structuredClone(tb.data),
         collapsed: false,

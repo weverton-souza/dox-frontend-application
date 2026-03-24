@@ -69,3 +69,10 @@ export async function updateFormResponse(
 export async function deleteFormResponse(formId: string, responseId: string): Promise<void> {
   await api.delete(`/forms/${formId}/responses/${responseId}`)
 }
+
+// ========== Form Responses by Customer ==========
+
+export async function getFormResponsesByCustomerId(customerId: string): Promise<FormResponse[]> {
+  const { data } = await api.get<FormResponse[]>(`/forms/by-customer/${customerId}/responses`)
+  return data
+}
