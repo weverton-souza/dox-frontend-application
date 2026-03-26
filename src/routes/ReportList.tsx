@@ -13,7 +13,7 @@ import Modal from '@/components/ui/Modal'
 import Pagination from '@/components/ui/Pagination'
 import PageHeader from '@/components/layout/PageHeader'
 import StatusBadge from '@/components/ui/StatusBadge'
-import ListCard, { ListCardPill, ListCardAction, TrashIcon as ListTrashIcon } from '@/components/ui/ListCard'
+import ListCard, { ListCardPill, ListCardAction } from '@/components/ui/ListCard'
 import ConfirmDeleteModal from '@/components/ui/ConfirmDeleteModal'
 import EmptyState from '@/components/ui/EmptyState'
 import PageSizeSelector from '@/components/ui/PageSizeSelector'
@@ -185,7 +185,7 @@ export default function ReportList() {
                   <ListCardAction
                     onClick={() => setConfirmDeleteId(report.id)}
                     title="Excluir relatório"
-                    icon={<ListTrashIcon />}
+                    icon={<TrashIcon />}
                     variant="danger"
                   />
                 }

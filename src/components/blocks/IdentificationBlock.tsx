@@ -49,7 +49,7 @@ function calculateAge(birthDate: string, referenceDate: string): string {
   return `${years} ${years === 1 ? 'ano' : 'anos'} e ${months} ${months === 1 ? 'mes' : 'meses'}`
 }
 
-const IdentificationBlock = ({ data, onChange, customers, onCustomerSelected }: IdentificationBlockProps) => {
+export default function IdentificationBlock({ data, onChange, customers, onCustomerSelected }: IdentificationBlockProps) {
   const hasSolicitor = !!data.solicitor
 
   const customerOptions = useMemo(() => {
@@ -305,5 +305,3 @@ const IdentificationBlock = ({ data, onChange, customers, onCustomerSelected }: 
     </div>
   )
 }
-
-export default IdentificationBlock

@@ -16,8 +16,8 @@ import ConfirmDeleteModal from '@/components/ui/ConfirmDeleteModal'
 import EmptyState from '@/components/ui/EmptyState'
 import PageSizeSelector from '@/components/ui/PageSizeSelector'
 import Spinner from '@/components/ui/Spinner'
-// icons from ListCard
-import ListCard, { ListCardPill, ListCardAction, TrashIcon as ListTrashIcon } from '@/components/ui/ListCard'
+import ListCard, { ListCardPill, ListCardAction } from '@/components/ui/ListCard'
+import { TrashIcon } from '@/components/icons'
 import GenerateReportModal from '@/components/form-builder/GenerateReportModal'
 import GenerateFormLinkModal from '@/components/form-builder/GenerateFormLinkModal'
 
@@ -184,7 +184,7 @@ export default function FormResponseList() {
                       <ListCardAction
                         onClick={() => setConfirmDeleteId(resp.id)}
                         title="Excluir resposta"
-                        icon={<ListTrashIcon />}
+                        icon={<TrashIcon />}
                         variant="danger"
                       />
                     }

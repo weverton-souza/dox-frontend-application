@@ -132,6 +132,17 @@ export function CopyIcon({ size = 16, className }: IconProps) {
   )
 }
 
+export function DocumentPlusIcon({ size = 16, className }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <line x1="12" y1="18" x2="12" y2="12" />
+      <line x1="9" y1="15" x2="15" y2="15" />
+    </svg>
+  )
+}
+
 export function EyeIcon({ size = 18, className }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -182,6 +193,37 @@ export function CalendarIcon({ size = 20, className }: IconProps) {
   )
 }
 
+export function DragDotsIcon({ size = 20, className }: IconProps) {
+  return (
+    <svg width={size} height={Math.round(size / 2)} viewBox="0 0 20 10" fill="currentColor" className={className}>
+      <circle cx="4" cy="2" r="1.2" />
+      <circle cx="10" cy="2" r="1.2" />
+      <circle cx="16" cy="2" r="1.2" />
+      <circle cx="4" cy="8" r="1.2" />
+      <circle cx="10" cy="8" r="1.2" />
+      <circle cx="16" cy="8" r="1.2" />
+    </svg>
+  )
+}
+
+export function ThreeDotsIcon({ size = 18, className }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <circle cx="12" cy="5" r="2" />
+      <circle cx="12" cy="12" r="2" />
+      <circle cx="12" cy="19" r="2" />
+    </svg>
+  )
+}
+
+export function CheckIcon({ size = 16, className }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  )
+}
+
 export function NewDocumentIcon({ size = 16, className }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -189,6 +231,55 @@ export function NewDocumentIcon({ size = 16, className }: IconProps) {
       <polyline points="14 2 14 8 20 8" />
       <line x1="12" y1="18" x2="12" y2="12" />
       <line x1="9" y1="15" x2="15" y2="15" />
+    </svg>
+  )
+}
+
+export function AlignLeftIcon({ size = 12, className }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className={className}>
+      <line x1="2" y1="4" x2="14" y2="4" />
+      <line x1="2" y1="8" x2="10" y2="8" />
+      <line x1="2" y1="12" x2="12" y2="12" />
+    </svg>
+  )
+}
+
+export function AlignCenterIcon({ size = 12, className }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className={className}>
+      <line x1="2" y1="4" x2="14" y2="4" />
+      <line x1="4" y1="8" x2="12" y2="8" />
+      <line x1="3" y1="12" x2="13" y2="12" />
+    </svg>
+  )
+}
+
+export function AlignRightIcon({ size = 12, className }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className={className}>
+      <line x1="2" y1="4" x2="14" y2="4" />
+      <line x1="6" y1="8" x2="14" y2="8" />
+      <line x1="4" y1="12" x2="14" y2="12" />
+    </svg>
+  )
+}
+
+export function AlignIcon({ alignment, size = 12 }: { alignment: 'left' | 'center' | 'right'; size?: number }) {
+  if (alignment === 'left') return <AlignLeftIcon size={size} />
+  if (alignment === 'right') return <AlignRightIcon size={size} />
+  return <AlignCenterIcon size={size} />
+}
+
+export function GripDotsIcon({ size = 12, className }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="currentColor" className={className}>
+      <circle cx="5" cy="3" r="1.5" />
+      <circle cx="11" cy="3" r="1.5" />
+      <circle cx="5" cy="8" r="1.5" />
+      <circle cx="11" cy="8" r="1.5" />
+      <circle cx="5" cy="13" r="1.5" />
+      <circle cx="11" cy="13" r="1.5" />
     </svg>
   )
 }

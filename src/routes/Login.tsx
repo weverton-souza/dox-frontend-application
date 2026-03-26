@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { useError } from '@/contexts/ErrorContext'
 import Button from '@/components/ui/Button'
+import Input from '@/components/ui/Input'
 import { EyeIcon, EyeOffIcon } from '@/components/icons'
 import logoDox from '@/assets/logo-dox.svg'
 import loginBg from '@/assets/login_background.svg'
@@ -55,30 +56,24 @@ export default function Login() {
           <img src={logoDox} alt="Dox" className="h-10 mx-auto mb-6" />
 
           <form onSubmit={handleSubmit} className="space-y-3.5">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                E-mail
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                placeholder="seu@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                autoFocus
-                className="w-full rounded-lg border border-gray-300/80 bg-white/40 px-3 py-2.5 sm:py-1.5 text-base sm:text-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none transition-colors placeholder:text-gray-400"
-              />
-            </div>
+            <Input
+              label="E-mail"
+              id="email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              placeholder="seu@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              autoFocus
+              className="border-gray-300/80 bg-white/40 py-2.5 sm:py-1.5 text-base sm:text-sm"
+            />
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                Senha
-              </label>
               <div className="relative">
-                <input
+                <Input
+                  label="Senha"
                   id="password"
                   name="password"
                   type={showPassword ? 'text' : 'password'}
@@ -87,12 +82,12 @@ export default function Login() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="w-full rounded-lg border border-gray-300/80 bg-white/50 px-3 py-2.5 sm:py-1.5 pr-9 text-base sm:text-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none transition-colors placeholder:text-gray-400"
+                  className="border-gray-300/80 bg-white/50 py-2.5 sm:py-1.5 pr-9 text-base sm:text-sm"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  className="absolute right-2.5 bottom-2.5 sm:bottom-1.5 text-gray-400 hover:text-gray-600 transition-colors"
                 >
                   {showPassword ? <EyeOffIcon /> : <EyeIcon />}
                 </button>

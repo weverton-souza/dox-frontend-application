@@ -2,11 +2,12 @@ import { useState, useEffect, useMemo } from 'react'
 import type { Block, SectionData, InfoBoxData, TextBlockData, FormResponse, ReviewAction } from '@/types'
 import { FORM_RESPONSE_STATUS_LABELS, FORM_RESPONSE_STATUS_COLORS, isSlateContent, slateContentToPlainText } from '@/types'
 import { getFormResponsesByCustomerId } from '@/lib/api/form-api'
-import { listForms } from '@/lib/api/form-api'
+import { getForms } from '@/lib/api/form-api'
 import { formatDateTime } from '@/lib/utils'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import AiSparkleIcon from '@/components/ai/AiSparkleIcon'
+import { CheckIcon } from '@/components/icons'
 
 type SectionStatus = 'empty' | 'ai-generated' | 'skipped' | 'has-content'
 
@@ -52,13 +53,6 @@ function getSectionTitle(block: Block): string {
   return 'Seção'
 }
 
-function CheckIcon({ className = '' }: { className?: string }) {
-  return (
-    <svg className={className} width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-    </svg>
-  )
-}
 
 function ChevronIcon({ expanded }: { expanded: boolean }) {
   return (
@@ -100,7 +94,7 @@ export default function AiSectionChecklist({ isOpen, onClose, onConfirm, blocks,
     if (isOpen && customerId) {
       Promise.all([
         getFormResponsesByCustomerId(customerId),
-        listForms(),
+        getForms(),
       ]).then(([responses, forms]) => {
         setFormResponses(responses)
         const titles: Record<string, string> = {}
@@ -292,9 +286,6 @@ export default function AiSectionChecklist({ isOpen, onClose, onConfirm, blocks,
                     {/* Data sources */}
                     {hasFormResponses && (
                       <>
-                        <span className="text-[11px] text-gray-400 font-medium uppercase tracking-wide">
-                          Fontes de dados
-                        </span>
                     <span className="text-[11px] text-gray-400 font-medium uppercase tracking-wide">
                       Fontes de dados
                     </span>

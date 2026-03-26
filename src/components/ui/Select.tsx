@@ -11,7 +11,7 @@ interface SelectProps {
   placeholder?: string
 }
 
-const Select = ({ label, value, onChange, options, placeholder }: SelectProps) => {
+export default function Select({ label, value, onChange, options, placeholder }: SelectProps) {
   const selectId = label?.toLowerCase().replace(/\s+/g, '-')
 
   return (
@@ -68,5 +68,3 @@ const Select = ({ label, value, onChange, options, placeholder }: SelectProps) =
     </div>
   )
 }
-
-export default Select

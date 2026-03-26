@@ -27,8 +27,8 @@ interface OutlineRowProps {
   depth: number
   siblingIndex?: number
   onEdit: (blockId: string) => void
-  onDuplicate: (blockId: string) => void
-  onRemove: (blockId: string) => void
+  onDuplicate?: (blockId: string) => void
+  onRemove?: (blockId: string) => void
   onChange: (blockId: string, data: BlockData) => void
   onRequestAdd?: (afterBlockId: string, parentId?: string | null) => void
   onReviewBlock?: (blockId: string) => void
@@ -140,6 +140,7 @@ export default function OutlineRow({
   }, [confirmingRemove])
 
   const handleRemoveClick = useCallback(() => {
+    if (!onRemove) return
     if (isContainerBlock(block.type)) {
       onRemove(block.id)
       setShowMenu(false)
@@ -389,7 +390,7 @@ export default function OutlineRow({
               )}
 
               {/* Duplicate */}
-              <button
+              {onDuplicate && <button
                 type="button"
                 onClick={() => {
                   onDuplicate(block.id)
@@ -402,10 +403,10 @@ export default function OutlineRow({
                   <path d="M4.5 6A1.5 1.5 0 003 7.5v9A1.5 1.5 0 004.5 18h7a1.5 1.5 0 001.5-1.5v-5.879a1.5 1.5 0 00-.44-1.06L9.44 6.44A1.5 1.5 0 008.378 6H4.5z" />
                 </svg>
                 Duplicar
-              </button>
+              </button>}
 
               {/* Remove */}
-              <button
+              {onRemove && <button
                 type="button"
                 onClick={handleRemoveClick}
                 className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left ${
@@ -422,7 +423,7 @@ export default function OutlineRow({
                   />
                 </svg>
                 {isContainerBlock(block.type) ? 'Excluir seção' : confirmingRemove ? 'Confirmar remoção' : 'Remover'}
-              </button>
+              </button>}
             </div>
           )}
         </div>

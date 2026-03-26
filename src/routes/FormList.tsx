@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { Form } from '@/types'
 import { createEmptyForm } from '@/types'
-import { listForms, createForm, deleteForm, listFormResponses } from '@/lib/api/form-api'
+import { getForms, createForm, deleteForm, listFormResponses } from '@/lib/api/form-api'
 import { getAllTemplates } from '@/lib/default-templates'
 import { getReportTemplates } from '@/lib/api/template-api'
 import { formatDateTime } from '@/lib/utils'
@@ -15,8 +15,8 @@ import PageHeader from '@/components/layout/PageHeader'
 import ConfirmDeleteModal from '@/components/ui/ConfirmDeleteModal'
 import EmptyState from '@/components/ui/EmptyState'
 import PageSizeSelector from '@/components/ui/PageSizeSelector'
-// icons from ListCard
-import ListCard, { ListCardPill, ListCardAction, CopyIcon as ListCopyIcon, TrashIcon as ListTrashIcon } from '@/components/ui/ListCard'
+import ListCard, { ListCardPill, ListCardAction } from '@/components/ui/ListCard'
+import { CopyIcon, TrashIcon } from '@/components/icons'
 
 export default function FormList() {
   const navigate = useNavigate()
@@ -29,7 +29,7 @@ export default function FormList() {
   const loadData = useCallback(async () => {
     try {
       const [loadedForms, customTemplates] = await Promise.all([
-        listForms(),
+        getForms(),
         getReportTemplates(),
       ])
       setForms(loadedForms)
@@ -188,9 +188,9 @@ export default function FormList() {
                     }
                     actions={
                       <>
-                        <ListCardAction onClick={() => handleDuplicate(form)} title="Duplicar" icon={<ListCopyIcon />} />
+                        <ListCardAction onClick={() => handleDuplicate(form)} title="Duplicar" icon={<CopyIcon />} />
                         {!isDefault && (
-                          <ListCardAction onClick={() => setConfirmDeleteId(form.id)} title="Excluir" icon={<ListTrashIcon />} variant="danger" />
+                          <ListCardAction onClick={() => setConfirmDeleteId(form.id)} title="Excluir" icon={<TrashIcon />} variant="danger" />
                         )}
                       </>
                     }
