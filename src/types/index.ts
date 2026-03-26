@@ -122,6 +122,59 @@ export interface CustomerEvent {
   createdAt: string
 }
 
+// ========== Calendar Event Tags ==========
+
+export interface EventTag {
+  id: string
+  name: string
+  color: string
+  createdAt: string
+  updatedAt: string
+}
+
+// ========== Calendar Events (Google Calendar pattern) ==========
+
+export interface EventDateTime {
+  date?: string
+  dateTime?: string
+  timeZone?: string
+}
+
+export interface CalendarEvent {
+  id: string
+  summary: string
+  description?: string
+  location?: string
+  start: EventDateTime
+  end: EventDateTime
+  allDay: boolean
+  tagId?: string
+  tagName?: string
+  tagColor?: string
+  customerId?: string
+  customerName?: string
+  status: 'confirmed' | 'tentative' | 'cancelled'
+  recurrence?: string[]
+  reminders?: { useDefault: boolean; overrides?: { method: string; minutes: number }[] }
+  googleEventId?: string
+  iCalUID?: string
+  createdAt: string
+  updatedAt: string
+}
+
+// ========== Customer Event (calendar global view — from prontuário) ==========
+
+export interface CustomerCalendarEvent {
+  id: string
+  customerId: string
+  customerName: string
+  type: CustomerEventType
+  title: string
+  description: string
+  date: string
+  createdAt: string
+}
+
 // ========== Block Data Types ==========
 
 export interface IdentificationData {
@@ -461,6 +514,8 @@ export interface Report {
   customerId?: string
   formId?: string
   formResponseId?: string
+  templateId?: string
+  isStructureLocked: boolean
   blocks: Block[]
   theme?: ReportTheme
 }
@@ -506,6 +561,8 @@ export interface ReportTemplate {
   description: string
   blocks: TemplateBlock[]
   isDefault: boolean
+  isLocked: boolean
+  isMaster: boolean
 }
 
 // Re-export block constants so existing imports from '@/types' still work

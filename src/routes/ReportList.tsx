@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { Report, ReportTemplate, Block, Page } from '@/types'
 import { getReports, createReport, deleteReport } from '@/lib/api/report-api'
-import { getReportTemplates, deleteReportTemplate } from '@/lib/api/template-api'
+import { getReportTemplates, deleteReportTemplate, duplicateReportTemplate } from '@/lib/api/template-api'
 import { getAllTemplates } from '@/lib/default-templates'
 import { formatDateTime } from '@/lib/utils'
 import { createEmptyReport } from '@/lib/report-utils'
@@ -13,10 +13,12 @@ import Modal from '@/components/ui/Modal'
 import Pagination from '@/components/ui/Pagination'
 import PageHeader from '@/components/layout/PageHeader'
 import StatusBadge from '@/components/ui/StatusBadge'
+import ListCard, { ListCardPill, ListCardAction, TrashIcon as ListTrashIcon } from '@/components/ui/ListCard'
 import ConfirmDeleteModal from '@/components/ui/ConfirmDeleteModal'
 import EmptyState from '@/components/ui/EmptyState'
 import PageSizeSelector from '@/components/ui/PageSizeSelector'
-import { TrashIcon } from '@/components/icons'
+import { TrashIcon, CopyIcon } from '@/components/icons'
+import { getBlockTitle } from '@/lib/block-constants'
 
 export default function ReportList() {
   const navigate = useNavigate()
@@ -27,6 +29,7 @@ export default function ReportList() {
   const [pageSize, setPageSize] = useState(10)
   const [customTemplates, setCustomTemplates] = useState<ReportTemplate[]>([])
   const [showNewModal, setShowNewModal] = useState(false)
+  const [activeTab, setActiveTab] = useState('reports')
 
   const loadData = useCallback(async (page: number, size: number) => {
     try {
@@ -106,6 +109,16 @@ export default function ReportList() {
     [showError]
   )
 
+  const handleDuplicateTemplate = useCallback(async (id: string) => {
+    try {
+      await duplicateReportTemplate(id)
+      const templates = await getReportTemplates()
+      setCustomTemplates(templates)
+    } catch (err) {
+      showError(err)
+    }
+  }, [showError])
+
   const changePageSize = useCallback((size: number) => {
     setPageSize(size)
     setCurrentPage(0)
@@ -115,13 +128,21 @@ export default function ReportList() {
     <>
       <PageHeader
         title="Relatórios"
-        subtitle="Montagem de relatórios"
+        tabs={[
+          { id: 'reports', label: 'Relatórios' },
+          { id: 'templates', label: 'Templates' },
+        ]}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
         actions={
-          <Button onClick={() => setShowNewModal(true)}>+ Novo Relatório</Button>
+          activeTab === 'reports'
+            ? <Button onClick={() => setShowNewModal(true)}>+ Novo Relatório</Button>
+            : undefined
         }
       />
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+      {activeTab === 'reports' ? (<>
         {/* Filters */}
         {reportsPage && reportsPage.totalElements > 0 && (
           <div className="mb-6 hidden sm:flex items-center justify-end">
@@ -149,42 +170,26 @@ export default function ReportList() {
           <>
           <div className="space-y-3">
             {reportsPage.content.map((report) => (
-              <div
+              <ListCard
                 key={report.id}
-                className="bg-white rounded-xl border border-gray-200 hover:border-brand-300 hover:shadow-md transition-all p-3 sm:p-4 flex items-center gap-3 sm:gap-4 cursor-pointer"
                 onClick={() => navigate(`/reports/${report.id}`)}
-              >
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-medium text-gray-900 truncate">
-                    {report.customerName || 'Cliente sem nome'}
-                  </h3>
-                  <div className="flex items-center gap-3 mt-1">
-                    <span className="text-xs text-gray-500">
-                      {formatDateTime(report.updatedAt)}
-                    </span>
-                    <span className="text-xs text-gray-400">•</span>
-                    <span className="text-xs text-gray-500">
-                      {report.blocks.length} {report.blocks.length === 1 ? 'bloco' : 'blocos'}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="shrink-0">
-                  <StatusBadge status={report.status} />
-                </div>
-
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setConfirmDeleteId(report.id)
-                  }}
-                  className="p-2 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors shrink-0"
-                  title="Excluir relatório"
-                >
-                  <TrashIcon />
-                </button>
-              </div>
+                title={report.customerName || 'Cliente sem nome'}
+                pills={
+                  <>
+                    <ListCardPill>{formatDateTime(report.updatedAt)}</ListCardPill>
+                    <ListCardPill>{report.blocks.length} {report.blocks.length === 1 ? 'bloco' : 'blocos'}</ListCardPill>
+                  </>
+                }
+                badges={<StatusBadge status={report.status} />}
+                actions={
+                  <ListCardAction
+                    onClick={() => setConfirmDeleteId(report.id)}
+                    title="Excluir relatório"
+                    icon={<ListTrashIcon />}
+                    variant="danger"
+                  />
+                }
+              />
             ))}
           </div>
           <Pagination
@@ -193,6 +198,14 @@ export default function ReportList() {
           />
           </>
         )}
+      </>) : (
+        /* Templates tab */
+        <TemplatesTab
+          templates={allTemplates}
+          onDuplicate={handleDuplicateTemplate}
+          onDelete={handleDeleteTemplate}
+        />
+      )}
       </main>
 
       {/* New Report Modal */}
@@ -285,5 +298,120 @@ export default function ReportList() {
         message="Tem certeza de que deseja excluir este relatório? Esta ação não pode ser desfeita."
       />
     </>
+  )
+}
+
+function TemplatesTab({
+  templates,
+  onDuplicate,
+  onDelete,
+}: {
+  templates: ReportTemplate[]
+  onDuplicate: (id: string) => void
+  onDelete: (id: string) => void
+}) {
+  const masterTemplates = templates.filter((t) => t.isMaster)
+  const customTemplates = templates.filter((t) => !t.isMaster)
+
+  return (
+    <div className="space-y-8">
+      {masterTemplates.length > 0 && (
+        <section>
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3">
+            Templates Mestre
+          </h2>
+          <div className="space-y-2">
+            {masterTemplates.map((t) => (
+              <TemplateCard key={t.id} template={t} onDuplicate={onDuplicate} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      <section>
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3">
+          {masterTemplates.length > 0 ? 'Meus Templates' : 'Templates'}
+        </h2>
+        {customTemplates.length === 0 ? (
+          <p className="text-sm text-gray-400 py-4">
+            Nenhum template customizado. Duplique um template mestre ou salve um relatório como template.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {customTemplates.map((t) => (
+              <TemplateCard key={t.id} template={t} onDuplicate={onDuplicate} onDelete={onDelete} />
+            ))}
+          </div>
+        )}
+      </section>
+    </div>
+  )
+}
+
+function TemplateCard({
+  template,
+  onDuplicate,
+  onDelete,
+}: {
+  template: ReportTemplate
+  onDuplicate: (id: string) => void
+  onDelete?: (id: string) => void
+}) {
+  return (
+    <div className="flex items-center gap-4 p-4 bg-white rounded-xl border border-gray-200 hover:border-gray-300 transition-colors">
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <p className="font-medium text-gray-900">{template.name}</p>
+          {template.isMaster && (
+            <span className="text-[10px] font-medium uppercase bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">
+              Mestre
+            </span>
+          )}
+          {template.isLocked && (
+            <span className="text-[10px] font-medium uppercase bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded flex items-center gap-0.5">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              </svg>
+              Estrutura fixa
+            </span>
+          )}
+        </div>
+        {template.description && (
+          <p className="text-xs text-gray-500 mt-0.5">{template.description}</p>
+        )}
+        <div className="mt-2 flex flex-wrap gap-1">
+          {template.blocks.map((block, i) => (
+            <span key={i} className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">
+              {getBlockTitle(block)}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex items-center gap-1 shrink-0">
+        <span className="text-xs text-gray-400 mr-2">
+          {template.blocks.length} blocos
+        </span>
+        <button
+          type="button"
+          onClick={() => onDuplicate(template.id)}
+          className="p-2 rounded-lg hover:bg-brand-50 text-gray-400 hover:text-brand-600 transition-colors"
+          title="Duplicar template"
+        >
+          <CopyIcon size={14} />
+        </button>
+        {onDelete && !template.isMaster && (
+          <button
+            type="button"
+            onClick={() => onDelete(template.id)}
+            className="p-2 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
+            title="Excluir template"
+          >
+            <TrashIcon size={14} />
+          </button>
+        )}
+      </div>
+    </div>
   )
 }
