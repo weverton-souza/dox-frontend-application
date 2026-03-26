@@ -15,7 +15,8 @@ import PageHeader from '@/components/layout/PageHeader'
 import ConfirmDeleteModal from '@/components/ui/ConfirmDeleteModal'
 import EmptyState from '@/components/ui/EmptyState'
 import PageSizeSelector from '@/components/ui/PageSizeSelector'
-import { TrashIcon, CopyIcon } from '@/components/icons'
+// icons from ListCard
+import ListCard, { ListCardPill, ListCardAction, CopyIcon as ListCopyIcon, TrashIcon as ListTrashIcon } from '@/components/ui/ListCard'
 
 export default function FormList() {
   const navigate = useNavigate()
@@ -144,113 +145,56 @@ export default function FormList() {
                 const responseCount = responseCounts[form.id] ?? 0
                 const isDefault = !!form.isDefault
 
+                const questionCount = form.fields.filter(f => f.type !== 'section-header').length
+
                 return (
-                  <div
+                  <ListCard
                     key={form.id}
-                    className="bg-white rounded-xl border border-gray-200 hover:border-brand-300 hover:shadow-md transition-all p-3 sm:p-4 flex items-center gap-3 sm:gap-4 cursor-pointer"
                     onClick={() =>
                       isDefault
                         ? navigate(`/forms/${form.id}/responses`)
                         : navigate(`/forms/${form.id}/edit`)
                     }
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-medium text-gray-900 truncate">
-                          {form.title || 'Formulário sem título'}
-                        </h3>
-                        {isDefault && (
-                          <span className="text-[10px] font-medium uppercase bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded shrink-0">
-                            Padrão
+                    title={form.title || 'Formulário sem título'}
+                    subtitle={
+                      isDefault ? (
+                        <span className="text-[10px] font-medium uppercase bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">
+                          Padrão
+                        </span>
+                      ) : undefined
+                    }
+                    pills={
+                      <>
+                        {!isDefault && <ListCardPill>{formatDateTime(form.updatedAt)}</ListCardPill>}
+                        <ListCardPill>{questionCount} {questionCount === 1 ? 'pergunta' : 'perguntas'}</ListCardPill>
+                        {templateName && (
+                          <span className="text-[10px] font-medium uppercase bg-brand-100 text-brand-700 px-1.5 py-0.5 rounded">
+                            {templateName}
                           </span>
                         )}
-                      </div>
-                      <div className="flex items-center gap-3 mt-1 flex-wrap">
-                        {!isDefault && (
-                          <>
-                            <span className="text-xs text-gray-500">
-                              {formatDateTime(form.updatedAt)}
-                            </span>
-                            <span className="text-xs text-gray-400">•</span>
-                          </>
-                        )}
-                        <span className="text-xs text-gray-500">
-                          {form.fields.filter(f => f.type !== 'section-header').length} {form.fields.filter(f => f.type !== 'section-header').length === 1 ? 'pergunta' : 'perguntas'}
-                        </span>
-                        {templateName && (
-                          <>
-                            <span className="text-xs text-gray-400">•</span>
-                            <span className="text-[10px] font-medium uppercase bg-brand-100 text-brand-700 px-1.5 py-0.5 rounded">
-                              {templateName}
-                            </span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Quick fill button for default forms */}
-                    {isDefault && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          navigate(`/forms/${form.id}/fill`)
-                        }}
-                        className="text-xs text-brand-600 hover:text-brand-700 font-medium shrink-0"
+                      </>
+                    }
+                    badges={
+                      <span
+                        className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full cursor-pointer ${
+                          responseCount > 0
+                            ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                            : 'bg-gray-100 text-gray-500'
+                        }`}
+                        onClick={(e) => { e.stopPropagation(); navigate(`/forms/${form.id}/responses`) }}
                       >
-                        Preencher
-                      </button>
-                    )}
-
-                    {/* Response count badge */}
-                    <div
-                      className="shrink-0 cursor-pointer"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        navigate(`/forms/${form.id}/responses`)
-                      }}
-                    >
-                      <span className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full ${
-                        responseCount > 0
-                          ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                          : 'bg-gray-100 text-gray-500'
-                      }`}>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                          <circle cx="9" cy="7" r="4" />
-                        </svg>
                         {responseCount} {responseCount === 1 ? 'resposta' : 'respostas'}
                       </span>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="hidden sm:flex items-center gap-1 shrink-0">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleDuplicate(form)
-                        }}
-                        className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
-                        title="Duplicar"
-                      >
-                        <CopyIcon />
-                      </button>
-                      {!isDefault && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setConfirmDeleteId(form.id)
-                          }}
-                          className="p-2 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
-                          title="Excluir"
-                        >
-                          <TrashIcon />
-                        </button>
-                      )}
-                    </div>
-                  </div>
+                    }
+                    actions={
+                      <>
+                        <ListCardAction onClick={() => handleDuplicate(form)} title="Duplicar" icon={<ListCopyIcon />} />
+                        {!isDefault && (
+                          <ListCardAction onClick={() => setConfirmDeleteId(form.id)} title="Excluir" icon={<ListTrashIcon />} variant="danger" />
+                        )}
+                      </>
+                    }
+                  />
                 )
               })}
             </div>

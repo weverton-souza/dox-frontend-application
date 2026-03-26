@@ -17,7 +17,31 @@ import PageHeader from '@/components/layout/PageHeader'
 import ConfirmDeleteModal from '@/components/ui/ConfirmDeleteModal'
 import EmptyState from '@/components/ui/EmptyState'
 import PageSizeSelector from '@/components/ui/PageSizeSelector'
-import { TrashIcon } from '@/components/icons'
+// icons from ListCard
+import ListCard, { ListCardPill, ListCardAction, DocumentPlusIcon, EditIcon, TrashIcon as ListTrashIcon } from '@/components/ui/ListCard'
+
+const AVATAR_COLORS = [
+  'from-blue-400 to-blue-600',
+  'from-purple-400 to-purple-600',
+  'from-teal-400 to-teal-600',
+  'from-rose-400 to-rose-600',
+  'from-amber-400 to-amber-600',
+  'from-indigo-400 to-indigo-600',
+  'from-emerald-400 to-emerald-600',
+  'from-cyan-400 to-cyan-600',
+]
+
+function getAvatarColor(name: string): string {
+  let hash = 0
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash)
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length]
+}
+
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/)
+  if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+  return (parts[0]?.[0] ?? '?').toUpperCase()
+}
 
 export default function CustomerList() {
   const navigate = useNavigate()
@@ -207,130 +231,81 @@ export default function CustomerList() {
               const isExpanded = expandedId === customer.id
 
               return (
-                <div key={customer.id} className="bg-white rounded-xl border border-gray-200 transition-all hover:border-brand-300 hover:shadow-sm cursor-pointer" onClick={() => navigate(`/customers/${customer.id}`)}>
-                  {/* Card row */}
-                  <div className="p-3 sm:p-4 flex items-center gap-3 sm:gap-4">
-                    {/* Avatar */}
-                    <div className="w-10 h-10 rounded-full bg-brand-100 flex items-center justify-center shrink-0">
-                      <span className="text-sm font-semibold text-brand-700">
-                        {customer.data.name ? customer.data.name.charAt(0).toUpperCase() : '?'}
-                      </span>
-                    </div>
-
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-medium text-gray-900 truncate">
-                        {customer.data.name || 'Cliente sem nome'}
-                      </h3>
-                      <div className="flex items-center gap-3 mt-0.5">
-                        {customer.data.cpf && (
-                          <>
-                            <span className="text-xs text-gray-500">{customer.data.cpf}</span>
-                            <span className="text-xs text-gray-400">·</span>
-                          </>
-                        )}
-                        {customer.data.birthDate && (
-                          <>
-                            <span className="text-xs text-gray-500">{customer.data.age || customer.data.birthDate}</span>
-                            <span className="text-xs text-gray-400">·</span>
-                          </>
-                        )}
-                        <span className="text-xs text-gray-400">
-                          Atualizado {formatDateTime(customer.updatedAt)}
+                <div key={customer.id}>
+                  <ListCard
+                    onClick={() => navigate(`/customers/${customer.id}`)}
+                    avatar={
+                      <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${getAvatarColor(customer.data.name || customer.id)} flex items-center justify-center shadow-sm`}>
+                        <span className="text-sm font-bold text-white">
+                          {getInitials(customer.data.name || '?')}
                         </span>
                       </div>
-                    </div>
-
-                    {/* Reports badge */}
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); setExpandedId(isExpanded ? null : customer.id) }}
-                      className={`hidden sm:inline-flex px-2.5 py-1 rounded-full text-xs font-medium shrink-0 transition-colors ${
-                        customerReports.length > 0
-                          ? 'bg-brand-100 text-brand-700 hover:bg-brand-200'
-                          : 'bg-gray-100 text-gray-500'
-                      }`}
-                      title={customerReports.length > 0 ? 'Ver relatórios vinculados' : 'Nenhum relatório vinculado'}
-                    >
-                      {customerReports.length} {customerReports.length === 1 ? 'relatório' : 'relatórios'}
-                    </button>
-
-                    {/* Actions */}
-                    <div className="hidden sm:flex items-center gap-1 shrink-0">
+                    }
+                    title={customer.data.name || 'Cliente sem nome'}
+                    pills={
+                      <>
+                        {customer.data.cpf && <ListCardPill>{customer.data.cpf}</ListCardPill>}
+                        {customer.data.age && <ListCardPill>{customer.data.age}</ListCardPill>}
+                        <ListCardPill>Atualizado {formatDateTime(customer.updatedAt)}</ListCardPill>
+                      </>
+                    }
+                    badges={
                       <button
                         type="button"
-                        onClick={(e) => { e.stopPropagation(); handleCreateReport(customer) }}
-                        className="p-2 rounded-lg hover:bg-brand-50 text-gray-400 hover:text-brand-600 transition-colors"
-                        title="Novo relatório para este cliente"
+                        onClick={(e) => { e.stopPropagation(); setExpandedId(isExpanded ? null : customer.id) }}
+                        className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                          customerReports.length > 0
+                            ? 'bg-brand-100 text-brand-700 hover:bg-brand-200'
+                            : 'bg-gray-100 text-gray-500'
+                        }`}
+                        title={customerReports.length > 0 ? 'Ver relatórios vinculados' : 'Nenhum relatório vinculado'}
                       >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                          <polyline points="14 2 14 8 20 8" />
-                          <line x1="12" y1="18" x2="12" y2="12" />
-                          <line x1="9" y1="15" x2="15" y2="15" />
-                        </svg>
+                        {customerReports.length} {customerReports.length === 1 ? 'relatório' : 'relatórios'}
                       </button>
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); handleOpenEdit(customer) }}
-                        className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
-                        title="Editar cliente"
-                      >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                        </svg>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setConfirmDeleteId(customer.id)
-                        }}
-                        className="p-2 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
-                        title="Excluir cliente"
-                      >
-                        <TrashIcon />
-                      </button>
-                    </div>
-                  </div>
+                    }
+                    actions={
+                      <>
+                        <ListCardAction onClick={() => handleCreateReport(customer)} title="Novo relatório" icon={<DocumentPlusIcon />} variant="brand" />
+                        <ListCardAction onClick={() => handleOpenEdit(customer)} title="Editar cliente" icon={<EditIcon />} />
+                        <ListCardAction onClick={() => setConfirmDeleteId(customer.id)} title="Excluir cliente" icon={<ListTrashIcon />} variant="danger" />
+                      </>
+                    }
+                  />
 
                   {/* Expanded reports list */}
                   {isExpanded && customerReports.length > 0 && (
-                    <div className="border-t border-gray-100 px-4 py-3 bg-gray-50/50 rounded-b-xl">
+                    <div className="ml-4 mt-1 mb-2 border-l-2 border-brand-200 pl-4 space-y-1.5">
                       <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
                         Relatórios vinculados
                       </p>
-                      <div className="space-y-1.5">
-                        {customerReports
-                          .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-                          .map((report) => (
-                            <button
-                              key={report.id}
-                              type="button"
-                              onClick={() => navigate(`/reports/${report.id}`)}
-                              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white transition-colors text-left"
-                            >
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 shrink-0">
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                                <polyline points="14 2 14 8 20 8" />
-                              </svg>
-                              <span className="text-sm text-gray-700 flex-1 truncate">
-                                {report.customerName || 'Sem nome'}
-                              </span>
-                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                                report.status === 'finalizado'
-                                  ? 'bg-green-100 text-green-700'
-                                  : 'bg-yellow-100 text-yellow-700'
-                              }`}>
-                                {report.status === 'finalizado' ? 'Finalizado' : 'Rascunho'}
-                              </span>
-                              <span className="text-xs text-gray-400">
-                                {formatDateTime(report.updatedAt)}
-                              </span>
-                            </button>
-                          ))}
-                      </div>
+                      {customerReports
+                        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+                        .map((report) => (
+                          <button
+                            key={report.id}
+                            type="button"
+                            onClick={() => navigate(`/reports/${report.id}`)}
+                            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-white border border-gray-200 hover:border-brand-300 transition-colors text-left"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 shrink-0">
+                              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                              <polyline points="14 2 14 8 20 8" />
+                            </svg>
+                            <span className="text-sm text-gray-700 flex-1 truncate">
+                              {report.customerName || 'Sem nome'}
+                            </span>
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                              report.status === 'finalizado'
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-yellow-100 text-yellow-700'
+                            }`}>
+                              {report.status === 'finalizado' ? 'Finalizado' : 'Rascunho'}
+                            </span>
+                            <span className="text-xs text-gray-400">
+                              {formatDateTime(report.updatedAt)}
+                            </span>
+                          </button>
+                        ))}
                     </div>
                   )}
                 </div>
