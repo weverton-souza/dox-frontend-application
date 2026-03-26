@@ -17,6 +17,11 @@ export async function deleteReportTemplate(id: string): Promise<void> {
   await api.delete(`/templates/reports/${id}`)
 }
 
+export async function duplicateReportTemplate(id: string): Promise<ReportTemplate> {
+  const { data } = await api.post<ReportTemplate>(`/templates/reports/${id}/duplicate`)
+  return data
+}
+
 // ========== Score Table Templates ==========
 
 export async function getScoreTableTemplates(): Promise<ScoreTableTemplate[]> {

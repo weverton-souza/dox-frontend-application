@@ -3,7 +3,7 @@ import { api } from '@/lib/api/api-client'
 
 // ========== Forms CRUD ==========
 
-export async function listForms(): Promise<Form[]> {
+export async function getForms(): Promise<Form[]> {
   const { data } = await api.get<Form[]>('/forms')
   return data
 }

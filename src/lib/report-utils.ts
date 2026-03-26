@@ -49,11 +49,26 @@ export async function createReportFromTemplate(
       }
     })
 
+  const idMap = new Map<string, string>()
+  template.blocks.forEach((tb) => {
+    if (tb.id) idMap.set(tb.id, crypto.randomUUID())
+  })
+
+  const remappedBlocks = blocks.map((b, i) => {
+    const originalId = template.blocks[i]?.id
+    const newId = originalId ? idMap.get(originalId) ?? b.id : b.id
+    const originalParentId = template.blocks[i]?.parentId
+    const newParentId = originalParentId ? idMap.get(originalParentId) ?? b.parentId : b.parentId
+    return { ...b, id: newId, parentId: newParentId }
+  })
+
   const report: Partial<Report> = {
     status: 'rascunho',
     customerName: customer.data.name,
     customerId: customer.id,
-    blocks,
+    templateId: template.id,
+    isStructureLocked: template.isLocked,
+    blocks: remappedBlocks,
   }
 
   return createReport(report)

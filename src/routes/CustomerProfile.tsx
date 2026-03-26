@@ -25,7 +25,7 @@ import {
 } from '@/lib/api/customer-api'
 import { getReportsByCustomer } from '@/lib/api/report-api'
 import { formatDateTime } from '@/lib/utils'
-import { createReportFromCustomer, createReportFromTemplate } from '@/lib/report-utils'
+import { useCreateReport } from '@/lib/hooks/use-create-report'
 import { useError } from '@/contexts/ErrorContext'
 import NewReportModal from '@/components/NewReportModal'
 import Input from '@/components/ui/Input'
@@ -35,6 +35,7 @@ import Spinner from '@/components/ui/Spinner'
 import StatusBadge from '@/components/ui/StatusBadge'
 import ListCard, { ListCardPill } from '@/components/ui/ListCard'
 import { TrashIcon } from '@/components/icons'
+import { getAvatarColor, getInitials } from '@/lib/avatar-utils'
 
 // ========== Types ==========
 
@@ -44,31 +45,6 @@ interface TabItem {
   key: ProfileSection
   label: string
   icon: React.ReactNode
-}
-
-// ========== Avatar ==========
-
-const AVATAR_COLORS = [
-  'from-blue-400 to-blue-600',
-  'from-purple-400 to-purple-600',
-  'from-teal-400 to-teal-600',
-  'from-rose-400 to-rose-600',
-  'from-amber-400 to-amber-600',
-  'from-indigo-400 to-indigo-600',
-  'from-emerald-400 to-emerald-600',
-  'from-cyan-400 to-cyan-600',
-]
-
-function getAvatarColor(name: string): string {
-  let hash = 0
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash)
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length]
-}
-
-function getInitials(name: string): string {
-  const parts = name.trim().split(/\s+/)
-  if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-  return (parts[0]?.[0] ?? '?').toUpperCase()
 }
 
 // ========== Tabs config ==========
@@ -125,7 +101,7 @@ export default function CustomerProfile() {
 
   // Reports
   const [reports, setReports] = useState<Report[]>([])
-  const [showNewReportModal, setShowNewReportModal] = useState(false)
+  const { isModalOpen: showNewReportModal, showModal: showReportModal, hideModal: hideReportModal, createBlank, createFromTemplate } = useCreateReport()
 
   // Notes
   const [notes, setNotes] = useState<CustomerNote[]>([])
@@ -190,28 +166,8 @@ export default function CustomerProfile() {
 
   const handleCreateReport = useCallback(() => {
     if (!customer) return
-    setShowNewReportModal(true)
-  }, [customer])
-
-  const handleCreateBlankReport = useCallback(async () => {
-    if (!customer) return
-    try {
-      const report = await createReportFromCustomer(customer)
-      navigate(`/reports/${report.id}`)
-    } catch (err) {
-      showError(err)
-    }
-  }, [customer, navigate, showError])
-
-  const handleCreateFromTemplate = useCallback(async (template: import('@/types').ReportTemplate) => {
-    if (!customer) return
-    try {
-      const report = await createReportFromTemplate(customer, template)
-      navigate(`/reports/${report.id}`)
-    } catch (err) {
-      showError(err)
-    }
-  }, [customer, navigate, showError])
+    showReportModal(customer)
+  }, [customer, showReportModal])
 
   const handleAddNote = useCallback(async () => {
     if (!customer || !newNoteContent.trim()) return
@@ -721,10 +677,10 @@ export default function CustomerProfile() {
       {customer && (
         <NewReportModal
           isOpen={showNewReportModal}
-          onClose={() => setShowNewReportModal(false)}
+          onClose={hideReportModal}
           customer={customer}
-          onSelectTemplate={handleCreateFromTemplate}
-          onSelectBlank={handleCreateBlankReport}
+          onSelectTemplate={createFromTemplate}
+          onSelectBlank={createBlank}
         />
       )}
     </div>
