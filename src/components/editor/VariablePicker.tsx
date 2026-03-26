@@ -2,9 +2,6 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import type { VariableInfo } from '@/types'
 import { useClickOutside } from '@/lib/hooks/use-click-outside'
 
-/** @deprecated Use VariableInfo from @/types instead */
-export type VariableItem = VariableInfo
-
 interface VariablePickerProps {
   variables: VariableInfo[]
   onInsert: (variableKey: string) => void
