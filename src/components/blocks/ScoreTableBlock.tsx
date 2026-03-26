@@ -10,20 +10,19 @@ import {
 import type { DragEndEvent } from '@dnd-kit/core'
 import {
   SortableContext,
-  useSortable,
   verticalListSortingStrategy,
   horizontalListSortingStrategy,
 } from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
 import type { ScoreTableData, ScoreTableColumn } from '@/types'
 import { createEmptyScoreTableRow, createScoreTableColumn } from '@/types'
 import { isFormulaColumn, computeCellResult, cellHasFormula, getCellFormulaText, getFormulaFunctions } from '@/lib/docx-engine/table'
 import { adjustFormulaRefs, isFormula, remapFormulaRefs, indexToLetter } from '@/lib/docx-engine/table'
-import { createScoreTableTemplate, getScoreTableTemplates } from '@/lib/api/template-api'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
-import { CloseIcon, PlusIcon } from '@/components/icons'
+import { CloseIcon, PlusIcon, AlignIcon } from '@/components/icons'
+import { SortableRow, SortableTh } from '@/components/blocks/SortableTableItems'
+import SaveScoreTableTemplateModal from '@/components/blocks/SaveScoreTableTemplateModal'
 import { COLOR_PRESETS, hexToHsl, hslToHex } from '@/components/ui/ColorPicker'
 
 const FORMULA_HINTS: Record<string, { syntax: string; desc: string }> = {
@@ -48,113 +47,11 @@ const FORMULA_HINTS: Record<string, { syntax: string; desc: string }> = {
 
 const ALL_FUNCTIONS = getFormulaFunctions()
 
-function AlignLeftIcon({ size = 12 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-      <line x1="2" y1="4" x2="14" y2="4" />
-      <line x1="2" y1="8" x2="10" y2="8" />
-      <line x1="2" y1="12" x2="12" y2="12" />
-    </svg>
-  )
-}
-
-function AlignCenterIcon({ size = 12 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-      <line x1="2" y1="4" x2="14" y2="4" />
-      <line x1="4" y1="8" x2="12" y2="8" />
-      <line x1="3" y1="12" x2="13" y2="12" />
-    </svg>
-  )
-}
-
-function AlignRightIcon({ size = 12 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-      <line x1="2" y1="4" x2="14" y2="4" />
-      <line x1="6" y1="8" x2="14" y2="8" />
-      <line x1="4" y1="12" x2="14" y2="12" />
-    </svg>
-  )
-}
-
-function AlignIcon({ alignment, size = 12 }: { alignment: 'left' | 'center' | 'right'; size?: number }) {
-  if (alignment === 'left') return <AlignLeftIcon size={size} />
-  if (alignment === 'right') return <AlignRightIcon size={size} />
-  return <AlignCenterIcon size={size} />
-}
-
 const ALIGN_LABELS: Record<string, string> = { left: 'Esquerda', center: 'Centro', right: 'Direita' }
 
 function alignClass(col: ScoreTableColumn): string {
   const a = col.alignment ?? 'center'
   return a === 'left' ? 'text-left' : a === 'right' ? 'text-right' : 'text-center'
-}
-
-function GripDotsIcon({ size = 12 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 16 16" fill="currentColor">
-      <circle cx="5" cy="3" r="1.5" />
-      <circle cx="11" cy="3" r="1.5" />
-      <circle cx="5" cy="8" r="1.5" />
-      <circle cx="11" cy="8" r="1.5" />
-      <circle cx="5" cy="13" r="1.5" />
-      <circle cx="11" cy="13" r="1.5" />
-    </svg>
-  )
-}
-
-function SortableRow({ id, rowIndex, children }: { id: string; rowIndex: number; children: React.ReactNode }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  }
-  return (
-    <tr
-      ref={setNodeRef}
-      style={style}
-      className={rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'}
-    >
-      <td
-        className="w-10 px-1 py-1 text-center text-[10px] font-semibold text-gray-400 bg-gray-50 border-r border-gray-200 select-none cursor-grab active:cursor-grabbing"
-        {...listeners}
-        {...attributes}
-      >
-        <div className="flex items-center justify-center gap-0.5">
-          <GripDotsIcon size={10} />
-          <span>{rowIndex + 1}</span>
-        </div>
-      </td>
-      {children}
-    </tr>
-  )
-}
-
-
-function SortableTh({ id, children, className }: { id: string; children: React.ReactNode; className?: string }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  }
-  return (
-    <th ref={setNodeRef} style={style} className={className} {...attributes}>
-      <div className="flex items-center gap-1">
-        <div
-          className="shrink-0 cursor-grab active:cursor-grabbing text-white/30 hover:text-white/70 transition-colors"
-          {...listeners}
-        >
-          <GripDotsIcon size={10} />
-        </div>
-        <div className="flex-1 min-w-0">
-          {children}
-        </div>
-      </div>
-    </th>
-  )
 }
 
 function remapAllFormulas(
@@ -200,10 +97,6 @@ export default function ScoreTableBlock({ data, onChange }: ScoreTableBlockProps
   const [editingColumnId, setEditingColumnId] = useState<string | null>(null)
   const [editingCellId, setEditingCellId] = useState<string | null>(null) // "rowId:colId"
   const [showSaveTemplate, setShowSaveTemplate] = useState(false)
-  const [templateName, setTemplateName] = useState('')
-  const [templateDescription, setTemplateDescription] = useState('')
-  const [templateInstrument, setTemplateInstrument] = useState('')
-  const [templateCategory, setTemplateCategory] = useState('')
   const [savedFeedback, setSavedFeedback] = useState(false)
   const [acIndex, setAcIndex] = useState(0)
   const [acPos, setAcPos] = useState<{ top: number; left: number; height: number } | null>(null)
@@ -644,52 +537,10 @@ export default function ScoreTableBlock({ data, onChange }: ScoreTableBlockProps
     if (e.key === 'Escape') setEditingCellId(null)
   }, [handleAcKeyDown, triggerReplicatePrompt])
 
-  const openSaveTemplateModal = () => {
-    setTemplateName(data.title || '')
-    setTemplateDescription('')
-    setTemplateInstrument('')
-    setTemplateCategory('')
-    setShowSaveTemplate(true)
+  const handleTemplateSaved = () => {
+    setSavedFeedback(true)
+    setTimeout(() => setSavedFeedback(false), 2000)
   }
-
-  const handleSaveTemplate = async () => {
-    try {
-      await createScoreTableTemplate({
-        name: templateName.trim(),
-        description: templateDescription.trim(),
-        instrumentName: templateInstrument.trim(),
-        category: templateCategory.trim(),
-        columns: data.columns.map(c => ({
-          id: c.id,
-          label: c.label,
-          formula: c.formula ?? null,
-        })),
-        rows: data.rows.map(r => ({
-          id: r.id,
-          defaultValues: { ...r.values },
-        })),
-        isDefault: false,
-      })
-      setShowSaveTemplate(false)
-      setSavedFeedback(true)
-      setTimeout(() => setSavedFeedback(false), 2000)
-    } catch {
-      // error saving template
-    }
-  }
-
-  const canSaveTemplate = templateName.trim() && templateInstrument.trim() && templateCategory.trim()
-
-  const [existingCategories, setExistingCategories] = useState<string[]>([])
-  useEffect(() => {
-    if (!showSaveTemplate) return
-    getScoreTableTemplates()
-      .then(tpls => {
-        const cats = [...new Set(tpls.map(t => t.category))]
-        setExistingCategories(cats.sort())
-      })
-      .catch(() => {})
-  }, [showSaveTemplate])
 
   // ========== Replicar fórmula ==========
 
@@ -826,7 +677,7 @@ export default function ScoreTableBlock({ data, onChange }: ScoreTableBlockProps
         <Button
           variant="secondary"
           size="sm"
-          onClick={openSaveTemplateModal}
+          onClick={() => setShowSaveTemplate(true)}
           disabled={data.columns.length === 0}
           className="mt-6 whitespace-nowrap"
         >
@@ -1326,63 +1177,12 @@ export default function ScoreTableBlock({ data, onChange }: ScoreTableBlockProps
       />
 
       {/* Modal salvar como template */}
-      <Modal
+      <SaveScoreTableTemplateModal
         isOpen={showSaveTemplate}
         onClose={() => setShowSaveTemplate(false)}
-        title="Salvar como Template"
-        size="md"
-      >
-        <div className="space-y-4">
-          <Input
-            label="Nome *"
-            value={templateName}
-            onChange={(e) => setTemplateName(e.target.value)}
-            placeholder="Ex: Meu Template WAIS"
-          />
-          <Input
-            label="Instrumento *"
-            value={templateInstrument}
-            onChange={(e) => setTemplateInstrument(e.target.value)}
-            placeholder="Ex: WAIS-III, RAVLT"
-          />
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Categoria *
-            </label>
-            <input
-              type="text"
-              list="template-categories"
-              value={templateCategory}
-              onChange={(e) => setTemplateCategory(e.target.value)}
-              placeholder="Ex: Inteligência, Memória, Atenção"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-            />
-            <datalist id="template-categories">
-              {existingCategories.map((cat) => (
-                <option key={cat} value={cat} />
-              ))}
-            </datalist>
-          </div>
-          <Input
-            label="Descrição"
-            value={templateDescription}
-            onChange={(e) => setTemplateDescription(e.target.value)}
-            placeholder="Breve descrição do template (opcional)"
-          />
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="ghost" size="sm" onClick={() => setShowSaveTemplate(false)}>
-              Cancelar
-            </Button>
-            <Button
-              size="sm"
-              onClick={handleSaveTemplate}
-              disabled={!canSaveTemplate}
-            >
-              Salvar
-            </Button>
-          </div>
-        </div>
-      </Modal>
+        tableData={data}
+        onSaved={handleTemplateSaved}
+      />
 
       {/* Modal: Aplicar intensidade a todas */}
       <Modal

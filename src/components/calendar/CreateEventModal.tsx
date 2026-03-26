@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
-import type { EventTag, CalendarEvent, Customer, Page } from '@/types'
+import type { EventTag, CalendarEvent, Customer } from '@/types'
 import Modal from '@/components/ui/Modal'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import TextArea from '@/components/ui/TextArea'
 import Toggle from '@/components/ui/Toggle'
-import { getCustomers } from '@/lib/api/customer-api'
+import { useCustomerSearch } from '@/lib/hooks/use-customer-search'
 import TagPicker from '@/components/calendar/TagPicker'
 
 interface CreateEventModalProps {
@@ -49,22 +49,40 @@ function addHours(date: Date, hours: number): Date {
   return result
 }
 
+interface EventFormData {
+  summary: string
+  description: string
+  location: string
+  allDay: boolean
+  startDate: string
+  startTime: string
+  endDate: string
+  endTime: string
+  tagId: string
+  customerId: string
+}
+
+const EMPTY_FORM: EventFormData = {
+  summary: '',
+  description: '',
+  location: '',
+  allDay: false,
+  startDate: '',
+  startTime: '',
+  endDate: '',
+  endTime: '',
+  tagId: '',
+  customerId: '',
+}
+
 export default function CreateEventModal({ isOpen, onClose, onSave, onDelete, tags, onNewTag, event, initialDate }: CreateEventModalProps) {
-  const [summary, setSummary] = useState('')
-  const [description, setDescription] = useState('')
-  const [location, setLocation] = useState('')
-  const [allDay, setAllDay] = useState(false)
-  const [startDate, setStartDate] = useState('')
-  const [startTime, setStartTime] = useState('')
-  const [endDate, setEndDate] = useState('')
-  const [endTime, setEndTime] = useState('')
-  const [tagId, setTagId] = useState('')
-  const [customerId, setCustomerId] = useState('')
-  const [customerSearch, setCustomerSearch] = useState('')
-  const [customers, setCustomers] = useState<Customer[]>([])
+  const [form, setForm] = useState<EventFormData>(EMPTY_FORM)
+  const { search: customerSearch, setSearch: setCustomerSearch, customers, loading: _customerLoading, reset: resetCustomerSearch } = useCustomerSearch(isOpen)
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
+
+  const updateForm = (patch: Partial<EventFormData>) => setForm(prev => ({ ...prev, ...patch }))
 
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
 
@@ -72,27 +90,29 @@ export default function CreateEventModal({ isOpen, onClose, onSave, onDelete, ta
     if (!isOpen) return
 
     if (event) {
-      setSummary(event.summary)
-      setDescription(event.description ?? '')
-      setLocation(event.location ?? '')
-      setAllDay(event.allDay)
-      setTagId(event.tagId ?? '')
-      setCustomerId(event.customerId ?? '')
-      setCustomerSearch(event.customerName ?? '')
+      const dateFields: Pick<EventFormData, 'startDate' | 'startTime' | 'endDate' | 'endTime'> = event.allDay
+        ? { startDate: event.start.date ?? '', endDate: event.end.date ?? '', startTime: '', endTime: '' }
+        : (() => {
+            const startDt = event.start.dateTime ? new Date(event.start.dateTime) : new Date()
+            const endDt = event.end.dateTime ? new Date(event.end.dateTime) : addHours(startDt, 1)
+            return {
+              startDate: formatDateForInput(startDt),
+              startTime: formatTimeForInput(startDt),
+              endDate: formatDateForInput(endDt),
+              endTime: formatTimeForInput(endDt),
+            }
+          })()
 
-      if (event.allDay) {
-        setStartDate(event.start.date ?? '')
-        setEndDate(event.end.date ?? '')
-        setStartTime('')
-        setEndTime('')
-      } else {
-        const startDt = event.start.dateTime ? new Date(event.start.dateTime) : new Date()
-        const endDt = event.end.dateTime ? new Date(event.end.dateTime) : addHours(startDt, 1)
-        setStartDate(formatDateForInput(startDt))
-        setStartTime(formatTimeForInput(startDt))
-        setEndDate(formatDateForInput(endDt))
-        setEndTime(formatTimeForInput(endDt))
-      }
+      setForm({
+        summary: event.summary,
+        description: event.description ?? '',
+        location: event.location ?? '',
+        allDay: event.allDay,
+        tagId: event.tagId ?? '',
+        customerId: event.customerId ?? '',
+        ...dateFields,
+      })
+      setCustomerSearch(event.customerName ?? '')
     } else {
       const base = initialDate ?? new Date()
       const now = new Date()
@@ -100,60 +120,43 @@ export default function CreateEventModal({ isOpen, onClose, onSave, onDelete, ta
       roundedHour.setMinutes(0, 0, 0)
       roundedHour.setHours(roundedHour.getHours() + 1)
 
-      setSummary('')
-      setDescription('')
-      setLocation('')
-      setAllDay(false)
-      setStartDate(formatDateForInput(base))
-      setStartTime(formatTimeForInput(roundedHour))
-      setEndDate(formatDateForInput(base))
-      setEndTime(formatTimeForInput(addHours(roundedHour, 1)))
-      setTagId(tags.length > 0 ? tags[0].id : '')
-      setCustomerId('')
-      setCustomerSearch('')
+      setForm({
+        ...EMPTY_FORM,
+        startDate: formatDateForInput(base),
+        startTime: formatTimeForInput(roundedHour),
+        endDate: formatDateForInput(base),
+        endTime: formatTimeForInput(addHours(roundedHour, 1)),
+        tagId: tags.length > 0 ? tags[0].id : '',
+      })
+      resetCustomerSearch()
     }
   }, [isOpen, event, initialDate, tags])
 
   useEffect(() => {
-    if (!customerSearch.trim() || customerSearch.length < 2) {
-      setCustomers([])
-      return
-    }
-
-    const timer = setTimeout(async () => {
-      try {
-        const page: Page<Customer> = await getCustomers(0, 10, customerSearch)
-        setCustomers(page.content)
-        setShowCustomerDropdown(true)
-      } catch {
-        setCustomers([])
-      }
-    }, 300)
-
-    return () => clearTimeout(timer)
-  }, [customerSearch])
+    if (customers.length > 0) setShowCustomerDropdown(true)
+  }, [customers])
 
   const handleSave = async () => {
-    if (!summary.trim()) return
+    if (!form.summary.trim()) return
     setSaving(true)
     try {
       const payload: CreateEventPayload = {
-        summary: summary.trim(),
-        description: description.trim() || undefined,
-        location: location.trim() || undefined,
-        allDay,
-        tagId: tagId || undefined,
-        customerId: customerId || undefined,
+        summary: form.summary.trim(),
+        description: form.description.trim() || undefined,
+        location: form.location.trim() || undefined,
+        allDay: form.allDay,
+        tagId: form.tagId || undefined,
+        customerId: form.customerId || undefined,
         status: 'confirmed',
       }
 
-      if (allDay) {
-        payload.startDate = startDate
-        payload.endDate = endDate || startDate
+      if (form.allDay) {
+        payload.startDate = form.startDate
+        payload.endDate = form.endDate || form.startDate
       } else {
-        payload.startDateTime = `${startDate}T${startTime}:00`
+        payload.startDateTime = `${form.startDate}T${form.startTime}:00`
         payload.startTimeZone = timeZone
-        payload.endDateTime = `${endDate}T${endTime}:00`
+        payload.endDateTime = `${form.endDate}T${form.endTime}:00`
         payload.endTimeZone = timeZone
       }
 
@@ -176,15 +179,14 @@ export default function CreateEventModal({ isOpen, onClose, onSave, onDelete, ta
   }
 
   const selectCustomer = (customer: Customer) => {
-    setCustomerId(customer.id)
+    updateForm({ customerId: customer.id })
     setCustomerSearch(customer.data.name)
     setShowCustomerDropdown(false)
   }
 
   const clearCustomer = () => {
-    setCustomerId('')
-    setCustomerSearch('')
-    setCustomers([])
+    updateForm({ customerId: '' })
+    resetCustomerSearch()
   }
 
   return (
@@ -206,7 +208,7 @@ export default function CreateEventModal({ isOpen, onClose, onSave, onDelete, ta
             <Button variant="ghost" size="sm" onClick={onClose}>
               Cancelar
             </Button>
-            <Button size="sm" onClick={handleSave} disabled={saving || !summary.trim()}>
+            <Button size="sm" onClick={handleSave} disabled={saving || !form.summary.trim()}>
               {saving ? 'Salvando...' : 'Salvar'}
             </Button>
           </div>
@@ -216,30 +218,30 @@ export default function CreateEventModal({ isOpen, onClose, onSave, onDelete, ta
       <div className="space-y-4">
         <Input
           label="Título"
-          value={summary}
-          onChange={(e) => setSummary(e.target.value)}
+          value={form.summary}
+          onChange={(e) => updateForm({ summary: e.target.value })}
           placeholder="Ex: Consulta com Maria"
           autoFocus
         />
 
-        <Toggle label="Dia inteiro" checked={allDay} onChange={setAllDay} />
+        <Toggle label="Dia inteiro" checked={form.allDay} onChange={(v) => updateForm({ allDay: v })} />
 
         <div className="grid grid-cols-2 gap-3">
           <Input
             label="Data início"
             type="date"
-            value={startDate}
+            value={form.startDate}
             onChange={(e) => {
-              setStartDate(e.target.value)
-              if (!endDate || e.target.value > endDate) setEndDate(e.target.value)
+              updateForm({ startDate: e.target.value })
+              if (!form.endDate || e.target.value > form.endDate) updateForm({ endDate: e.target.value })
             }}
           />
-          {!allDay && (
+          {!form.allDay && (
             <Input
               label="Hora início"
               type="time"
-              value={startTime}
-              onChange={(e) => setStartTime(e.target.value)}
+              value={form.startTime}
+              onChange={(e) => updateForm({ startTime: e.target.value })}
             />
           )}
         </div>
@@ -248,20 +250,20 @@ export default function CreateEventModal({ isOpen, onClose, onSave, onDelete, ta
           <Input
             label="Data fim"
             type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
+            value={form.endDate}
+            onChange={(e) => updateForm({ endDate: e.target.value })}
           />
-          {!allDay && (
+          {!form.allDay && (
             <Input
               label="Hora fim"
               type="time"
-              value={endTime}
-              onChange={(e) => setEndTime(e.target.value)}
+              value={form.endTime}
+              onChange={(e) => updateForm({ endTime: e.target.value })}
             />
           )}
         </div>
 
-        <TagPicker tags={tags} selectedId={tagId} onChange={setTagId} onNewTag={onNewTag} />
+        <TagPicker tags={tags} selectedId={form.tagId} onChange={(v) => updateForm({ tagId: v })} onNewTag={onNewTag} />
 
         <div className="relative">
           <label className="block text-sm font-medium text-gray-700 mb-1">Cliente (opcional)</label>
@@ -279,7 +281,7 @@ export default function CreateEventModal({ isOpen, onClose, onSave, onDelete, ta
               placeholder="Buscar cliente..."
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none transition-colors placeholder:text-gray-400"
             />
-            {customerId && (
+            {form.customerId && (
               <button
                 type="button"
                 onClick={clearCustomer}
@@ -307,15 +309,15 @@ export default function CreateEventModal({ isOpen, onClose, onSave, onDelete, ta
 
         <Input
           label="Localização (opcional)"
-          value={location}
-          onChange={(e) => setLocation(e.target.value)}
+          value={form.location}
+          onChange={(e) => updateForm({ location: e.target.value })}
           placeholder="Ex: Consultório, Sala 3"
         />
 
         <TextArea
           label="Descrição (opcional)"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
+          value={form.description}
+          onChange={(e) => updateForm({ description: e.target.value })}
           placeholder="Detalhes do agendamento..."
         />
       </div>

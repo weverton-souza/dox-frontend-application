@@ -37,21 +37,49 @@ import type { ReviewSectionConfig } from '@/components/ai/AiSectionChecklist'
 import { reviewText as reviewTextApi } from '@/lib/api/ai-api'
 import AiReviewModal from '@/components/ai/AiReviewModal'
 
+interface BlockSelectorState {
+  showBlockSelector: boolean
+  insertAfterBlockId: string | null
+  insertParentId: string | null
+  showSectionSelector: boolean
+}
+
+interface TemplateModalState {
+  showSaveTemplate: boolean
+  templateName: string
+  templateDesc: string
+}
+
+interface AiModalsState {
+  showUsageDashboard: boolean
+  showFinalizationModal: boolean
+  showSectionChecklist: boolean
+  reviewingBlockId: string | null
+}
+
 export default function ReportEditor() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { showError } = useError()
 
   const [report, setReport] = useState<Report | null>(null)
-  const [showBlockSelector, setShowBlockSelector] = useState(false)
-  const [showSaveTemplate, setShowSaveTemplate] = useState(false)
-  const [templateName, setTemplateName] = useState('')
-  const [templateDesc, setTemplateDesc] = useState('')
+  const [blockSelector, setBlockSelector] = useState<BlockSelectorState>({
+    showBlockSelector: false,
+    insertAfterBlockId: null,
+    insertParentId: null,
+    showSectionSelector: false,
+  })
+  const updateBlockSelector = (patch: Partial<BlockSelectorState>) => setBlockSelector(prev => ({ ...prev, ...patch }))
+
+  const [templateModal, setTemplateModal] = useState<TemplateModalState>({
+    showSaveTemplate: false,
+    templateName: '',
+    templateDesc: '',
+  })
+  const updateTemplateModal = (patch: Partial<TemplateModalState>) => setTemplateModal(prev => ({ ...prev, ...patch }))
+
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set())
-  const [insertAfterBlockId, setInsertAfterBlockId] = useState<string | null>(null)
-  const [insertParentId, setInsertParentId] = useState<string | null>(null)
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null)
-  const [showSectionSelector, setShowSectionSelector] = useState(false)
   const [customers, setCustomers] = useState<Customer[]>([])
   const [showVersionHistory, setShowVersionHistory] = useState(false)
   const [showDocxPreview, setShowDocxPreview] = useState(false)
@@ -66,11 +94,15 @@ export default function ReportEditor() {
   const { saveStatus, scheduleSave, forceSave } = useAutoSave<Report>(saveReportFn)
 
   const ai = useAiGeneration()
-  const [showUsageDashboard, setShowUsageDashboard] = useState(false)
-  const [showFinalizationModal, setShowFinalizationModal] = useState(false)
-  const [showSectionChecklist, setShowSectionChecklist] = useState(false)
+  const [aiModals, setAiModals] = useState<AiModalsState>({
+    showUsageDashboard: false,
+    showFinalizationModal: false,
+    showSectionChecklist: false,
+    reviewingBlockId: null,
+  })
+  const updateAiModals = (patch: Partial<AiModalsState>) => setAiModals(prev => ({ ...prev, ...patch }))
+
   const [pendingStatusChange, setPendingStatusChange] = useState<ReportStatus | null>(null)
-  const [reviewingBlockId, setReviewingBlockId] = useState<string | null>(null)
 
   // Load report, customers, and templates
   useEffect(() => {
@@ -163,10 +195,10 @@ export default function ReportEditor() {
 
       const sorted = [...report.blocks].sort((a, b) => a.order - b.order)
 
-      const newBlock = createBlock(type, 0, undefined, insertParentId)
+      const newBlock = createBlock(type, 0, undefined, blockSelector.insertParentId)
 
       // Subseção: usar título contextual quando criado dentro de outra seção
-      if (type === 'section' && insertParentId) {
+      if (type === 'section' && blockSelector.insertParentId) {
         ;(newBlock.data as { title: string }).title = 'Subseção'
       }
 
@@ -187,8 +219,8 @@ export default function ReportEditor() {
       }
 
       let newBlocks: Block[]
-      if (insertAfterBlockId) {
-        const afterIndex = sorted.findIndex((b) => b.id === insertAfterBlockId)
+      if (blockSelector.insertAfterBlockId) {
+        const afterIndex = sorted.findIndex((b) => b.id === blockSelector.insertAfterBlockId)
         if (afterIndex !== -1) {
           sorted.splice(afterIndex + 1, 0, newBlock)
           newBlocks = sorted.map((b, i) => ({ ...b, order: i }))
@@ -199,8 +231,7 @@ export default function ReportEditor() {
         newBlocks = [...sorted, newBlock].map((b, i) => ({ ...b, order: i }))
       }
 
-      setInsertAfterBlockId(null)
-      setInsertParentId(null)
+      updateBlockSelector({ insertAfterBlockId: null, insertParentId: null })
       handleUpdateReport({ blocks: newBlocks })
 
       // Abrir edição automaticamente para tabelas e gráficos
@@ -208,14 +239,12 @@ export default function ReportEditor() {
         setEditingBlockId(newBlock.id)
       }
     },
-    [report, handleUpdateReport, insertAfterBlockId, insertParentId, scoreTableTemplates, chartTemplatesState]
+    [report, handleUpdateReport, blockSelector.insertAfterBlockId, blockSelector.insertParentId, scoreTableTemplates, chartTemplatesState]
   )
 
   const handleRequestAddBlock = useCallback(
     (afterBlockId: string, parentId?: string | null) => {
-      setInsertAfterBlockId(afterBlockId)
-      setInsertParentId(parentId ?? null)
-      setShowBlockSelector(true)
+      updateBlockSelector({ insertAfterBlockId: afterBlockId, insertParentId: parentId ?? null, showBlockSelector: true })
     },
     []
   )
@@ -235,7 +264,7 @@ export default function ReportEditor() {
     }
     const newBlocks = sorted.map((b, i) => ({ ...b, order: i }))
     handleUpdateReport({ blocks: newBlocks })
-    setShowSectionSelector(false)
+    updateBlockSelector({ showSectionSelector: false })
   }, [report, handleUpdateReport])
 
   const handleAddClosingPage = useCallback(() => {
@@ -245,16 +274,16 @@ export default function ReportEditor() {
     const newBlock = createBlock('closing-page', 0)
     const newBlocks = [...sorted, newBlock].map((b, i) => ({ ...b, order: i }))
     handleUpdateReport({ blocks: newBlocks })
-    setShowSectionSelector(false)
+    updateBlockSelector({ showSectionSelector: false })
   }, [report, handleUpdateReport])
 
   const handleSaveTemplate = useCallback(async () => {
-    if (!report || !templateName.trim()) return
+    if (!report || !templateModal.templateName.trim()) return
 
     try {
       await createReportTemplate({
-        name: templateName.trim(),
-        description: templateDesc.trim(),
+        name: templateModal.templateName.trim(),
+        description: templateModal.templateDesc.trim(),
         isDefault: false,
         blocks: report.blocks.map((b) => ({
           type: b.type,
@@ -262,13 +291,11 @@ export default function ReportEditor() {
           data: JSON.parse(JSON.stringify(b.data)),
         })),
       })
-      setShowSaveTemplate(false)
-      setTemplateName('')
-      setTemplateDesc('')
+      updateTemplateModal({ showSaveTemplate: false, templateName: '', templateDesc: '' })
     } catch (err) {
       showError(err)
     }
-  }, [report, templateName, templateDesc, showError])
+  }, [report, templateModal.templateName, templateModal.templateDesc, showError])
 
   const handleGenerateDocx = useCallback(async () => {
     if (!report || !id) return
@@ -292,7 +319,7 @@ export default function ReportEditor() {
     (newStatus: ReportStatus) => {
       if (newStatus === 'finalizado' && report?.blocks.some(b => b.generatedByAi || b.skippedByAi)) {
         setPendingStatusChange(newStatus)
-        setShowFinalizationModal(true)
+        updateAiModals({ showFinalizationModal: true })
         return
       }
       if (report) createStatusChangeSnapshot(report.status)
@@ -306,13 +333,13 @@ export default function ReportEditor() {
       createStatusChangeSnapshot(report.status)
       handleUpdateReport({ status: pendingStatusChange })
     }
-    setShowFinalizationModal(false)
+    updateAiModals({ showFinalizationModal: false })
     setPendingStatusChange(null)
   }, [report, pendingStatusChange, handleUpdateReport, createStatusChangeSnapshot])
 
   const handleGenerateFullReport = useCallback(() => {
     if (!report || !id) return
-    setShowSectionChecklist(true)
+    updateAiModals({ showSectionChecklist: true })
   }, [report, id])
 
   const [isReviewing, setIsReviewing] = useState(false)
@@ -326,7 +353,7 @@ export default function ReportEditor() {
     const hasReview = reviewSections && reviewSections.length > 0
 
     if (hasGenerate) {
-      setShowSectionChecklist(false)
+      updateAiModals({ showSectionChecklist: false })
       ai.generateFullReport(
         id,
         formResponseIds,
@@ -392,7 +419,7 @@ export default function ReportEditor() {
       }
 
       setIsReviewing(false)
-      setShowSectionChecklist(false)
+      updateAiModals({ showSectionChecklist: false })
 
       if (!hasGenerate) {
         const reloaded = await getReport(id)
@@ -404,7 +431,7 @@ export default function ReportEditor() {
     }
 
     if (!hasGenerate && !hasReview) {
-      setShowSectionChecklist(false)
+      updateAiModals({ showSectionChecklist: false })
     }
   }, [report, id, ai])
 
@@ -502,10 +529,10 @@ export default function ReportEditor() {
 
   // Compute target section name for BlockSelector context
   const insertTargetSection = useMemo(() => {
-    if (!insertAfterBlockId || !report) return undefined
-    const meta = blockMetas[insertAfterBlockId]
+    if (!blockSelector.insertAfterBlockId || !report) return undefined
+    const meta = blockMetas[blockSelector.insertAfterBlockId]
     return meta?.section || undefined
-  }, [insertAfterBlockId, report, blockMetas])
+  }, [blockSelector.insertAfterBlockId, report, blockMetas])
 
   // Find the block being edited
   const editingBlock = useMemo(() => {
@@ -514,17 +541,17 @@ export default function ReportEditor() {
   }, [editingBlockId, report])
 
   const reviewingBlockText = useMemo(() => {
-    if (!reviewingBlockId || !report) return ''
-    const block = report.blocks.find((b) => b.id === reviewingBlockId)
+    if (!aiModals.reviewingBlockId || !report) return ''
+    const block = report.blocks.find((b) => b.id === aiModals.reviewingBlockId)
     if (!block || block.type !== 'text') return ''
     const data = block.data as TextBlockData
     if (isSlateContent(data.content)) return slateContentToPlainText(data.content)
     return typeof data.content === 'string' ? data.content : ''
-  }, [reviewingBlockId, report])
+  }, [aiModals.reviewingBlockId, report])
 
   const reviewingSectionType = useMemo(() => {
-    if (!reviewingBlockId || !report) return undefined
-    const block = report.blocks.find((b) => b.id === reviewingBlockId)
+    if (!aiModals.reviewingBlockId || !report) return undefined
+    const block = report.blocks.find((b) => b.id === aiModals.reviewingBlockId)
     if (!block?.parentId) return undefined
     const parent = report.blocks.find((b) => b.id === block.parentId)
     if (parent?.type === 'section') {
@@ -532,12 +559,12 @@ export default function ReportEditor() {
       return parentData.title || undefined
     }
     return undefined
-  }, [reviewingBlockId, report])
+  }, [aiModals.reviewingBlockId, report])
 
   const handleAcceptReview = useCallback((revisedText: string) => {
-    if (!reviewingBlockId || !report) return
+    if (!aiModals.reviewingBlockId || !report) return
     const updatedBlocks = report.blocks.map((b): Block => {
-      if (b.id !== reviewingBlockId) return b
+      if (b.id !== aiModals.reviewingBlockId) return b
       const paragraphs = revisedText.split('\n\n').filter((p) => p.trim())
       const slateContent = paragraphs.map((p) => ({
         id: Math.random().toString(36).slice(2, 12),
@@ -555,7 +582,7 @@ export default function ReportEditor() {
     setReport(updated)
     scheduleSave(updated)
     setPreviewRefreshKey((k) => k + 1)
-  }, [reviewingBlockId, report, scheduleSave])
+  }, [aiModals.reviewingBlockId, report, scheduleSave])
 
   // Check if closing-page already exists (only allow one)
   const hasClosingPage = useMemo(() => {
@@ -564,8 +591,8 @@ export default function ReportEditor() {
   }, [report])
 
   // Close section selector on outside click
-  const closeSectionSelector = useCallback(() => setShowSectionSelector(false), [])
-  useClickOutside(sectionSelectorRef, closeSectionSelector, showSectionSelector)
+  const closeSectionSelector = useCallback(() => updateBlockSelector({ showSectionSelector: false }), [])
+  useClickOutside(sectionSelectorRef, closeSectionSelector, blockSelector.showSectionSelector)
 
   if (!report) {
     return (
@@ -642,7 +669,7 @@ export default function ReportEditor() {
 
           {/* Ações principais */}
           <div className="hidden lg:flex items-center gap-2">
-            <Button variant="secondary" size="sm" onClick={() => setShowSaveTemplate(true)}>
+            <Button variant="secondary" size="sm" onClick={() => updateTemplateModal({ showSaveTemplate: true })}>
               Salvar como Template
             </Button>
 
@@ -751,7 +778,7 @@ export default function ReportEditor() {
                 <AiUsageBadge
                   used={ai.usageSummary.used}
                   limit={ai.usageSummary.limit}
-                  onClick={() => setShowUsageDashboard(true)}
+                  onClick={() => updateAiModals({ showUsageDashboard: true })}
                 />
               )}
               {warningCount > 0 && (
@@ -812,22 +839,23 @@ export default function ReportEditor() {
               onToggleSectionCollapse={toggleSectionCollapse}
               onRequestAddBlock={handleRequestAddBlock}
               onEditBlock={setEditingBlockId}
-              onReviewBlock={ai.isAvailable && report.status !== 'finalizado' ? setReviewingBlockId : undefined}
-              insertAfterBlockId={insertAfterBlockId}
+              onReviewBlock={ai.isAvailable && report.status !== 'finalizado' ? (id: string) => updateAiModals({ reviewingBlockId: id }) : undefined}
+              insertAfterBlockId={blockSelector.insertAfterBlockId}
+              locked={report.isStructureLocked}
             />
 
-            <div className="mt-6 flex justify-center">
+            {!report.isStructureLocked && <div className="mt-6 flex justify-center">
               <div className="relative w-full max-w-md" ref={sectionSelectorRef}>
                 <Button
                   variant="ghost"
                   size="lg"
-                  onClick={() => setShowSectionSelector(!showSectionSelector)}
+                  onClick={() => updateBlockSelector({ showSectionSelector: !blockSelector.showSectionSelector })}
                   className="border-2 border-dashed border-gray-300 hover:border-brand-400 hover:text-brand-700 w-full"
                 >
                   + Adicionar Seção
                 </Button>
 
-                {showSectionSelector && (
+                {blockSelector.showSectionSelector && (
                   <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
                     <button
                       type="button"
@@ -877,7 +905,7 @@ export default function ReportEditor() {
                   </div>
                 )}
               </div>
-            </div>
+            </div>}
           </main>
         </div>
 
@@ -907,11 +935,9 @@ export default function ReportEditor() {
 
       {/* Block Selector Modal */}
       <BlockSelector
-        isOpen={showBlockSelector}
+        isOpen={blockSelector.showBlockSelector}
         onClose={() => {
-          setShowBlockSelector(false)
-          setInsertAfterBlockId(null)
-          setInsertParentId(null)
+          updateBlockSelector({ showBlockSelector: false, insertAfterBlockId: null, insertParentId: null })
         }}
         onSelect={handleAddBlock}
         contextLabel={insertTargetSection}
@@ -919,29 +945,29 @@ export default function ReportEditor() {
 
       {/* Save Template Modal */}
       <Modal
-        isOpen={showSaveTemplate}
-        onClose={() => setShowSaveTemplate(false)}
+        isOpen={templateModal.showSaveTemplate}
+        onClose={() => updateTemplateModal({ showSaveTemplate: false })}
         title="Salvar como Template"
         size="sm"
       >
         <div className="p-4 space-y-4">
           <Input
             label="Nome do template"
-            value={templateName}
-            onChange={(e) => setTemplateName(e.target.value)}
+            value={templateModal.templateName}
+            onChange={(e) => updateTemplateModal({ templateName: e.target.value })}
             placeholder="Ex: Relatório Infantil"
           />
           <Input
             label="Descrição (opcional)"
-            value={templateDesc}
-            onChange={(e) => setTemplateDesc(e.target.value)}
+            value={templateModal.templateDesc}
+            onChange={(e) => updateTemplateModal({ templateDesc: e.target.value })}
             placeholder="Breve descrição do template"
           />
           <div className="flex justify-end gap-2 pt-2">
-            <Button variant="ghost" onClick={() => setShowSaveTemplate(false)}>
+            <Button variant="ghost" onClick={() => updateTemplateModal({ showSaveTemplate: false })}>
               Cancelar
             </Button>
-            <Button onClick={handleSaveTemplate} disabled={!templateName.trim()}>
+            <Button onClick={handleSaveTemplate} disabled={!templateModal.templateName.trim()}>
               Salvar
             </Button>
           </div>
@@ -967,15 +993,15 @@ export default function ReportEditor() {
 
       {/* AI Usage Dashboard */}
       <AiUsageDashboard
-        isOpen={showUsageDashboard}
-        onClose={() => setShowUsageDashboard(false)}
+        isOpen={aiModals.showUsageDashboard}
+        onClose={() => updateAiModals({ showUsageDashboard: false })}
       />
 
       {/* AI Section Checklist */}
       {report && (
         <AiSectionChecklist
-          isOpen={showSectionChecklist}
-          onClose={() => setShowSectionChecklist(false)}
+          isOpen={aiModals.showSectionChecklist}
+          onClose={() => updateAiModals({ showSectionChecklist: false })}
           onConfirm={handleConfirmGeneration}
           blocks={report.blocks}
           loading={ai.isGenerating || isReviewing}
@@ -987,8 +1013,8 @@ export default function ReportEditor() {
       {/* AI Review Modal */}
       {report && (
         <AiReviewModal
-          isOpen={!!reviewingBlockId && !!reviewingBlockText}
-          onClose={() => setReviewingBlockId(null)}
+          isOpen={!!aiModals.reviewingBlockId && !!reviewingBlockText}
+          onClose={() => updateAiModals({ reviewingBlockId: null })}
           reportId={report.id}
           customerId={report.customerId}
           blockText={reviewingBlockText}
@@ -999,9 +1025,9 @@ export default function ReportEditor() {
 
       {/* AI Finalization Modal */}
       <AiFinalizationModal
-        isOpen={showFinalizationModal}
+        isOpen={aiModals.showFinalizationModal}
         onClose={() => {
-          setShowFinalizationModal(false)
+          updateAiModals({ showFinalizationModal: false })
           setPendingStatusChange(null)
         }}
         onConfirm={handleConfirmFinalization}

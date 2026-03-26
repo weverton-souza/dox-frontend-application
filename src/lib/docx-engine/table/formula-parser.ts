@@ -92,13 +92,12 @@ function isDigit(ch: string): boolean {
   return ch >= '0' && ch <= '9'
 }
 
-/**
- * Ajusta referências de célula (A1, B23) numa fórmula.
- * - deltaCol: deslocamento de coluna (ex: +1 → A vira B)
- * - deltaRow: deslocamento de linha (ex: +1 → 1 vira 2)
- * Preserva: strings entre "", cores @#RRGGBB, nomes de função, COL_RANGE (A:A).
- */
-export function adjustFormulaRefs(formula: string, deltaCol: number, deltaRow: number): string {
+type RefTransformer = {
+  transformCol: (colIdx: number) => number
+  transformRow: (rowNum: number) => number
+}
+
+function transformFormulaRefs(formula: string, transformer: RefTransformer): string {
   let result = ''
   let i = 0
   const len = formula.length
@@ -126,7 +125,7 @@ export function adjustFormulaRefs(formula: string, deltaCol: number, deltaRow: n
       }
       const upper = letters.toUpperCase()
 
-      // Seguido por dígitos → referência de célula ou cell range → ajustar
+      // Seguido por dígitos → referência de célula ou cell range → transformar
       if (i < len && isDigit(formula[i])) {
         let digits = ''
         while (i < len && isDigit(formula[i])) {
@@ -148,35 +147,29 @@ export function adjustFormulaRefs(formula: string, deltaCol: number, deltaRow: n
               endDigits += formula[j]
               j++
             }
-            const startColIdx = letterToIndex(upper) + deltaCol
-            const endColIdx = letterToIndex(endLetters.toUpperCase()) + deltaCol
-            const startRowNum = parseInt(digits, 10) + deltaRow
-            const endRowNum = parseInt(endDigits, 10) + deltaRow
-            if (startColIdx >= 0 && endColIdx >= 0 && startRowNum >= 1 && endRowNum >= 1) {
-              result += indexToLetter(startColIdx) + startRowNum + ':' + indexToLetter(endColIdx) + endRowNum
-            } else {
-              result += upper + digits + ':' + endLetters + endDigits
-            }
+            const newStartCol = transformer.transformCol(letterToIndex(upper))
+            const newEndCol = transformer.transformCol(letterToIndex(endLetters.toUpperCase()))
+            const newStartRow = transformer.transformRow(parseInt(digits, 10))
+            const newEndRow = transformer.transformRow(parseInt(endDigits, 10))
+            result += indexToLetter(newStartCol) + newStartRow + ':' + indexToLetter(newEndCol) + newEndRow
             i = j
             continue
           }
         }
 
-        const colIdx = letterToIndex(upper) + deltaCol
-        const rowNum = parseInt(digits, 10) + deltaRow
-        if (colIdx >= 0 && rowNum >= 1) {
-          result += indexToLetter(colIdx) + rowNum
-        } else {
-          result += upper + digits
-        }
+        const newCol = transformer.transformCol(letterToIndex(upper))
+        const newRow = transformer.transformRow(parseInt(digits, 10))
+        result += indexToLetter(newCol) + newRow
         continue
       }
 
-      // Seguido por ':' + mesmas letras → COL_RANGE → manter
+      // Seguido por ':' + mesmas letras → COL_RANGE → transformar coluna
       if (i < len && formula[i] === ':') {
         const afterColon = formula.slice(i + 1, i + 1 + letters.length).toUpperCase()
         if (afterColon === upper) {
-          result += formula.slice(start, i + 1 + letters.length)
+          const newColIdx = transformer.transformCol(letterToIndex(upper))
+          const newLetter = indexToLetter(newColIdx)
+          result += newLetter + ':' + newLetter
           i += 1 + letters.length
           continue
         }
@@ -196,6 +189,19 @@ export function adjustFormulaRefs(formula: string, deltaCol: number, deltaRow: n
 }
 
 /**
+ * Ajusta referências de célula (A1, B23) numa fórmula.
+ * - deltaCol: deslocamento de coluna (ex: +1 → A vira B)
+ * - deltaRow: deslocamento de linha (ex: +1 → 1 vira 2)
+ * Preserva: strings entre "", cores @#RRGGBB, nomes de função, COL_RANGE (A:A).
+ */
+export function adjustFormulaRefs(formula: string, deltaCol: number, deltaRow: number): string {
+  return transformFormulaRefs(formula, {
+    transformCol: (col) => { const r = col + deltaCol; return r >= 0 ? r : col },
+    transformRow: (row) => { const r = row + deltaRow; return r >= 1 ? r : row },
+  })
+}
+
+/**
  * Remapeia referências de célula e coluna numa fórmula usando mappings de permutação.
  * Usado ao reordenar linhas/colunas para manter fórmulas apontando para os dados corretos.
  * - colMap: old col index (0-based) → new col index
@@ -207,101 +213,10 @@ export function remapFormulaRefs(
   colMap: Map<number, number>,
   rowMap: Map<number, number>,
 ): string {
-  let result = ''
-  let i = 0
-  const len = formula.length
-
-  while (i < len) {
-    // String literal — copiar sem alterar
-    if (formula[i] === '"') {
-      result += '"'
-      i++
-      while (i < len && formula[i] !== '"') {
-        result += formula[i]
-        i++
-      }
-      if (i < len) { result += '"'; i++ }
-      continue
-    }
-
-    // Sequência de letras
-    if (isLetter(formula[i])) {
-      let letters = ''
-      const start = i
-      while (i < len && isLetter(formula[i])) {
-        letters += formula[i]
-        i++
-      }
-      const upper = letters.toUpperCase()
-
-      // Seguido por dígitos → referência de célula ou cell range → remapear
-      if (i < len && isDigit(formula[i])) {
-        let digits = ''
-        while (i < len && isDigit(formula[i])) {
-          digits += formula[i]
-          i++
-        }
-
-        // Peek para ':' + letras + dígitos → cell range (A1:A4)
-        if (i < len && formula[i] === ':') {
-          let j = i + 1
-          let endLetters = ''
-          while (j < len && isLetter(formula[j])) {
-            endLetters += formula[j]
-            j++
-          }
-          if (endLetters.length > 0 && j < len && isDigit(formula[j])) {
-            let endDigits = ''
-            while (j < len && isDigit(formula[j])) {
-              endDigits += formula[j]
-              j++
-            }
-            const oldStartCol = letterToIndex(upper)
-            const oldEndCol = letterToIndex(endLetters.toUpperCase())
-            const oldStartRow = parseInt(digits, 10)
-            const oldEndRow = parseInt(endDigits, 10)
-            const newStartCol = colMap.get(oldStartCol) ?? oldStartCol
-            const newEndCol = colMap.get(oldEndCol) ?? oldEndCol
-            const newStartRow = rowMap.get(oldStartRow) ?? oldStartRow
-            const newEndRow = rowMap.get(oldEndRow) ?? oldEndRow
-            result += indexToLetter(newStartCol) + newStartRow + ':' + indexToLetter(newEndCol) + newEndRow
-            i = j
-            continue
-          }
-        }
-
-        const oldColIdx = letterToIndex(upper)
-        const oldRowNum = parseInt(digits, 10)
-        const newColIdx = colMap.get(oldColIdx) ?? oldColIdx
-        const newRowNum = rowMap.get(oldRowNum) ?? oldRowNum
-        result += indexToLetter(newColIdx) + newRowNum
-        continue
-      }
-
-      // Seguido por ':' + mesmas letras → COL_RANGE → remapear coluna
-      if (i < len && formula[i] === ':') {
-        const afterColon = formula.slice(i + 1, i + 1 + letters.length).toUpperCase()
-        if (afterColon === upper) {
-          const oldColIdx = letterToIndex(upper)
-          const newColIdx = colMap.get(oldColIdx) ?? oldColIdx
-          const newLetter = indexToLetter(newColIdx)
-          result += newLetter + ':' + newLetter
-          i += 1 + letters.length
-          continue
-        }
-      }
-
-      // Nome de função ou outro identificador → manter como está
-      result += formula.slice(start, i)
-      continue
-    }
-
-    // Outros caracteres
-    result += formula[i]
-    i++
-  }
-
-  return result
+  return transformFormulaRefs(formula, {
+    transformCol: (col) => colMap.get(col) ?? col,
+    transformRow: (row) => rowMap.get(row) ?? row,
+  })
 }
 
 // ========== Tokenizer ==========
@@ -888,196 +803,199 @@ function evaluateNode(node: ASTNode, ctx: FormulaContext): FormulaValue {
 
 // ========== Funções ==========
 
-function evaluateFunction(name: string, argNodes: ASTNode[], ctx: FormulaContext): FormulaValue {
-  switch (name) {
-    case 'SOMA': {
-      const nums: number[] = []
-      for (const arg of argNodes) {
-        const val = evaluateNode(arg, ctx)
-        nums.push(...flattenNumbers(val))
-      }
-      return nums.reduce((a, b) => a + b, 0)
+type FormulaFn = (argNodes: ASTNode[], ctx: FormulaContext) => FormulaValue
+
+const FORMULA_HANDLERS: Record<string, FormulaFn> = {
+  SOMA(argNodes, ctx) {
+    const nums: number[] = []
+    for (const arg of argNodes) {
+      const val = evaluateNode(arg, ctx)
+      nums.push(...flattenNumbers(val))
     }
+    return nums.reduce((a, b) => a + b, 0)
+  },
 
-    case 'SUBTRACAO': {
-      if (argNodes.length !== 2) throw new FormulaError('#SINTAXE', 'SUBTRACAO requer 2 argumentos')
-      const a = toNumber(evaluateNode(argNodes[0], ctx))
-      const b = toNumber(evaluateNode(argNodes[1], ctx))
-      return a - b
+  SUBTRACAO(argNodes, ctx) {
+    if (argNodes.length !== 2) throw new FormulaError('#SINTAXE', 'SUBTRACAO requer 2 argumentos')
+    const a = toNumber(evaluateNode(argNodes[0], ctx))
+    const b = toNumber(evaluateNode(argNodes[1], ctx))
+    return a - b
+  },
+
+  MULTIPLICACAO(argNodes, ctx) {
+    if (argNodes.length !== 2) throw new FormulaError('#SINTAXE', 'MULTIPLICACAO requer 2 argumentos')
+    const a = toNumber(evaluateNode(argNodes[0], ctx))
+    const b = toNumber(evaluateNode(argNodes[1], ctx))
+    return a * b
+  },
+
+  DIVISAO(argNodes, ctx) {
+    if (argNodes.length !== 2) throw new FormulaError('#SINTAXE', 'DIVISAO requer 2 argumentos')
+    const a = toNumber(evaluateNode(argNodes[0], ctx))
+    const b = toNumber(evaluateNode(argNodes[1], ctx))
+    if (b === 0) throw new FormulaError('#DIV/0', 'Divisão por zero')
+    return a / b
+  },
+
+  MEDIA(argNodes, ctx) {
+    const nums: number[] = []
+    for (const arg of argNodes) {
+      const val = evaluateNode(arg, ctx)
+      nums.push(...flattenNumbers(val))
     }
+    if (nums.length === 0) throw new FormulaError('#VALOR', 'MEDIA sem valores')
+    return nums.reduce((a, b) => a + b, 0) / nums.length
+  },
 
-    case 'MULTIPLICACAO': {
-      if (argNodes.length !== 2) throw new FormulaError('#SINTAXE', 'MULTIPLICACAO requer 2 argumentos')
-      const a = toNumber(evaluateNode(argNodes[0], ctx))
-      const b = toNumber(evaluateNode(argNodes[1], ctx))
-      return a * b
+  MIN(argNodes, ctx) {
+    const nums: number[] = []
+    for (const arg of argNodes) {
+      const val = evaluateNode(arg, ctx)
+      nums.push(...flattenNumbers(val))
     }
+    if (nums.length === 0) throw new FormulaError('#VALOR', 'MIN sem valores')
+    return Math.min(...nums)
+  },
 
-    case 'DIVISAO': {
-      if (argNodes.length !== 2) throw new FormulaError('#SINTAXE', 'DIVISAO requer 2 argumentos')
-      const a = toNumber(evaluateNode(argNodes[0], ctx))
-      const b = toNumber(evaluateNode(argNodes[1], ctx))
-      if (b === 0) throw new FormulaError('#DIV/0', 'Divisão por zero')
-      return a / b
+  MAX(argNodes, ctx) {
+    const nums: number[] = []
+    for (const arg of argNodes) {
+      const val = evaluateNode(arg, ctx)
+      nums.push(...flattenNumbers(val))
     }
+    if (nums.length === 0) throw new FormulaError('#VALOR', 'MAX sem valores')
+    return Math.max(...nums)
+  },
 
-    case 'MEDIA': {
-      const nums: number[] = []
-      for (const arg of argNodes) {
-        const val = evaluateNode(arg, ctx)
-        nums.push(...flattenNumbers(val))
-      }
-      if (nums.length === 0) throw new FormulaError('#VALOR', 'MEDIA sem valores')
-      return nums.reduce((a, b) => a + b, 0) / nums.length
+  ABS(argNodes, ctx) {
+    if (argNodes.length !== 1) throw new FormulaError('#SINTAXE', 'ABS requer 1 argumento')
+    return Math.abs(toNumber(evaluateNode(argNodes[0], ctx)))
+  },
+
+  ARRED(argNodes, ctx) {
+    if (argNodes.length !== 2) throw new FormulaError('#SINTAXE', 'ARRED requer 2 argumentos')
+    const val = toNumber(evaluateNode(argNodes[0], ctx))
+    const places = toNumber(evaluateNode(argNodes[1], ctx))
+    const factor = Math.pow(10, Math.round(places))
+    return Math.round(val * factor) / factor
+  },
+
+  PORCENTAGEM(argNodes, ctx) {
+    if (argNodes.length !== 2) throw new FormulaError('#SINTAXE', 'PORCENTAGEM requer 2 argumentos')
+    const parte = toNumber(evaluateNode(argNodes[0], ctx))
+    const total = toNumber(evaluateNode(argNodes[1], ctx))
+    if (total === 0) throw new FormulaError('#DIV/0', 'Divisão por zero')
+    return (parte / total) * 100
+  },
+
+  SE(argNodes, ctx) {
+    if (argNodes.length < 2 || argNodes.length > 3) {
+      throw new FormulaError('#SINTAXE', 'SE requer 2 ou 3 argumentos')
     }
-
-    case 'MIN': {
-      const nums: number[] = []
-      for (const arg of argNodes) {
-        const val = evaluateNode(arg, ctx)
-        nums.push(...flattenNumbers(val))
-      }
-      if (nums.length === 0) throw new FormulaError('#VALOR', 'MIN sem valores')
-      return Math.min(...nums)
+    const condition = toBoolean(evaluateNode(argNodes[0], ctx))
+    if (condition) {
+      return evaluateNode(argNodes[1], ctx)
     }
+    return argNodes.length === 3 ? evaluateNode(argNodes[2], ctx) : ''
+  },
 
-    case 'MAX': {
-      const nums: number[] = []
-      for (const arg of argNodes) {
-        const val = evaluateNode(arg, ctx)
-        nums.push(...flattenNumbers(val))
-      }
-      if (nums.length === 0) throw new FormulaError('#VALOR', 'MAX sem valores')
-      return Math.max(...nums)
-    }
+  E(argNodes, ctx) {
+    if (argNodes.length < 2) throw new FormulaError('#SINTAXE', 'E requer pelo menos 2 argumentos')
+    return argNodes.every(arg => toBoolean(evaluateNode(arg, ctx)))
+  },
 
-    case 'ABS': {
-      if (argNodes.length !== 1) throw new FormulaError('#SINTAXE', 'ABS requer 1 argumento')
-      return Math.abs(toNumber(evaluateNode(argNodes[0], ctx)))
-    }
+  OU(argNodes, ctx) {
+    if (argNodes.length < 2) throw new FormulaError('#SINTAXE', 'OU requer pelo menos 2 argumentos')
+    return argNodes.some(arg => toBoolean(evaluateNode(arg, ctx)))
+  },
 
-    case 'ARRED': {
-      if (argNodes.length !== 2) throw new FormulaError('#SINTAXE', 'ARRED requer 2 argumentos')
-      const val = toNumber(evaluateNode(argNodes[0], ctx))
-      const places = toNumber(evaluateNode(argNodes[1], ctx))
-      const factor = Math.pow(10, Math.round(places))
-      return Math.round(val * factor) / factor
-    }
+  CLASSIFICAR(argNodes, ctx) {
+    if (argNodes.length < 3) throw new FormulaError('#SINTAXE', 'CLASSIFICAR requer pelo menos 3 argumentos')
 
-    case 'PORCENTAGEM': {
-      if (argNodes.length !== 2) throw new FormulaError('#SINTAXE', 'PORCENTAGEM requer 2 argumentos')
-      const parte = toNumber(evaluateNode(argNodes[0], ctx))
-      const total = toNumber(evaluateNode(argNodes[1], ctx))
-      if (total === 0) throw new FormulaError('#DIV/0', 'Divisão por zero')
-      return (parte / total) * 100
-    }
+    const sourceValue = toNumber(evaluateNode(argNodes[0], ctx))
+    let i = 1
 
-    case 'SE': {
-      if (argNodes.length < 2 || argNodes.length > 3) {
-        throw new FormulaError('#SINTAXE', 'SE requer 2 ou 3 argumentos')
-      }
-      const condition = toBoolean(evaluateNode(argNodes[0], ctx))
-      if (condition) {
-        return evaluateNode(argNodes[1], ctx)
-      }
-      return argNodes.length === 3 ? evaluateNode(argNodes[2], ctx) : ''
-    }
+    while (i < argNodes.length - 1) {
+      const thresholdNode = argNodes[i]
+      const resultNode = argNodes[i + 1]
 
-    case 'E': {
-      if (argNodes.length < 2) throw new FormulaError('#SINTAXE', 'E requer pelo menos 2 argumentos')
-      return argNodes.every(arg => toBoolean(evaluateNode(arg, ctx)))
-    }
-
-    case 'OU': {
-      if (argNodes.length < 2) throw new FormulaError('#SINTAXE', 'OU requer pelo menos 2 argumentos')
-      return argNodes.some(arg => toBoolean(evaluateNode(arg, ctx)))
-    }
-
-    case 'CLASSIFICAR': {
-      if (argNodes.length < 3) throw new FormulaError('#SINTAXE', 'CLASSIFICAR requer pelo menos 3 argumentos')
-
-      const sourceValue = toNumber(evaluateNode(argNodes[0], ctx))
-      let i = 1
-
-      while (i < argNodes.length - 1) {
-        const thresholdNode = argNodes[i]
-        const resultNode = argNodes[i + 1]
-
-        if (thresholdNode.type === 'thresholdPair') {
-          const threshold = toNumber(evaluateNode(thresholdNode.value, ctx))
-          let matches = false
-          switch (thresholdNode.op) {
-            case '>=': matches = sourceValue >= threshold; break
-            case '<=': matches = sourceValue <= threshold; break
-            case '>': matches = sourceValue > threshold; break
-            case '<': matches = sourceValue < threshold; break
-            case '=': matches = sourceValue === threshold; break
-            case '<>': matches = sourceValue !== threshold; break
-          }
-          if (matches) {
-            return evaluateNode(resultNode, ctx)
-          }
-          i += 2
-        } else {
-          return evaluateNode(thresholdNode, ctx)
-        }
-      }
-
-      if (i < argNodes.length) {
-        return evaluateNode(argNodes[i], ctx)
-      }
-
-      return '-'
-    }
-
-    case 'CONT': {
-      let count = 0
-      for (const arg of argNodes) {
-        const val = evaluateNode(arg, ctx)
-        if (Array.isArray(val)) {
-          count += val.length
-        } else if (val !== '' && val !== 0) {
-          count++
-        }
-      }
-      return count
-    }
-
-    case 'CONT.SE': {
-      if (argNodes.length !== 2) throw new FormulaError('#SINTAXE', 'CONT.SE requer 2 argumentos')
-      const values = evaluateNode(argNodes[0], ctx)
-      const condNode = argNodes[1]
-
-      if (!Array.isArray(values)) throw new FormulaError('#VALOR', 'CONT.SE requer coluna como primeiro argumento')
-
-      if (condNode.type !== 'thresholdPair') {
-        throw new FormulaError('#SINTAXE', 'CONT.SE requer condição (ex: >0)')
-      }
-
-      const threshold = toNumber(evaluateNode(condNode.value, ctx))
-      let count = 0
-      for (const val of values) {
+      if (thresholdNode.type === 'thresholdPair') {
+        const threshold = toNumber(evaluateNode(thresholdNode.value, ctx))
         let matches = false
-        switch (condNode.op) {
-          case '>=': matches = val >= threshold; break
-          case '<=': matches = val <= threshold; break
-          case '>': matches = val > threshold; break
-          case '<': matches = val < threshold; break
-          case '=': matches = val === threshold; break
-          case '<>': matches = val !== threshold; break
+        switch (thresholdNode.op) {
+          case '>=': matches = sourceValue >= threshold; break
+          case '<=': matches = sourceValue <= threshold; break
+          case '>': matches = sourceValue > threshold; break
+          case '<': matches = sourceValue < threshold; break
+          case '=': matches = sourceValue === threshold; break
+          case '<>': matches = sourceValue !== threshold; break
         }
-        if (matches) count++
+        if (matches) {
+          return evaluateNode(resultNode, ctx)
+        }
+        i += 2
+      } else {
+        return evaluateNode(thresholdNode, ctx)
       }
-      return count
     }
 
-    case 'CONCAT': {
-      return argNodes.map(arg => toString(evaluateNode(arg, ctx))).join('')
+    if (i < argNodes.length) {
+      return evaluateNode(argNodes[i], ctx)
     }
 
-    default:
-      throw new FormulaError('#SINTAXE', `Função desconhecida: ${name}`)
-  }
+    return '-'
+  },
+
+  CONT(argNodes, ctx) {
+    let count = 0
+    for (const arg of argNodes) {
+      const val = evaluateNode(arg, ctx)
+      if (Array.isArray(val)) {
+        count += val.length
+      } else if (val !== '' && val !== 0) {
+        count++
+      }
+    }
+    return count
+  },
+
+  'CONT.SE'(argNodes, ctx) {
+    if (argNodes.length !== 2) throw new FormulaError('#SINTAXE', 'CONT.SE requer 2 argumentos')
+    const values = evaluateNode(argNodes[0], ctx)
+    const condNode = argNodes[1]
+
+    if (!Array.isArray(values)) throw new FormulaError('#VALOR', 'CONT.SE requer coluna como primeiro argumento')
+
+    if (condNode.type !== 'thresholdPair') {
+      throw new FormulaError('#SINTAXE', 'CONT.SE requer condição (ex: >0)')
+    }
+
+    const threshold = toNumber(evaluateNode(condNode.value, ctx))
+    let count = 0
+    for (const val of values) {
+      let matches = false
+      switch (condNode.op) {
+        case '>=': matches = val >= threshold; break
+        case '<=': matches = val <= threshold; break
+        case '>': matches = val > threshold; break
+        case '<': matches = val < threshold; break
+        case '=': matches = val === threshold; break
+        case '<>': matches = val !== threshold; break
+      }
+      if (matches) count++
+    }
+    return count
+  },
+
+  CONCAT(argNodes, ctx) {
+    return argNodes.map(arg => toString(evaluateNode(arg, ctx))).join('')
+  },
+}
+
+function evaluateFunction(name: string, argNodes: ASTNode[], ctx: FormulaContext): FormulaValue {
+  const fn = FORMULA_HANDLERS[name]
+  if (!fn) throw new FormulaError('#SINTAXE', `Função desconhecida: ${name}`)
+  return fn(argNodes, ctx)
 }
 
 // ========== API Pública ==========

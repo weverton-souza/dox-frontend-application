@@ -1,6 +1,23 @@
 import { useState, useCallback } from 'react'
 import type { FormField, FormFieldAnswer } from '@/types'
 
+function isFieldEmpty(field: FormField, answer: FormFieldAnswer): boolean {
+  switch (field.type) {
+    case 'short-text':
+    case 'long-text':
+    case 'date':
+    case 'yes-no':
+      return !answer.value.trim()
+    case 'single-choice':
+    case 'multiple-choice':
+      return answer.selectedOptionIds.length === 0
+    case 'scale':
+      return answer.scaleValue === null
+    default:
+      return false
+  }
+}
+
 export function useFormValidation(
   getFields: () => FormField[],
   getAnswers: () => FormFieldAnswer[],
@@ -21,16 +38,7 @@ export function useFormValidation(
         continue
       }
 
-      const isEmpty =
-        (field.type === 'short-text' || field.type === 'long-text' || field.type === 'date' || field.type === 'yes-no')
-          ? !answer.value.trim()
-        : (field.type === 'single-choice' || field.type === 'multiple-choice')
-          ? answer.selectedOptionIds.length === 0
-        : field.type === 'scale'
-          ? answer.scaleValue === null
-        : false
-
-      if (isEmpty) errors.add(field.id)
+      if (isFieldEmpty(field, answer)) errors.add(field.id)
     }
 
     setValidationErrors(errors)

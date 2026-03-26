@@ -39,6 +39,7 @@ import {
 import { Chart as ChartJS } from 'chart.js'
 import './chart/setup'
 import { getProfessional } from '@/lib/api/professional-api'
+import { formatDate } from '@/lib/utils'
 import { base64ToUint8Array } from './shared/social-icons'
 import type { ContactType } from '@/types'
 
@@ -69,8 +70,7 @@ import {
 
 // ========== Header / Footer ==========
 
-async function createDocHeader(): Promise<Header> {
-  const prof = await getProfessional()
+async function createDocHeader(prof: import('@/types').Professional): Promise<Header> {
 
   const nameParagraph = new Paragraph({
     alignment: AlignmentType.RIGHT,
@@ -174,8 +174,7 @@ async function createDocHeader(): Promise<Header> {
   return new Header({ children })
 }
 
-async function createDocFooter(): Promise<Footer> {
-  const prof = await getProfessional()
+async function createDocFooter(prof: import('@/types').Professional): Promise<Footer> {
   const contactItems = prof.contactItems ?? []
 
   const children: (Paragraph | Table)[] = []
@@ -285,7 +284,7 @@ function renderIdentification(data: IdentificationData): (Paragraph | Table)[] {
   const customerRows = [
     ['Nome', data.customer.name],
     ['CPF', data.customer.cpf],
-    ['Data de Nascimento', formatDateBR(data.customer.birthDate)],
+    ['Data de Nascimento', formatDate(data.customer.birthDate)],
     ['Idade', data.customer.age],
     ['Escolaridade', data.customer.education],
     ['Profissão', data.customer.profession],
@@ -299,7 +298,7 @@ function renderIdentification(data: IdentificationData): (Paragraph | Table)[] {
   // Data e local
   elements.push(createSectionHeader('DADOS DO LAUDO'))
   const laudoRows = [
-    ['Data', formatDateBR(data.date)],
+    ['Data', formatDate(data.date)],
     ['Local', data.location],
   ].filter(([, val]) => val)
   elements.push(createKeyValueTable(laudoRows))
@@ -809,32 +808,16 @@ function renderInfoBox(data: InfoBoxData, amber = false): (Paragraph | Table)[] 
   return elements
 }
 
-async function renderChart(data: ChartData): Promise<(Paragraph | Table)[]> {
-  const elements: (Paragraph | Table)[] = []
+interface GroupBound { seriesIdx: number; start: number; end: number }
 
-  if (data.title) {
-    elements.push(createSectionHeader(data.title.toUpperCase()))
-  }
-
-  if (data.categories.length === 0 || data.series.length === 0) {
-    return elements
-  }
-
-  // Create offscreen canvas
-  const canvas = document.createElement('canvas')
-  canvas.width = 1200
-  canvas.height = 600
-  const ctx = canvas.getContext('2d')
-  if (!ctx) return elements
-
+function buildChartDatasets(data: ChartData): {
+  chartLabels: string[]
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  chartDatasets: any[]
+  groupBounds: GroupBound[]
+} {
   const displayMode = data.displayMode ?? 'grouped'
   const isSeparated = displayMode === 'separated' && data.chartType !== 'line' && data.series.length > 1
-
-  // ---- Build chart data based on display mode ----
-  let chartLabels: string[]
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let chartDatasets: any[]
-  interface GroupBound { seriesIdx: number; start: number; end: number }
   const groupBounds: GroupBound[] = []
 
   if (isSeparated) {
@@ -869,43 +852,54 @@ async function renderChart(data: ChartData): Promise<(Paragraph | Table)[]> {
       }
     })
 
-    chartLabels = flatLabels
-    chartDatasets = [{
-      data: flatValues,
-      backgroundColor: flatBgColors,
-      borderColor: flatBorderColors,
-      borderWidth: 1,
-      borderRadius: 3,
-    }]
-  } else {
-    chartLabels = data.categories.map((c) => c.label || '')
-    chartDatasets = data.series.map((series) => {
-      const values = data.categories.map((cat) => cat.values[series.id] ?? 0)
+    return {
+      chartLabels: flatLabels,
+      chartDatasets: [{
+        data: flatValues,
+        backgroundColor: flatBgColors,
+        borderColor: flatBorderColors,
+        borderWidth: 1,
+        borderRadius: 3,
+      }],
+      groupBounds,
+    }
+  }
 
-      if (data.chartType === 'line') {
-        return {
-          label: series.label,
-          data: values,
-          borderColor: series.color,
-          backgroundColor: series.color + '33',
-          fill: false,
-          tension: 0.3,
-          pointRadius: 5,
-        }
-      }
+  const chartLabels = data.categories.map((c) => c.label || '')
+  const chartDatasets = data.series.map((series) => {
+    const values = data.categories.map((cat) => cat.values[series.id] ?? 0)
 
+    if (data.chartType === 'line') {
       return {
         label: series.label,
         data: values,
-        backgroundColor: series.color,
         borderColor: series.color,
-        borderWidth: 1,
-        borderRadius: 3,
+        backgroundColor: series.color + '33',
+        fill: false,
+        tension: 0.3,
+        pointRadius: 5,
       }
-    })
-  }
+    }
 
-  // ---- Annotations ----
+    return {
+      label: series.label,
+      data: values,
+      backgroundColor: series.color,
+      borderColor: series.color,
+      borderWidth: 1,
+      borderRadius: 3,
+    }
+  })
+
+  return { chartLabels, chartDatasets, groupBounds }
+}
+
+function buildChartAnnotations(
+  data: ChartData,
+  groupBounds: GroupBound[],
+  isSeparated: boolean,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): Record<string, any> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const annotations: Record<string, any> = {}
 
@@ -940,7 +934,6 @@ async function renderChart(data: ChartData): Promise<(Paragraph | Table)[]> {
     }
   })
 
-  // Separator lines between series groups (separated mode)
   if (isSeparated) {
     groupBounds.forEach((group, i) => {
       if (i < groupBounds.length - 1) {
@@ -958,22 +951,11 @@ async function renderChart(data: ChartData): Promise<(Paragraph | Table)[]> {
     })
   }
 
-  const chartType = data.chartType === 'line' ? 'line' : 'bar'
+  return annotations
+}
 
-  // Compute Y-axis suggestedMax
-  const allValues = data.categories.flatMap((cat) =>
-    data.series.map((s) => cat.values[s.id] ?? 0)
-  )
-  const refLineValues = data.referenceLines.map((l) => l.value)
-  const refRegionValues = data.referenceRegions.map((r) => r.yMax)
-  const maxDataValue = Math.max(0, ...allValues, ...refLineValues, ...refRegionValues)
-  const suggestedMax = maxDataValue + 10
-
-  const showRegionLegend = data.showRegionLegend ?? true
-
-  // ---- Inline plugins ----
-
-  const regionLegendPlugin = {
+function createRegionLegendPlugin(data: ChartData, showRegionLegend: boolean) {
+  return {
     id: 'regionLegend',
     afterDraw: (chart: ChartJS) => {
       if (!showRegionLegend || data.referenceRegions.length === 0) return
@@ -1027,9 +1009,10 @@ async function renderChart(data: ChartData): Promise<(Paragraph | Table)[]> {
       c.restore()
     },
   }
+}
 
-  // Series header labels (separated mode)
-  const seriesHeaderPlugin = {
+function createSeriesHeaderPlugin(data: ChartData, groupBounds: GroupBound[], isSeparated: boolean) {
+  return {
     id: 'seriesHeaders',
     afterDraw: (chart: ChartJS) => {
       if (!isSeparated || groupBounds.length === 0) return
@@ -1054,6 +1037,61 @@ async function renderChart(data: ChartData): Promise<(Paragraph | Table)[]> {
       c.restore()
     },
   }
+}
+
+function chartCanvasToImageBytes(canvas: HTMLCanvasElement): Uint8Array | null {
+  const dataUrl = canvas.toDataURL('image/png')
+  const chartParts = dataUrl.split(',')
+  if (chartParts.length < 2) {
+    return null
+  }
+  const base64 = chartParts[1]
+  const binaryString = atob(base64)
+  const bytes = new Uint8Array(binaryString.length)
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i)
+  }
+  return bytes
+}
+
+async function renderChart(data: ChartData): Promise<(Paragraph | Table)[]> {
+  const elements: (Paragraph | Table)[] = []
+
+  if (data.title) {
+    elements.push(createSectionHeader(data.title.toUpperCase()))
+  }
+
+  if (data.categories.length === 0 || data.series.length === 0) {
+    return elements
+  }
+
+  // Create offscreen canvas
+  const canvas = document.createElement('canvas')
+  canvas.width = 1200
+  canvas.height = 600
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return elements
+
+  const displayMode = data.displayMode ?? 'grouped'
+  const isSeparated = displayMode === 'separated' && data.chartType !== 'line' && data.series.length > 1
+
+  const { chartLabels, chartDatasets, groupBounds } = buildChartDatasets(data)
+  const annotations = buildChartAnnotations(data, groupBounds, isSeparated)
+
+  const chartType = data.chartType === 'line' ? 'line' : 'bar'
+
+  // Compute Y-axis suggestedMax
+  const allValues = data.categories.flatMap((cat) =>
+    data.series.map((s) => cat.values[s.id] ?? 0)
+  )
+  const refLineValues = data.referenceLines.map((l) => l.value)
+  const refRegionValues = data.referenceRegions.map((r) => r.yMax)
+  const maxDataValue = Math.max(0, ...allValues, ...refLineValues, ...refRegionValues)
+  const suggestedMax = maxDataValue + 10
+
+  const showRegionLegend = data.showRegionLegend ?? true
+  const regionLegendPlugin = createRegionLegendPlugin(data, showRegionLegend)
+  const seriesHeaderPlugin = createSeriesHeaderPlugin(data, groupBounds, isSeparated)
 
   const chart = new ChartJS(ctx, {
     type: chartType,
@@ -1102,17 +1140,10 @@ async function renderChart(data: ChartData): Promise<(Paragraph | Table)[]> {
   chart.update()
 
   // Export as PNG
-  const dataUrl = canvas.toDataURL('image/png')
-  const chartParts = dataUrl.split(',')
-  if (chartParts.length < 2) {
+  const bytes = chartCanvasToImageBytes(canvas)
+  if (!bytes) {
     chart.destroy()
     return elements
-  }
-  const base64 = chartParts[1]
-  const binaryString = atob(base64)
-  const bytes = new Uint8Array(binaryString.length)
-  for (let i = 0; i < binaryString.length; i++) {
-    bytes[i] = binaryString.charCodeAt(i)
   }
 
   chart.destroy()
@@ -1202,9 +1233,8 @@ function renderReferences(data: ReferencesData): Paragraph[] {
 
 // ========== Closing Page ==========
 
-async function renderClosingPage(data: ClosingPageData, report: Report): Promise<(Paragraph | Table)[]> {
+async function renderClosingPage(data: ClosingPageData, report: Report, prof: import('@/types').Professional): Promise<(Paragraph | Table)[]> {
   const elements: (Paragraph | Table)[] = []
-  const prof = await getProfessional()
 
   // Find identification block for customer info
   const idBlock = report.blocks.find((b) => b.type === 'identification')
@@ -1533,23 +1563,11 @@ function createKeyValueTable(rows: string[][]): Table {
   })
 }
 
-function formatDateBR(dateStr: string): string {
-  if (!dateStr) return ''
-  try {
-    const date = new Date(dateStr + 'T00:00:00')
-    return date.toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    })
-  } catch {
-    return dateStr
-  }
-}
 
 // ========== Main generator ==========
 
 export async function generateDocx(report: Report): Promise<Blob> {
+  const prof = await getProfessional()
   const sortedBlocks = [...report.blocks].sort((a, b) => a.order - b.order)
 
   const sectionChildren: (Paragraph | Table)[] = []
@@ -1599,7 +1617,7 @@ export async function generateDocx(report: Report): Promise<Blob> {
         sectionChildren.push(...renderReferences(block.data as ReferencesData))
         break
       case 'closing-page':
-        sectionChildren.push(...await renderClosingPage(block.data as ClosingPageData, report))
+        sectionChildren.push(...await renderClosingPage(block.data as ClosingPageData, report, prof))
         break
     }
 
@@ -1625,10 +1643,10 @@ export async function generateDocx(report: Report): Promise<Blob> {
       },
     },
     headers: {
-      default: await createDocHeader(),
+      default: await createDocHeader(prof),
     },
     footers: {
-      default: await createDocFooter(),
+      default: await createDocFooter(prof),
     },
     children: sectionChildren,
   }
