@@ -5,8 +5,8 @@ import { createEmptyCustomer } from '@/types'
 import { getCustomers, createCustomer, updateCustomer, deleteCustomer } from '@/lib/api/customer-api'
 import { getReports } from '@/lib/api/report-api'
 import { formatDateTime } from '@/lib/utils'
-import { createReportFromCustomer, createReportFromTemplate } from '@/lib/report-utils'
 import { useConfirmDelete } from '@/lib/hooks/use-confirm-delete'
+import { useCreateReport } from '@/lib/hooks/use-create-report'
 import { useError } from '@/contexts/ErrorContext'
 import NewReportModal from '@/components/NewReportModal'
 import Button from '@/components/ui/Button'
@@ -17,31 +17,9 @@ import PageHeader from '@/components/layout/PageHeader'
 import ConfirmDeleteModal from '@/components/ui/ConfirmDeleteModal'
 import EmptyState from '@/components/ui/EmptyState'
 import PageSizeSelector from '@/components/ui/PageSizeSelector'
-// icons from ListCard
-import ListCard, { ListCardPill, ListCardAction, DocumentPlusIcon, EditIcon, TrashIcon as ListTrashIcon } from '@/components/ui/ListCard'
-
-const AVATAR_COLORS = [
-  'from-blue-400 to-blue-600',
-  'from-purple-400 to-purple-600',
-  'from-teal-400 to-teal-600',
-  'from-rose-400 to-rose-600',
-  'from-amber-400 to-amber-600',
-  'from-indigo-400 to-indigo-600',
-  'from-emerald-400 to-emerald-600',
-  'from-cyan-400 to-cyan-600',
-]
-
-function getAvatarColor(name: string): string {
-  let hash = 0
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash)
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length]
-}
-
-function getInitials(name: string): string {
-  const parts = name.trim().split(/\s+/)
-  if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-  return (parts[0]?.[0] ?? '?').toUpperCase()
-}
+import ListCard, { ListCardPill, ListCardAction } from '@/components/ui/ListCard'
+import { DocumentPlusIcon, EditIcon, TrashIcon as ListTrashIcon } from '@/components/icons'
+import { getAvatarColor, getInitials } from '@/lib/avatar-utils'
 
 export default function CustomerList() {
   const navigate = useNavigate()
@@ -55,7 +33,7 @@ export default function CustomerList() {
   const [showFormModal, setShowFormModal] = useState(false)
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
-  const [reportCustomer, setReportCustomer] = useState<Customer | null>(null)
+  const { reportCustomer, isModalOpen: isReportModalOpen, showModal: showReportModal, hideModal: hideReportModal, createBlank, createFromTemplate } = useCreateReport()
 
   // Debounce search to avoid firing on every keystroke
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
@@ -139,33 +117,6 @@ export default function CustomerList() {
   }, [loadData, currentPage, pageSize, debouncedSearch, showError])
 
   const { confirmId: confirmDeleteId, requestDelete: setConfirmDeleteId, confirmDelete, cancelDelete } = useConfirmDelete(handleDeleteCustomer)
-
-  const handleCreateReport = useCallback(
-    (customer: Customer) => {
-      setReportCustomer(customer)
-    },
-    []
-  )
-
-  const handleCreateBlankReport = useCallback(async () => {
-    if (!reportCustomer) return
-    try {
-      const report = await createReportFromCustomer(reportCustomer)
-      navigate(`/reports/${report.id}`)
-    } catch (err) {
-      showError(err)
-    }
-  }, [reportCustomer, navigate, showError])
-
-  const handleCreateFromTemplate = useCallback(async (template: import('@/types').ReportTemplate) => {
-    if (!reportCustomer) return
-    try {
-      const report = await createReportFromTemplate(reportCustomer, template)
-      navigate(`/reports/${report.id}`)
-    } catch (err) {
-      showError(err)
-    }
-  }, [reportCustomer, navigate, showError])
 
   const updateEditingField = useCallback(
     (field: keyof CustomerData, value: string) => {
@@ -265,7 +216,7 @@ export default function CustomerList() {
                     }
                     actions={
                       <>
-                        <ListCardAction onClick={() => handleCreateReport(customer)} title="Novo relatório" icon={<DocumentPlusIcon />} variant="brand" />
+                        <ListCardAction onClick={() => showReportModal(customer)} title="Novo relatório" icon={<DocumentPlusIcon />} variant="brand" />
                         <ListCardAction onClick={() => handleOpenEdit(customer)} title="Editar cliente" icon={<EditIcon />} />
                         <ListCardAction onClick={() => setConfirmDeleteId(customer.id)} title="Excluir cliente" icon={<ListTrashIcon />} variant="danger" />
                       </>
@@ -410,11 +361,11 @@ export default function CustomerList() {
 
       {reportCustomer && (
         <NewReportModal
-          isOpen={!!reportCustomer}
-          onClose={() => setReportCustomer(null)}
+          isOpen={isReportModalOpen}
+          onClose={hideReportModal}
           customer={reportCustomer}
-          onSelectTemplate={handleCreateFromTemplate}
-          onSelectBlank={handleCreateBlankReport}
+          onSelectTemplate={createFromTemplate}
+          onSelectBlank={createBlank}
         />
       )}
     </>

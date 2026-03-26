@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useCallback } from 'react'
 import type { Customer } from '@/types'
-import { getCustomers } from '@/lib/api/customer-api'
 import { createFormLink } from '@/lib/api/form-link-api'
+import { useCustomerSearch } from '@/lib/hooks/use-customer-search'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 
@@ -15,38 +15,11 @@ type ModalState = 'select-customer' | 'loading' | 'success' | 'error'
 
 export default function GenerateFormLinkModal({ isOpen, onClose, formId }: GenerateFormLinkModalProps) {
   const [state, setState] = useState<ModalState>('select-customer')
-  const [search, setSearch] = useState('')
-  const [customers, setCustomers] = useState<Customer[]>([])
+  const { search, setSearch, customers, loading: searchLoading, reset: resetSearch } = useCustomerSearch(isOpen)
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
   const [generatedLink, setGeneratedLink] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
   const [copied, setCopied] = useState(false)
-  const [searchLoading, setSearchLoading] = useState(false)
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  useEffect(() => {
-    if (!isOpen) return
-    setSearchLoading(true)
-    getCustomers(0, 10)
-      .then((page) => setCustomers(page.content))
-      .finally(() => setSearchLoading(false))
-  }, [isOpen])
-
-  useEffect(() => {
-    if (!isOpen) return
-    if (debounceRef.current) clearTimeout(debounceRef.current)
-
-    debounceRef.current = setTimeout(() => {
-      setSearchLoading(true)
-      getCustomers(0, 10, search || undefined)
-        .then((page) => setCustomers(page.content))
-        .finally(() => setSearchLoading(false))
-    }, 300)
-
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current)
-    }
-  }, [search, isOpen])
 
   const handleGenerate = useCallback(async () => {
     if (!selectedCustomer) return
@@ -87,7 +60,7 @@ export default function GenerateFormLinkModal({ isOpen, onClose, formId }: Gener
 
   const handleClose = () => {
     setState('select-customer')
-    setSearch('')
+    resetSearch()
     setSelectedCustomer(null)
     setGeneratedLink('')
     setErrorMessage('')

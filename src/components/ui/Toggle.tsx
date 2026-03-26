@@ -4,7 +4,7 @@ interface ToggleProps {
   onChange: (checked: boolean) => void
 }
 
-const Toggle = ({ label, checked, onChange }: ToggleProps) => {
+export default function Toggle({ label, checked, onChange }: ToggleProps) {
   return (
     <div className="flex items-center gap-2">
       <button
@@ -28,5 +28,3 @@ const Toggle = ({ label, checked, onChange }: ToggleProps) => {
     </div>
   )
 }
-
-export default Toggle

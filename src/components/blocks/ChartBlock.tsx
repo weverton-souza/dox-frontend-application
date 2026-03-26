@@ -11,11 +11,10 @@ import type {
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import Select from '@/components/ui/Select'
-import Modal from '@/components/ui/Modal'
 import { CloseIcon } from '@/components/icons'
 import ColorPicker from '@/components/ui/ColorPicker'
 import { Chart as ChartJS } from 'chart.js'
-import { createChartTemplate, getChartTemplates } from '@/lib/api/template-api'
+import SaveChartTemplateModal from '@/components/blocks/SaveChartTemplateModal'
 import '@/lib/docx-engine/chart/setup'
 
 interface ChartBlockProps {
@@ -50,62 +49,12 @@ export default function ChartBlock({ data, onChange }: ChartBlockProps) {
 
   // Save as template state
   const [showSaveTemplate, setShowSaveTemplate] = useState(false)
-  const [templateName, setTemplateName] = useState('')
-  const [templateDescription, setTemplateDescription] = useState('')
-  const [templateInstrument, setTemplateInstrument] = useState('')
-  const [templateCategory, setTemplateCategory] = useState('')
   const [savedFeedback, setSavedFeedback] = useState(false)
 
-  const openSaveTemplateModal = () => {
-    setTemplateName(data.title || '')
-    setTemplateDescription('')
-    setTemplateInstrument('')
-    setTemplateCategory('')
-    setShowSaveTemplate(true)
+  const handleTemplateSaved = () => {
+    setSavedFeedback(true)
+    setTimeout(() => setSavedFeedback(false), 2000)
   }
-
-  const handleSaveTemplate = async () => {
-    try {
-      await createChartTemplate({
-        name: templateName.trim(),
-        description: templateDescription.trim(),
-        instrumentName: templateInstrument.trim(),
-        category: templateCategory.trim(),
-        chartType: data.chartType,
-        displayMode: data.displayMode,
-        series: data.series.map(s => ({ ...s })),
-        categories: data.categories.map(c => ({
-          ...c,
-          values: { ...c.values },
-        })),
-        referenceLines: data.referenceLines.map(r => ({ ...r })),
-        referenceRegions: data.referenceRegions.map(r => ({ ...r })),
-        yAxisLabel: data.yAxisLabel,
-        showValues: data.showValues,
-        showLegend: data.showLegend,
-        showRegionLegend: data.showRegionLegend ?? true,
-        isDefault: false,
-      })
-      setShowSaveTemplate(false)
-      setSavedFeedback(true)
-      setTimeout(() => setSavedFeedback(false), 2000)
-    } catch {
-      // error saving template
-    }
-  }
-
-  const canSaveTemplate = templateName.trim() && templateInstrument.trim() && templateCategory.trim()
-
-  const [existingCategories, setExistingCategories] = useState<string[]>([])
-  useEffect(() => {
-    if (!showSaveTemplate) return
-    getChartTemplates()
-      .then(tpls => {
-        const cats = [...new Set(tpls.map(t => t.category))]
-        setExistingCategories(cats.sort())
-      })
-      .catch(() => {})
-  }, [showSaveTemplate])
 
   // Backwards-compatible defaults for new fields
   const showRegionLegend = data.showRegionLegend ?? true
@@ -717,9 +666,7 @@ export default function ChartBlock({ data, onChange }: ChartBlockProps) {
                         className="p-1 rounded hover:bg-red-50 text-gray-400 hover:text-red-500"
                         title="Remover categoria"
                       >
-                        <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
-                          <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
-                        </svg>
+                        <CloseIcon size={14} />
                       </button>
                     </td>
                   </tr>
@@ -777,9 +724,7 @@ export default function ChartBlock({ data, onChange }: ChartBlockProps) {
               onClick={() => removeReferenceLine(line.id)}
               className="p-1 rounded hover:bg-red-50 text-gray-400 hover:text-red-500"
             >
-              <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
-              </svg>
+              <CloseIcon size={14} />
             </button>
           </div>
         ))}
@@ -843,9 +788,7 @@ export default function ChartBlock({ data, onChange }: ChartBlockProps) {
               onClick={() => removeReferenceRegion(region.id)}
               className="p-1 rounded hover:bg-red-50 text-gray-400 hover:text-red-500"
             >
-              <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
-              </svg>
+              <CloseIcon size={14} />
             </button>
           </div>
         ))}
@@ -919,7 +862,7 @@ export default function ChartBlock({ data, onChange }: ChartBlockProps) {
         <Button
           variant="secondary"
           size="sm"
-          onClick={openSaveTemplateModal}
+          onClick={() => setShowSaveTemplate(true)}
           disabled={data.series.length === 0}
           className="whitespace-nowrap"
         >
@@ -927,64 +870,12 @@ export default function ChartBlock({ data, onChange }: ChartBlockProps) {
         </Button>
       </div>
 
-      {/* Modal salvar como template */}
-      <Modal
+      <SaveChartTemplateModal
         isOpen={showSaveTemplate}
         onClose={() => setShowSaveTemplate(false)}
-        title="Salvar como Template"
-        size="md"
-      >
-        <div className="space-y-4">
-          <Input
-            label="Nome *"
-            value={templateName}
-            onChange={(e) => setTemplateName(e.target.value)}
-            placeholder="Ex: WAIS-III — Perfil de Subtestes"
-          />
-          <Input
-            label="Instrumento *"
-            value={templateInstrument}
-            onChange={(e) => setTemplateInstrument(e.target.value)}
-            placeholder="Ex: WAIS-III, RAVLT"
-          />
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Categoria *
-            </label>
-            <input
-              type="text"
-              list="chart-template-categories"
-              value={templateCategory}
-              onChange={(e) => setTemplateCategory(e.target.value)}
-              placeholder="Ex: Inteligência, Memória, Atenção"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-            />
-            <datalist id="chart-template-categories">
-              {existingCategories.map((cat) => (
-                <option key={cat} value={cat} />
-              ))}
-            </datalist>
-          </div>
-          <Input
-            label="Descrição"
-            value={templateDescription}
-            onChange={(e) => setTemplateDescription(e.target.value)}
-            placeholder="Breve descrição do template (opcional)"
-          />
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="ghost" size="sm" onClick={() => setShowSaveTemplate(false)}>
-              Cancelar
-            </Button>
-            <Button
-              size="sm"
-              onClick={handleSaveTemplate}
-              disabled={!canSaveTemplate}
-            >
-              Salvar
-            </Button>
-          </div>
-        </div>
-      </Modal>
+        chartData={data}
+        onSaved={handleTemplateSaved}
+      />
     </div>
   )
 }

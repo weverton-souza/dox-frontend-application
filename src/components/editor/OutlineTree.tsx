@@ -35,6 +35,7 @@ interface OutlineTreeProps {
   onEditBlock: (blockId: string) => void
   onReviewBlock?: (blockId: string) => void
   insertAfterBlockId?: string | null
+  locked?: boolean
 }
 
 // Insertion point between blocks (hover to reveal)
@@ -87,6 +88,7 @@ export default function OutlineTree({
   onEditBlock,
   onReviewBlock,
   insertAfterBlockId,
+  locked = false,
 }: OutlineTreeProps) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -240,7 +242,7 @@ export default function OutlineTree({
 
       const activeStr = active.id as string
       const activeBlock = blocks.find(b => b.id === activeStr)
-      if (!activeBlock || isLockedBlock(activeBlock.type)) return
+      if (!activeBlock || locked || isLockedBlock(activeBlock.type)) return
 
       // Fallback when no valid over target (over is null or self)
       const finalOffsetX = event.delta?.x ?? offsetXRef.current
@@ -484,7 +486,7 @@ export default function OutlineTree({
   function renderNode(node: TreeNode, siblingIndex: number, _siblingCount: number) {
     const { block, children, depth } = node
     const isContainer = isContainerBlock(block.type)
-    const isLocked = isLockedBlock(block.type)
+    const isLocked = locked || isLockedBlock(block.type)
     const isCollapsed = collapsedSections.has(block.id)
     const hasChildren = children.length > 0
     const meta = blockMetas[block.id]
@@ -536,8 +538,8 @@ export default function OutlineTree({
               onRequestAdd={isContainer && !isLocked ? onRequestAddBlock : undefined}
               onReviewBlock={onReviewBlock}
               childCount={children.length}
-              onDuplicate={duplicateBlock}
-              onRemove={handleRemoveRequest}
+              onDuplicate={locked ? undefined : duplicateBlock}
+              onRemove={locked ? undefined : handleRemoveRequest}
               onChange={updateBlockData}
               dragDisabled={isLocked}
             />
@@ -555,7 +557,7 @@ export default function OutlineTree({
                     {renderNode(child, idx, children.length)}
 
                     {/* Insertion point between siblings */}
-                    {idx < children.length - 1 && (
+                    {idx < children.length - 1 && !locked && (
                       <InsertionPoint
                         afterBlockId={child.block.id}
                         parentId={block.id}

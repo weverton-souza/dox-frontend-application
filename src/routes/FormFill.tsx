@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import type { Form, FormResponse, FormFieldAnswer } from '@/types'
 import { createEmptyFormResponse, createEmptyFormFieldAnswer } from '@/types'
@@ -31,6 +31,7 @@ export default function FormFill() {
   const { saveStatus, scheduleSave, forceSave } = useAutoSave<FormResponse>(updateResponseFn)
   const responseIdParam = searchParams.get('response')
   const customerIdParam = searchParams.get('customer')
+  const creatingRef = useRef(false)
 
   // Load form
   useEffect(() => {
@@ -55,6 +56,10 @@ export default function FormFill() {
           // response not found, create new
         }
       }
+
+      // Guard: evita criação duplicada em StrictMode
+      if (creatingRef.current) return
+      creatingRef.current = true
 
       // Create new response
       const newResponse = createEmptyFormResponse(loadedForm.id)

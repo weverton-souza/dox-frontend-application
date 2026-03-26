@@ -9,7 +9,7 @@ interface FormPreviewProps {
 }
 
 export default function FormPreview({ title, description, fields }: FormPreviewProps) {
-  const sortedFields = [...fields].sort((a, b) => a.order - b.order)
+  const sortedFields = useMemo(() => [...fields].sort((a, b) => a.order - b.order), [fields])
   const sectionGroups = useMemo(() => buildFormSectionGroups(sortedFields), [sortedFields])
 
   function renderFieldPreview(field: FormField) {

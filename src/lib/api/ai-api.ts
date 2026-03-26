@@ -12,8 +12,7 @@ import type {
   ReviewTextRequest,
   ReviewTextResponse,
 } from '@/types'
-import { api, API_BASE_URL } from '@/lib/api/api-client'
-import { getAccessToken } from '@/lib/api/api-client'
+import { api, API_BASE_URL, getAccessToken, refreshTokens } from '@/lib/api/api-client'
 
 // ========== Single Section (Flow 2) ==========
 
@@ -54,18 +53,31 @@ export function generateFullReport(
 ): { abort: () => void } {
   const controller = new AbortController()
 
+  const doFetch = async (token: string | null) => {
+    return fetch(`${API_BASE_URL}/reports/${reportId}/generate-all`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(request),
+      signal: controller.signal,
+    })
+  }
+
   const run = async () => {
     try {
-      const token = getAccessToken()
-      const response = await fetch(`${API_BASE_URL}/reports/${reportId}/generate-all`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify(request),
-        signal: controller.signal,
-      })
+      let token = getAccessToken()
+      let response = await doFetch(token)
+
+      // Se token expirou, tenta refresh e retenta uma vez
+      if (response.status === 401 || response.status === 403) {
+        const refreshResult = await refreshTokens()
+        if (refreshResult) {
+          token = refreshResult.accessToken
+          response = await doFetch(token)
+        }
+      }
 
       if (!response.ok) {
         const errorText = await response.text()

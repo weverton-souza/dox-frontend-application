@@ -16,19 +16,10 @@ interface ModalProps {
   accent?: ModalAccent
 }
 
-// Default widths (px) per size key
-const defaultWidths: Record<string, number> = {
-  sm: 384,
-  md: 672,
-  lg: 896,
-  xl: 1024,
-  '2xl': 1152,
-}
-
 const MIN_WIDTH = 360
 const MIN_HEIGHT = 300
 
-const Modal = ({ isOpen, onClose, title, children, footer, size = 'md', accent }: ModalProps) => {
+export default function Modal({ isOpen, onClose, title, children, footer, size = 'md', accent }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null)
   const [customSize, setCustomSize] = useState<{ w: number; h: number } | null>(null)
   const dragging = useRef(false)
@@ -93,7 +84,7 @@ const Modal = ({ isOpen, onClose, title, children, footer, size = 'md', accent }
 
   const panelClassName = customSize
     ? 'bg-white rounded-xl shadow-xl overflow-hidden flex flex-col'
-    : `bg-white rounded-xl shadow-xl overflow-hidden flex flex-col w-full max-h-[90vh] ${defaultWidths[size] ? '' : ''}` // max-w via Tailwind below
+    : 'bg-white rounded-xl shadow-xl overflow-hidden flex flex-col w-full max-h-[90vh]'
 
   // When no custom size, use Tailwind max-w classes
   const tailwindMaxW = !customSize
@@ -180,5 +171,3 @@ const Modal = ({ isOpen, onClose, title, children, footer, size = 'md', accent }
     document.body
   )
 }
-
-export default Modal

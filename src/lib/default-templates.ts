@@ -1,6 +1,8 @@
-import {
+import type {
   ReportTemplate,
   TemplateBlock,
+} from '@/types'
+import {
   createEmptyIdentificationData,
   createEmptyTextBlockData,
   createEmptyScoreTableData,
@@ -10,8 +12,6 @@ import {
   createEmptyClosingPageData,
   createEmptySectionData,
 } from '@/types'
-
-// ========== Helper to build blocks ==========
 
 function sectionBlock(id: string, order: number, title: string, parentId: string | null = null): TemplateBlock {
   return { id, type: 'section', order, data: createEmptySectionData(title), parentId }
@@ -51,13 +51,13 @@ function closingPageBlock(id: string, order: number, parentId: string | null = n
   return { id, type: 'closing-page', order, data: createEmptyClosingPageData(), parentId }
 }
 
-// ========== Default Templates ==========
-
 const TEMPLATE_ADULTO: ReportTemplate = {
-  id: 'default-adulto',
+  id: '00000000-0000-0000-0000-000000000001',
   name: 'Laudo Padrão Adulto',
   description: 'Estrutura completa para avaliação de adultos',
   isDefault: true,
+  isLocked: true,
+  isMaster: true,
   blocks: [
     identificationBlock('tpl-adulto-id', 0),
     sectionBlock('tpl-adulto-s1', 1, 'DESCRIÇÃO DA DEMANDA E OBJETIVOS DA AVALIAÇÃO'),
@@ -84,10 +84,12 @@ const TEMPLATE_ADULTO: ReportTemplate = {
 }
 
 const TEMPLATE_BREVE: ReportTemplate = {
-  id: 'default-breve',
+  id: '00000000-0000-0000-0000-000000000002',
   name: 'Laudo Breve',
   description: 'Estrutura resumida para laudos mais curtos',
   isDefault: true,
+  isLocked: true,
+  isMaster: true,
   blocks: [
     identificationBlock('tpl-breve-id', 0),
     sectionBlock('tpl-breve-s1', 1, 'DESCRIÇÃO DA DEMANDA'),
@@ -108,8 +110,8 @@ export const DEFAULT_TEMPLATES: ReportTemplate[] = [
   TEMPLATE_BREVE,
 ]
 
-// ========== Merge helper ==========
-
 export function getAllTemplates(customTemplates: ReportTemplate[]): ReportTemplate[] {
+  const hasBackendMaster = customTemplates.some((t) => t.isMaster)
+  if (hasBackendMaster) return customTemplates
   return [...DEFAULT_TEMPLATES, ...customTemplates]
 }

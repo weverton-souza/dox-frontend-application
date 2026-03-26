@@ -224,31 +224,3 @@ export function parseAIResponse(raw: string, template: ReportTemplate): ReportGe
   }
 }
 
-// ========== Gerador (placeholder para backend) ==========
-
-/**
- * Gera um laudo a partir das respostas do formulário usando IA.
- *
- * PLACEHOLDER: Esta função será implementada pelo backend.
- * Atualmente lança um erro informativo.
- *
- * Quando o backend estiver pronto, substituir por:
- *   const res = await fetch('/api/ai/generate-laudo', {
- *     method: 'POST',
- *     headers: { 'Content-Type': 'application/json' },
- *     body: JSON.stringify(request),
- *   })
- *   return await res.json()
- */
-export async function generateReportFromResponse(
-  request: ReportGenerationRequest
-): Promise<ReportGenerationResult> {
-  // O prompt está pronto — basta enviá-lo ao backend
-  // buildPrompt(request) gera o texto completo
-  void request
-
-  throw new Error(
-    'O Assistente ainda não está configurado. ' +
-    'Configure o backend para utilizar a redação automática de laudos.'
-  )
-}
