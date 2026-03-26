@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import type { Form, FormResponse, ReportTemplate, SectionProgressEvent } from '@/types'
 import { useRotatingMessage } from '@/lib/hooks/use-rotating-message'
 import { getProfessional } from '@/lib/api/professional-api'
@@ -44,6 +44,8 @@ export default function GenerateReportModal({
   const [failedCount, setFailedCount] = useState(0)
   const [createdReportId, setCreatedReportId] = useState<string | null>(null)
   const [abortHandle, setAbortHandle] = useState<{ abort: () => void } | null>(null)
+  const completedCountRef = useRef(0)
+  const abortHandleRef = useRef<{ abort: () => void } | null>(null)
 
   const showNoTemplate = !template
 
@@ -79,6 +81,15 @@ export default function GenerateReportModal({
   }, [response, form])
 
   const lowAnswerRate = answeredInfo && answeredInfo.percentage < 30
+
+  // Sincroniza refs para acesso em callbacks sem stale closure
+  useEffect(() => { completedCountRef.current = completedCount }, [completedCount])
+  useEffect(() => { abortHandleRef.current = abortHandle }, [abortHandle])
+
+  // Cleanup: aborta geração se o componente desmontar
+  useEffect(() => {
+    return () => { abortHandleRef.current?.abort() }
+  }, [])
 
   const handleGenerate = useCallback(async () => {
     if (!form || !response || !template) return
@@ -173,7 +184,7 @@ export default function GenerateReportModal({
           },
           onError: (err: Error) => {
             setErrorMessage(err.message)
-            if (completedCount > 0) {
+            if (completedCountRef.current > 0) {
               setState('done')
             } else {
               setState('error')
@@ -187,7 +198,7 @@ export default function GenerateReportModal({
       setState('error')
       setErrorMessage(err instanceof Error ? err.message : 'Erro ao criar relatório')
     }
-  }, [form, response, template, completedCount])
+  }, [form, response, template])
 
   const handleCancel = useCallback(() => {
     abortHandle?.abort()
