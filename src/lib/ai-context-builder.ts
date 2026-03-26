@@ -47,7 +47,7 @@ function buildComputedTable(blockId: string, data: ScoreTableData): ComputedTabl
   return {
     blockId,
     title: data.title,
-    category: data.templateId ? '' : '',
+    category: '',
     dataStatus,
     rows: dataStatus === 'empty' ? [] : rows,
   }

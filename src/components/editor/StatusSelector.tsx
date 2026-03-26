@@ -49,7 +49,7 @@ export default function StatusSelector({ status, onChange }: StatusSelectorProps
                 }}
                 className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 text-left"
               >
-                <span className={`w-2 h-2 rounded-full ${targetColors.bg.replace('100', '500').replace('bg-', 'bg-')}`}
+                <span className={`w-2 h-2 rounded-full ${targetColors.bg.replace('100', '500')}`}
                   style={{
                     backgroundColor:
                       target === 'rascunho' ? '#eab308' :

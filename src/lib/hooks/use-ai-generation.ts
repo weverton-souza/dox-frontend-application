@@ -7,7 +7,6 @@ import type {
   AiGenerationStatus,
   SectionProgressEvent,
   GenerateFullReportRequest,
-  AiGenerationRequest,
   Block,
 } from '@/types'
 import {
@@ -171,23 +170,26 @@ export function useAiGeneration(): UseAiGenerationReturn {
     [refreshUsage],
   )
 
-  const generateSection = useCallback(
+  const generateOrRegenerate = useCallback(
     async (
       reportId: string,
       sectionType: string,
-      formResponseId?: string,
+      opts?: { formResponseId?: string; generationId?: string },
     ): Promise<AiGenerationResponse | null> => {
       setGenerationStatus('loading')
       setError(null)
 
+      const isRegeneration = !!opts?.generationId
+
       try {
-        const request: AiGenerationRequest = { sectionType, formResponseId }
-        const result = await apiGenerateSection(reportId, request)
+        const result = isRegeneration
+          ? await apiRegenerateSection(reportId, { sectionType, generationId: opts!.generationId! })
+          : await apiGenerateSection(reportId, { sectionType, formResponseId: opts?.formResponseId })
         setGenerationStatus('success')
         refreshUsage()
         return result
       } catch (e) {
-        const msg = e instanceof Error ? e.message : 'Erro ao gerar seção'
+        const msg = e instanceof Error ? e.message : (isRegeneration ? 'Erro ao regerar seção' : 'Erro ao gerar seção')
         setError(msg)
         setGenerationStatus('error')
         return null
@@ -196,28 +198,16 @@ export function useAiGeneration(): UseAiGenerationReturn {
     [refreshUsage],
   )
 
-  const regenerateSection = useCallback(
-    async (
-      reportId: string,
-      sectionType: string,
-      generationId: string,
-    ): Promise<AiGenerationResponse | null> => {
-      setGenerationStatus('loading')
-      setError(null)
+  const generateSection = useCallback(
+    (reportId: string, sectionType: string, formResponseId?: string) =>
+      generateOrRegenerate(reportId, sectionType, { formResponseId }),
+    [generateOrRegenerate],
+  )
 
-      try {
-        const result = await apiRegenerateSection(reportId, { sectionType, generationId })
-        setGenerationStatus('success')
-        refreshUsage()
-        return result
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : 'Erro ao regerar seção'
-        setError(msg)
-        setGenerationStatus('error')
-        return null
-      }
-    },
-    [refreshUsage],
+  const regenerateSection = useCallback(
+    (reportId: string, sectionType: string, generationId: string) =>
+      generateOrRegenerate(reportId, sectionType, { generationId }),
+    [generateOrRegenerate],
   )
 
   const cancelGeneration = useCallback(() => {

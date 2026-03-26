@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Link } from 'react-router-dom'
 import AppLayout from '@/components/layout/AppLayout'
 import ProtectedRoute from '@/components/auth/ProtectedRoute'
 import Login from '@/routes/Login'
@@ -14,6 +14,18 @@ import FormResponseList from '@/routes/FormResponseList'
 import FormulaGuide from '@/routes/FormulaGuide'
 import PublicFormFill from '@/routes/PublicFormFill'
 import Calendar from '@/routes/Calendar'
+
+function NotFound() {
+  return (
+    <div className="flex flex-col items-center justify-center py-32">
+      <h1 className="text-6xl font-bold text-gray-200">404</h1>
+      <p className="text-gray-500 mt-2">Página não encontrada</p>
+      <Link to="/" className="mt-4 text-brand-600 hover:text-brand-700 text-sm font-medium">
+        Voltar ao início
+      </Link>
+    </div>
+  )
+}
 
 export default function App() {
   return (
@@ -33,6 +45,7 @@ export default function App() {
           <Route path="/forms/:id/responses" element={<FormResponseList />} />
           <Route path="/calendar" element={<Calendar />} />
           <Route path="/guides" element={<FormulaGuide />} />
+          <Route path="*" element={<NotFound />} />
         </Route>
       </Route>
     </Routes>

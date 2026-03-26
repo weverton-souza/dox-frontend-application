@@ -44,86 +44,68 @@ export interface ParsedError {
   isAuthError: boolean
 }
 
+function fallbackError(title: string, message: string, overrides?: Partial<ParsedError>): ParsedError {
+  return {
+    title,
+    message,
+    errorCode: 'INTERNAL_ERROR',
+    colorClass: 'bg-red-100 text-red-600',
+    iconType: 'error',
+    isAuthError: false,
+    ...overrides,
+  }
+}
+
+function fromProblemDetail(
+  title: string | undefined,
+  detail: string | undefined,
+  code: ApiErrorCode,
+  errors?: { field: string; message: string; rejectedValue?: unknown }[],
+): ParsedError {
+  const icon = ERROR_ICONS[code] ?? ERROR_ICONS.INTERNAL_ERROR
+  return {
+    title: title || 'Erro',
+    message: detail || ERROR_MESSAGES[code],
+    errorCode: code,
+    colorClass: icon.colorClass,
+    iconType: icon.iconType,
+    validationErrors: errors?.map((e) => ({ field: e.field, message: e.message })),
+    isAuthError: SESSION_EXPIRED_CODES.includes(code),
+  }
+}
+
+const CONNECTION_ERROR_MSG = 'Não foi possível conectar ao servidor. Verifique sua conexão.'
+
 export function parseError(error: unknown): ParsedError {
   if (error instanceof ApiError) {
     const { problemDetail } = error
     const code = problemDetail.properties?.errorCode ?? 'INTERNAL_ERROR'
-    const icon = ERROR_ICONS[code] ?? ERROR_ICONS.INTERNAL_ERROR
-
-    return {
-      title: problemDetail.title || 'Erro',
-      message: problemDetail.detail || ERROR_MESSAGES[code],
-      errorCode: code,
-      colorClass: icon.colorClass,
-      iconType: icon.iconType,
-      validationErrors: problemDetail.properties?.errors?.map((e) => ({
-        field: e.field,
-        message: e.message,
-      })),
-      isAuthError: SESSION_EXPIRED_CODES.includes(code),
-    }
+    return fromProblemDetail(problemDetail.title, problemDetail.detail, code, problemDetail.properties?.errors)
   }
 
   if (error instanceof NetworkError) {
-    return {
-      title: 'Erro de Conexão',
-      message: 'Não foi possível conectar ao servidor. Verifique sua conexão.',
-      errorCode: 'INTERNAL_ERROR',
-      colorClass: 'bg-red-100 text-red-600',
-      iconType: 'error',
-      isAuthError: false,
-    }
+    return fallbackError('Erro de Conexão', CONNECTION_ERROR_MSG)
   }
 
   if (isAxiosError(error)) {
     if (!error.response) {
-      return {
-        title: 'Erro de Conexão',
-        message: 'Não foi possível conectar ao servidor. Verifique sua conexão.',
-        errorCode: 'INTERNAL_ERROR',
-        colorClass: 'bg-red-100 text-red-600',
-        iconType: 'error',
-        isAuthError: false,
-      }
+      return fallbackError('Erro de Conexão', CONNECTION_ERROR_MSG)
     }
 
     const data = error.response.data as Partial<ProblemDetail> | null
     if (data && typeof data.type === 'string' && data.type.startsWith('urn:dox:error:')) {
       const code = data.properties?.errorCode ?? 'INTERNAL_ERROR'
-      const icon = ERROR_ICONS[code] ?? ERROR_ICONS.INTERNAL_ERROR
-      return {
-        title: data.title || 'Erro',
-        message: data.detail || ERROR_MESSAGES[code],
-        errorCode: code,
-        colorClass: icon.colorClass,
-        iconType: icon.iconType,
-        validationErrors: data.properties?.errors?.map((e) => ({
-          field: e.field,
-          message: e.message,
-        })),
-        isAuthError: SESSION_EXPIRED_CODES.includes(code),
-      }
+      return fromProblemDetail(data.title, data.detail, code, data.properties?.errors)
     }
 
     const detail = (data as Record<string, unknown> | null)?.detail
     if (typeof detail === 'string') {
-      return {
-        title: 'Erro',
-        message: detail,
-        errorCode: 'INTERNAL_ERROR',
-        colorClass: 'bg-red-100 text-red-600',
-        iconType: 'error',
-        isAuthError: false,
-      }
+      return fallbackError('Erro', detail)
     }
   }
 
-  return {
-    title: 'Erro Inesperado',
-    message: error instanceof Error ? error.message : 'Ocorreu um erro inesperado.',
-    errorCode: 'INTERNAL_ERROR',
-    colorClass: 'bg-red-100 text-red-600',
-    iconType: 'error',
-    isAuthError: false,
-  }
+  return fallbackError(
+    'Erro Inesperado',
+    error instanceof Error ? error.message : 'Ocorreu um erro inesperado.',
+  )
 }

@@ -45,7 +45,7 @@ export default function ProfessionalModal({ isOpen, onClose }: ProfessionalModal
         const resized = await resizeImageToBase64(dataUrl)
         setProfessional((prev) => ({ ...prev, logo: resized }))
       } catch (err) {
-        alert((err as Error).message)
+        showError(err)
       }
       e.target.value = ''
     },
