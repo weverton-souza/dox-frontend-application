@@ -23,6 +23,8 @@ export interface AiGenerationResponse {
   model: string
   generationId: string
   cached: boolean
+  regenerationsUsed: number
+  regenerationLimit: number
 }
 
 export interface GenerateFullReportRequest {
