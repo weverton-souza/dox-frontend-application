@@ -156,6 +156,15 @@ export async function getGenerationSources(reportId: string): Promise<AiGenerati
   return data
 }
 
+// ========== Regeneration Info ==========
+
+export async function getRegenerationInfo(reportId: string): Promise<{ used: number; limit: number }> {
+  const { data } = await api.get<{ used: number; limit: number }>(
+    `/reports/${reportId}/regeneration-info`,
+  )
+  return data
+}
+
 // ========== Usage & Quota ==========
 
 export async function getAiStatus(): Promise<AiStatusResponse> {

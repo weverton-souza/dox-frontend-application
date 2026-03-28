@@ -14,6 +14,7 @@ import type {
   AiGenerationResponse,
 } from '@/types'
 import { BLOCK_TYPE_LABELS } from '@/types'
+import { getRegenerationInfo } from '@/lib/api/ai-api'
 import { BLOCK_TYPE_COLORS, getBlockTypeIcon } from '@/lib/block-constants'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
@@ -26,6 +27,7 @@ import InfoBoxBlock from '@/components/blocks/InfoBoxBlock'
 import ChartBlock from '@/components/blocks/ChartBlock'
 import ReferencesBlock from '@/components/blocks/ReferencesBlock'
 import ClosingPageBlock from '@/components/blocks/ClosingPageBlock'
+import BlockErrorBoundary from '@/components/ui/BlockErrorBoundary'
 
 interface BlockEditModalProps {
   block: Block | null
@@ -37,6 +39,7 @@ interface BlockEditModalProps {
   onGenerateSection?: (sectionType: string) => Promise<AiGenerationResponse | null>
   onRegenerateSection?: (sectionType: string, generationId: string) => Promise<AiGenerationResponse | null>
   aiLoading?: boolean
+  reportId?: string
 }
 
 const MODAL_SIZES: Record<BlockType, 'sm' | 'md' | 'lg' | 'xl' | '2xl'> = {
@@ -88,17 +91,26 @@ function getModalTitle(block: Block): string {
 export default function BlockEditModal({
   block, onClose, onChange, customers, onCustomerSelected,
   aiAvailable = false, onGenerateSection, onRegenerateSection, aiLoading = false,
+  reportId,
 }: BlockEditModalProps) {
   const [localData, setLocalData] = useState<BlockData | null>(null)
   const [generating, setGenerating] = useState(false)
+  const [regenInfo, setRegenInfo] = useState<{ used: number; limit: number } | null>(null)
 
   useEffect(() => {
     if (block) {
       setLocalData(structuredClone(block.data))
+      setRegenInfo(null)
+      if (block.generatedByAi && reportId) {
+        getRegenerationInfo(reportId)
+          .then(info => setRegenInfo(info))
+          .catch(() => {})
+      }
     } else {
       setLocalData(null)
+      setRegenInfo(null)
     }
-  }, [block])
+  }, [block, reportId])
 
   const isAiEligible = block?.type === 'text' || block?.type === 'info-box'
   const showAiButton = aiAvailable && isAiEligible && onGenerateSection
@@ -118,6 +130,7 @@ export default function BlockEditModal({
         if (!prev) return prev
         return { ...prev, content: result.text } as BlockData
       })
+      setRegenInfo({ used: result.regenerationsUsed, limit: result.regenerationLimit })
     }
     setGenerating(false)
   }, [onGenerateSection, block, sectionType])
@@ -131,6 +144,7 @@ export default function BlockEditModal({
         if (!prev) return prev
         return { ...prev, content: result.text } as BlockData
       })
+      setRegenInfo({ used: result.regenerationsUsed, limit: result.regenerationLimit })
     }
     setGenerating(false)
   }, [onRegenerateSection, block, sectionType])
@@ -243,10 +257,13 @@ export default function BlockEditModal({
       }}
       footer={footer}
     >
-      {renderContent()}
+      <BlockErrorBoundary blockType={block.type}>
+        {renderContent()}
+      </BlockErrorBoundary>
       {isGeneratedByAi && isAiEligible && (
         <AiRegenerateBar
-          regenerationsLeft={3}
+          regenerationsLeft={regenInfo ? regenInfo.limit - regenInfo.used : 0}
+          regenerationLimit={regenInfo?.limit ?? 3}
           onRegenerate={handleAiRegenerate}
           loading={generating}
         />

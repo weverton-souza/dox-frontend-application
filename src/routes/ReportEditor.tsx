@@ -596,8 +596,36 @@ export default function ReportEditor() {
 
   if (!report) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <p className="text-gray-500">Carregando...</p>
+      <div className="min-h-[calc(100vh)] bg-gray-100 flex flex-col">
+        {/* Skeleton header */}
+        <div className="bg-white border-b border-gray-200 h-14 lg:h-16 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.08)]">
+          <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 h-full flex items-center gap-4 animate-pulse">
+            <div className="w-8 h-8 rounded-lg bg-gray-200" />
+            <div className="h-5 bg-gray-200 rounded w-48" />
+            <div className="flex-1" />
+            <div className="h-7 bg-gray-200 rounded-full w-24" />
+            <div className="hidden md:block w-px h-5 bg-gray-200" />
+            <div className="hidden md:flex gap-1">
+              <div className="w-7 h-7 rounded-lg bg-gray-200" />
+              <div className="w-7 h-7 rounded-lg bg-gray-200" />
+            </div>
+          </div>
+        </div>
+        {/* Skeleton body */}
+        <div className="flex-1 max-w-3xl mx-auto w-full px-4 sm:px-6 pt-6 animate-pulse">
+          <div className="space-y-3">
+            {[180, 56, 56, 120, 56, 56, 80].map((h, i) => (
+              <div key={i} className="bg-white rounded-xl border border-gray-200 p-4" style={{ height: h }}>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-5 h-5 rounded bg-gray-200" />
+                  <div className="h-4 bg-gray-200 rounded w-32" />
+                </div>
+                {h > 60 && <div className="h-3 bg-gray-100 rounded w-3/4 mt-2" />}
+                {h > 100 && <div className="h-3 bg-gray-100 rounded w-1/2 mt-2" />}
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     )
   }
@@ -931,6 +959,7 @@ export default function ReportEditor() {
         onGenerateSection={(sectionType) => ai.generateSection(id!, sectionType, report.formResponseId)}
         onRegenerateSection={(sectionType, generationId) => ai.regenerateSection(id!, sectionType, generationId)}
         aiLoading={ai.isGenerating}
+        reportId={id}
       />
 
       {/* Block Selector Modal */}
