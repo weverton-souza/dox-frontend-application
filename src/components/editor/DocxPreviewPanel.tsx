@@ -98,7 +98,23 @@ export default function DocxPreviewPanel({ report, refreshKey }: DocxPreviewPane
           className={`h-full overflow-auto bg-transparent docx-preview-panel select-none ${state !== 'ready' ? 'invisible' : ''}`}
         />
         <style>{`
-          .docx-preview-panel .docx-wrapper { background: transparent !important; }
+          .docx-preview-panel .docx-wrapper {
+            background: transparent !important;
+            padding: 0 !important;
+          }
+          .docx-preview-panel .docx-wrapper > section {
+            box-shadow: var(--shadow-md) !important;
+            margin-bottom: 16px !important;
+            border: none !important;
+          }
+          .docx-preview-panel .docx-wrapper > section:first-child {
+            border-top-left-radius: var(--radius-xl) !important;
+            border-top-right-radius: var(--radius-xl) !important;
+          }
+          .docx-preview-panel .docx-wrapper > section:last-child {
+            border-bottom-left-radius: var(--radius-xl) !important;
+            border-bottom-right-radius: var(--radius-xl) !important;
+          }
           .docx-preview-panel * { user-select: none !important; -webkit-user-select: none !important; }
           @media print { .docx-preview-panel { display: none !important; } }
         `}</style>

@@ -21,7 +21,7 @@ import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
 import Input from '@/components/ui/Input'
 import StatusSelector from '@/components/editor/StatusSelector'
-import { HistoryIcon, SaveIcon } from '@/components/icons'
+import EditorFloatingToolbar from '@/components/editor/EditorFloatingToolbar'
 import SaveStatusIndicator from '@/components/ui/SaveStatusIndicator'
 import { useAiGeneration } from '@/lib/hooks/use-ai-generation'
 import { countFillableBlocks } from '@/lib/ai-context-builder'
@@ -638,130 +638,95 @@ export default function ReportEditor() {
         backgroundSize: '22px 22px',
       }}
     >
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-12 z-30 h-14 lg:h-16 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.08)]">
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 h-full flex items-center gap-2 sm:gap-4">
-          <button
-            type="button"
-            onClick={() => {
-              handleForceSave()
-              navigate('/')
-            }}
-            className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors shrink-0"
-            title="Voltar"
-          >
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z" clipRule="evenodd" />
-            </svg>
-          </button>
+      {/* Header — pill toolbar */}
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 pt-2 lg:pt-3 pb-2 lg:pb-3">
+        <div className="flex items-center justify-between bg-white rounded-full px-3 lg:px-4 py-2 lg:py-2.5 shadow-card">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <button
+              type="button"
+              onClick={() => {
+                handleForceSave()
+                navigate('/')
+              }}
+              className="h-9 w-9 lg:h-11 lg:w-11 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors shrink-0"
+              title="Voltar"
+            >
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z" clipRule="evenodd" />
+              </svg>
+            </button>
 
-          <div className="flex-1 min-w-0">
             <input
               type="text"
               value={report.customerName || ''}
               onChange={(e) => handleUpdateReport({ customerName: e.target.value })}
               placeholder="Nome do cliente"
-              className="text-base lg:text-lg font-semibold text-gray-900 bg-transparent border-0 focus:outline-none focus:ring-0 w-full truncate placeholder:text-gray-400"
+              className="text-sm font-medium text-gray-700 bg-transparent border-0 focus:outline-none focus:ring-0 flex-1 min-w-0 truncate placeholder:text-gray-400"
             />
+
+            <SaveStatusIndicator status={saveStatus} />
           </div>
 
-          <SaveStatusIndicator status={saveStatus} />
+          <div className="flex items-center gap-2 shrink-0">
+            <StatusSelector status={report.status} onChange={handleStatusChange} />
 
-          <StatusSelector status={report.status} onChange={handleStatusChange} />
-
-          {/* Separador */}
-          <div className="hidden md:block w-px h-5 bg-gray-200" />
-
-          {/* Ações de versão */}
-          <div className="hidden md:flex items-center gap-1">
-            <button
-              type="button"
-              onClick={createManualSnapshot}
-              className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
-              title="Salvar versão"
-            >
-              <SaveIcon size={16} />
-            </button>
-            <button
-              type="button"
-              onClick={handleOpenVersionHistory}
-              className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
-              title="Histórico de versões"
-            >
-              <HistoryIcon size={16} />
-            </button>
-          </div>
-
-          {/* Separador */}
-          <div className="hidden lg:block w-px h-5 bg-gray-200" />
-
-          {/* Ações principais */}
-          <div className="hidden lg:flex items-center gap-2">
-            <Button variant="secondary" size="sm" onClick={() => updateTemplateModal({ showSaveTemplate: true })}>
-              Salvar como Template
-            </Button>
-
+            {/* AI */}
             {showAiButton && fillableCount > 0 && (
-              <Button variant="primary" size="sm" onClick={handleGenerateFullReport} disabled={ai.isGenerating}>
-                <span className="flex items-center gap-1.5">
-                  {ai.isGenerating ? (
-                    <svg className="animate-spin" width={14} height={14} viewBox="0 0 24 24" fill="none">
-                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="32" strokeLinecap="round" />
-                    </svg>
-                  ) : (
-                    <AiSparkleIcon size={14} />
-                  )}
-                  Redigir com Assistente
-                </span>
-              </Button>
+              <button
+                type="button"
+                onClick={handleGenerateFullReport}
+                disabled={ai.isGenerating}
+                className="h-9 flex items-center gap-2 px-4 rounded-full bg-brand-700 text-white hover:bg-brand-800 transition-colors shadow-sm shrink-0 disabled:opacity-50 text-sm font-medium"
+                title="Redigir com Assistente"
+              >
+                {ai.isGenerating ? (
+                  <svg className="animate-spin" width={16} height={16} viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="32" strokeLinecap="round" />
+                  </svg>
+                ) : (
+                  <AiSparkleIcon size={16} />
+                )}
+                <span className="hidden sm:inline">Assistente</span>
+              </button>
             )}
-          </div>
 
-          {/* Separador */}
-          <div className="hidden lg:block w-px h-5 bg-gray-200" />
-
-          {/* Export */}
-          <div className="flex items-center gap-2">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setShowDocxPreview((v) => !v)}
-              className="hidden lg:inline-flex"
-            >
-              <span className="flex items-center gap-1.5">
-                <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M10 12.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z" />
-                  <path fillRule="evenodd" d="M.664 10.59a1.651 1.651 0 010-1.186A10.004 10.004 0 0110 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0110 17c-4.257 0-7.893-2.66-9.336-6.41zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
-                </svg>
-                Preview
-              </span>
-            </Button>
-
-            <Button
-              variant="primary"
-              size="sm"
+            {/* Download */}
+            <button
+              type="button"
               onClick={handleGenerateDocx}
               disabled={report.status !== 'finalizado'}
-              title={report.status !== 'finalizado' ? 'Finalize o relatório para baixar' : 'Baixar documento'}
+              className="h-9 flex items-center gap-2 px-4 rounded-full bg-brand-700 text-white hover:bg-brand-800 transition-colors shadow-sm shrink-0 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+              title={report.status !== 'finalizado' ? 'Finalize o relatório para baixar' : 'Baixar .docx'}
             >
-              <span className="flex items-center gap-1.5">
-                <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M10.75 2.75a.75.75 0 00-1.5 0v8.614L6.295 8.235a.75.75 0 10-1.09 1.03l4.25 4.5a.75.75 0 001.09 0l4.25-4.5a.75.75 0 00-1.09-1.03l-2.955 3.129V2.75z" />
-                  <path d="M3.5 12.75a.75.75 0 00-1.5 0v2.5A2.75 2.75 0 004.75 18h10.5A2.75 2.75 0 0018 15.25v-2.5a.75.75 0 00-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5z" />
-                </svg>
-                .docx
-              </span>
-            </Button>
+              <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M10.75 2.75a.75.75 0 00-1.5 0v8.614L6.295 8.235a.75.75 0 10-1.09 1.03l4.25 4.5a.75.75 0 001.09 0l4.25-4.5a.75.75 0 00-1.09-1.03l-2.955 3.129V2.75z" />
+                <path d="M3.5 12.75a.75.75 0 00-1.5 0v2.5A2.75 2.75 0 004.75 18h10.5A2.75 2.75 0 0018 15.25v-2.5a.75.75 0 00-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5z" />
+              </svg>
+              <span className="hidden sm:inline">Baixar</span>
+            </button>
           </div>
         </div>
-      </header>
+      </div>
 
       {/* Main content area */}
       <div
-        className={`flex-1 flex w-full px-4 sm:px-6 ${showDocxPreview ? 'gap-6' : 'max-w-3xl mx-auto'}`}
+        className={`flex-1 flex w-full px-2 sm:px-4 ${showDocxPreview ? '3xl:gap-6' : 'max-w-5xl mx-auto'}`}
       >
-        {/* Left: blocks */}
-        <div className={`min-w-0 flex flex-col ${showDocxPreview ? 'w-full max-w-3xl' : 'flex-1'}`}>
+        {/* Floating toolbar — left column */}
+        <div className="hidden lg:flex shrink-0 w-12 pt-12">
+          <div className="sticky top-28 h-fit z-30">
+            <EditorFloatingToolbar
+              onSaveVersion={createManualSnapshot}
+              onOpenVersionHistory={handleOpenVersionHistory}
+              onSaveAsTemplate={() => updateTemplateModal({ showSaveTemplate: true })}
+              onTogglePreview={() => setShowDocxPreview((v) => !v)}
+              showPreview={showDocxPreview}
+            />
+          </div>
+        </div>
+
+        {/* Left: blocks — hidden below 3xl when preview is active (toggle mode) */}
+        <div className={`min-w-0 flex flex-col ${showDocxPreview ? 'hidden 3xl:flex 3xl:w-2/5 3xl:shrink-0' : 'flex-1 max-w-3xl mx-auto'}`}>
           {/* Form provenance banner */}
           {formProvenanceLabel && (
             <div className="pt-3">
@@ -937,13 +902,15 @@ export default function ReportEditor() {
           </main>
         </div>
 
-        {/* Right: preview panel (desktop only) */}
+        {/* Right: preview panel — full width toggle below 3xl, side-by-side on 3xl+ */}
         {showDocxPreview && (
-          <div className="hidden lg:block flex-1 min-w-0 sticky top-16 h-[calc(100vh-4rem)] py-4">
-            <DocxPreviewPanel
-              report={report}
-              refreshKey={previewRefreshKey}
-            />
+          <div className="hidden lg:block flex-1 min-w-0 max-w-3xl mx-auto 3xl:max-w-none 3xl:mx-0 sticky top-16 h-[calc(100vh-4rem)] py-4">
+            <div className="h-full overflow-hidden">
+              <DocxPreviewPanel
+                report={report}
+                refreshKey={previewRefreshKey}
+              />
+            </div>
           </div>
         )}
       </div>
