@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useRef, useState, useEffect, useCallback } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import {
   DocumentIcon,
@@ -60,6 +60,9 @@ export default function Sidebar({
   onCloseMobile,
 }: SidebarProps) {
   const location = useLocation()
+  const navRef = useRef<HTMLElement>(null)
+  const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map())
+  const [slider, setSlider] = useState<{ top: number; height: number } | null>(null)
 
   const isActive = (item: NavItemConfig) => {
     if (location.pathname === item.to) return true
@@ -68,6 +71,32 @@ export default function Sidebar({
     }
     return false
   }
+
+  const updateSlider = useCallback(() => {
+    const nav = navRef.current
+    if (!nav) return
+
+    const activeItem = NAV_ITEMS.find((item) => isActive(item))
+    if (!activeItem) {
+      setSlider(null)
+      return
+    }
+
+    const el = itemRefs.current.get(activeItem.to)
+    if (!el) return
+
+    const navRect = nav.getBoundingClientRect()
+    const elRect = el.getBoundingClientRect()
+
+    setSlider({
+      top: elRect.top - navRect.top,
+      height: elRect.height,
+    })
+  }, [location.pathname])
+
+  useEffect(() => {
+    updateSlider()
+  }, [updateSlider])
 
   function handleNavClick() {
     if (isMobile) onCloseMobile()
@@ -97,21 +126,37 @@ export default function Sidebar({
       </button>
 
       {/* Navigation */}
-      <nav className="flex-1 py-3 px-2 space-y-1 overflow-y-auto overflow-x-hidden">
+      <nav ref={navRef} className="relative flex-1 py-3 px-2 space-y-1 overflow-y-auto overflow-x-hidden">
+        {/* Sliding active indicator */}
+        {slider && (
+          <div
+            className="absolute left-2 right-2 bg-gray-200 rounded-lg pointer-events-none z-0"
+            style={{
+              top: slider.top,
+              height: slider.height,
+              transition: 'top 250ms cubic-bezier(0.25, 0.1, 0.25, 1), height 250ms cubic-bezier(0.25, 0.1, 0.25, 1)',
+            }}
+          />
+        )}
+
         {NAV_ITEMS.map((item) => {
           const active = isActive(item)
           const Icon = item.icon
 
           return (
-            <div key={item.to} className="relative group">
+            <div
+              key={item.to}
+              ref={(el) => { if (el) itemRefs.current.set(item.to, el); else itemRefs.current.delete(item.to) }}
+              className="relative group"
+            >
               <NavLink
                 to={item.to}
                 end={item.to === '/'}
                 onClick={handleNavClick}
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-200 ${
+                className={`relative z-10 flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-200 ${
                   active
-                    ? 'bg-brand-100 text-brand-700 font-medium'
-                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                    ? 'text-gray-900 font-medium'
+                    : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
                 }`}
               >
                 <Icon size={20} className="shrink-0" />
@@ -138,8 +183,8 @@ export default function Sidebar({
             onClick={handleNavClick}
             className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-200 ${
               location.pathname === '/guides'
-                ? 'bg-brand-100 text-brand-700 font-medium'
-                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                ? 'bg-gray-200 text-gray-900 font-medium'
+                : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
             }`}
           >
             <BookIcon size={20} className="shrink-0" />

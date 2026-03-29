@@ -28,6 +28,7 @@ import { getReportTemplates } from '@/lib/api/template-api'
 import Button from '@/components/ui/Button'
 import Spinner from '@/components/ui/Spinner'
 import SaveStatusIndicator from '@/components/ui/SaveStatusIndicator'
+import SegmentedControl from '@/components/ui/SegmentedControl'
 import QuestionCard from '@/components/form-builder/QuestionCard'
 import FloatingToolbar from '@/components/form-builder/FloatingToolbar'
 import TemplateLinkModal from '@/components/form-builder/TemplateLinkModal'
@@ -333,82 +334,65 @@ export default function FormBuilder() {
 
   return (
     <>
-      {/* Tabs header (Google Forms style) */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
-        <div className="max-w-[860px] mx-auto px-3 sm:px-4 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            <button
-              type="button"
-              onClick={handleBack}
-              className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors shrink-0"
-            >
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
-              </svg>
-            </button>
-
-            <SaveStatusIndicator status={saveStatus} />
-          </div>
-
-          {/* Tabs */}
-          <div className="flex overflow-x-auto">
-            {([
-              { mode: 'editor' as ViewMode, label: 'Perguntas' },
-              { mode: 'preview' as ViewMode, label: 'Preview' },
-              { mode: 'mapping' as ViewMode, label: 'Mapeamento' },
-            ]).map(({ mode, label }) => (
-              <button
-                key={mode}
-                type="button"
-                onClick={() => setViewMode(mode)}
-                className={`px-3 sm:px-4 py-3 text-sm font-medium border-b-[3px] transition-colors whitespace-nowrap ${
-                  viewMode === mode
-                    ? 'text-brand-600 border-brand-500'
-                    : 'text-gray-500 border-transparent hover:text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0">
-            {/* Generate Link */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowLinkModal(true)}
-              className="hidden sm:inline-flex"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="inline -mt-0.5 mr-1">
-                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-              </svg>
-              Gerar Link
-            </Button>
-
-            {/* Template link */}
-            <Button
-              variant={form.linkedTemplateId ? 'secondary' : 'ghost'}
-              size="sm"
-              onClick={() => setShowTemplateLinkModal(true)}
-              className="hidden sm:inline-flex"
-            >
-              {form.linkedTemplateId ? linkedTemplate?.name ?? 'Template' : 'Vincular Template'}
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      {/* Main content */}
       <main
-        className="min-h-[calc(100vh-49px)] bg-gray-100 py-6"
+        className="min-h-screen bg-gray-100 pb-6"
         onClick={handleContainerClick}
         style={{
           backgroundImage: 'radial-gradient(circle, rgba(0,0,0,0.10) 1px, transparent 1px)',
           backgroundSize: '22px 22px',
         }}
       >
+        {/* Toolbar dentro do main para o dot pattern chegar ao topo */}
+        <div className="max-w-[860px] mx-auto px-3 sm:px-4 pt-4 pb-6">
+          <div className="flex items-center justify-between bg-white rounded-full px-3 py-1.5 shadow-card">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleBack}
+                className="h-11 w-11 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors shrink-0"
+              >
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
+                </svg>
+              </button>
+              <SaveStatusIndicator status={saveStatus} />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <SegmentedControl
+                options={[
+                  { value: 'editor', label: 'Perguntas' },
+                  { value: 'preview', label: 'Preview' },
+                  { value: 'mapping', label: 'Mapeamento' },
+                ]}
+                value={viewMode}
+                onChange={(v) => setViewMode(v as ViewMode)}
+                size="sm"
+              />
+
+              <button
+                type="button"
+                onClick={() => setShowLinkModal(true)}
+                className="hidden sm:flex h-11 w-11 items-center justify-center rounded-full bg-gray-200 text-gray-600 hover:bg-gray-300 transition-colors shadow-sm shrink-0"
+                title="Gerar Link"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                  <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                </svg>
+              </button>
+
+              <Button
+                variant={form.linkedTemplateId ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => setShowTemplateLinkModal(true)}
+                className="hidden sm:inline-flex rounded-full"
+              >
+                {form.linkedTemplateId ? linkedTemplate?.name ?? 'Template' : 'Vincular Template'}
+              </Button>
+            </div>
+          </div>
+        </div>
         {/* Editor mode */}
         {viewMode === 'editor' && (
           <div className="max-w-[860px] mx-auto px-4 relative">
