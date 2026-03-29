@@ -349,7 +349,7 @@ export default function FormulaGuide() {
         subtitle="Referência completa para tabelas de escores"
       />
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
+      <div className="page-container">
         <div className="flex gap-6">
           {/* Sidebar de navegação */}
           <div className="hidden lg:block w-48 shrink-0">

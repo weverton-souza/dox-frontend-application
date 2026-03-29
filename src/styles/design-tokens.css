@@ -95,4 +95,80 @@
   --transition-fast:   150ms ease;
   --transition-normal: 250ms ease;
   --transition-slow:   350ms ease;
+
+  /* ══════════════════════════════════════════
+     TIPOGRAFIA FLUIDA — escala suave via clamp()
+     min: 1366px  |  max: 2560px+
+     ══════════════════════════════════════════ */
+  --font-size-xs:   clamp(0.75rem, 0.71rem + 0.12vw, 0.875rem);
+  --font-size-sm:   clamp(0.8125rem, 0.77rem + 0.15vw, 0.9375rem);
+  --font-size-base: clamp(0.875rem, 0.83rem + 0.18vw, 1rem);
+  --font-size-lg:   clamp(1.125rem, 1rem + 0.35vw, 1.375rem);
+  --font-size-xl:   clamp(1.25rem, 1.1rem + 0.5vw, 1.625rem);
+  --font-size-2xl:  clamp(1.5rem, 1.3rem + 0.65vw, 2rem);
+  --font-size-3xl:  clamp(1.875rem, 1.6rem + 0.85vw, 2.5rem);
+
+  /* ══════════════════════════════════════════
+     LAYOUT RESPONSIVO — tokens que mudam por breakpoint
+     Base: mobile/notebook (<1024px)
+     ══════════════════════════════════════════ */
+  --page-padding-x: 1rem;
+  --page-padding-y: 1.5rem;
+  --page-max-width: 100%;
+  --content-gap: 0.75rem;
+  --section-gap: 1.5rem;
+  --card-padding: 1rem;
+}
+
+/* ── lg: 1024px — notebooks ─────────────────── */
+@media (min-width: 1024px) {
+  :root {
+    --page-padding-x: 1.5rem;
+    --page-padding-y: 1.5rem;
+    --page-max-width: 64rem;
+    --content-gap: 0.75rem;
+    --section-gap: 1.5rem;
+    --card-padding: 1.25rem;
+  }
+}
+
+/* ── xl: 1280px — notebooks wide / 1366px ───── */
+@media (min-width: 1280px) {
+  :root {
+    --page-padding-x: 1.5rem;
+    --page-max-width: 72rem;
+    --content-gap: 1rem;
+  }
+}
+
+/* ── 2xl: 1536px ────────────────────────────── */
+@media (min-width: 1536px) {
+  :root {
+    --page-padding-x: 2rem;
+    --page-max-width: 80rem;
+  }
+}
+
+/* ── 3xl: 1920px — Full HD ──────────────────── */
+@media (min-width: 1920px) {
+  :root {
+    --page-padding-x: 2.5rem;
+    --page-padding-y: 2rem;
+    --page-max-width: 88rem;
+    --content-gap: 1rem;
+    --section-gap: 2rem;
+    --card-padding: 1.5rem;
+  }
+}
+
+/* ── 4xl: 2560px — QHD / 4K escalado ────────── */
+@media (min-width: 2560px) {
+  :root {
+    --page-padding-x: 3rem;
+    --page-padding-y: 2.5rem;
+    --page-max-width: 100rem;
+    --content-gap: 1.25rem;
+    --section-gap: 2.5rem;
+    --card-padding: 1.75rem;
+  }
 }

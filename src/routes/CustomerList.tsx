@@ -13,10 +13,10 @@ import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
 import Input from '@/components/ui/Input'
 import Pagination from '@/components/ui/Pagination'
-import PageHeader from '@/components/layout/PageHeader'
 import ConfirmDeleteModal from '@/components/ui/ConfirmDeleteModal'
 import EmptyState from '@/components/ui/EmptyState'
 import PageSizeSelector from '@/components/ui/PageSizeSelector'
+import FilterBar from '@/components/ui/FilterBar'
 import ListCard, { ListCardPill, ListCardAction } from '@/components/ui/ListCard'
 import { DocumentPlusIcon, EditIcon, TrashIcon as ListTrashIcon } from '@/components/icons'
 import { getAvatarColor, getInitials } from '@/lib/avatar-utils'
@@ -30,6 +30,9 @@ export default function CustomerList() {
   const [pageSize, setPageSize] = useState(10)
   const [reports, setReports] = useState<Report[]>([])
   const [search, setSearch] = useState('')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+  const [filtersOpen, setFiltersOpen] = useState(false)
   const [showFormModal, setShowFormModal] = useState(false)
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -131,28 +134,52 @@ export default function CustomerList() {
 
   return (
     <>
-      <PageHeader
-        title="Clientes"
-        subtitle="Cadastro de clientes"
-        actions={
-          <Button onClick={handleOpenNew}>+ Novo Cliente</Button>
-        }
-      />
+      <main className="page-container">
+      <div className="flex items-center justify-between bg-white rounded-full px-5 py-1.5 shadow-card">
+        <h2 className="text-xl font-bold text-gray-700">Clientes</h2>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setFiltersOpen(!filtersOpen)}
+            className={`h-11 w-11 flex items-center justify-center rounded-full transition-colors shadow-sm shrink-0 ${
+              filtersOpen ? 'bg-gray-600 text-white' : 'bg-gray-500 text-white hover:bg-gray-600'
+            }`}
+            title="Filtros"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={handleOpenNew}
+            className="h-11 w-11 flex items-center justify-center rounded-full bg-brand-700 text-white hover:bg-brand-800 transition-colors shadow-sm shrink-0"
+            title="Novo Cliente"
+          >
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="10" y1="4" x2="10" y2="16" />
+            <line x1="4" y1="10" x2="16" y2="10" />
+          </svg>
+          </button>
+        </div>
+      </div>
 
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
-        {/* Search + filters */}
-        {customersPage && customersPage.totalElements > 0 && (
-          <div className="mb-6 flex items-center gap-3">
-            <div className="flex-1">
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Buscar por nome ou CPF..."
-              />
-            </div>
-            <PageSizeSelector pageSize={pageSize} onChange={changePageSize} />
-          </div>
-        )}
+      {/* Espaço fixo + Filtros colapsáveis */}
+      <div className="mt-6" />
+      {customersPage && (
+        <FilterBar
+          open={filtersOpen}
+          search={{ value: search, onChange: setSearch, placeholder: 'Nome ou CPF...' }}
+          date={{
+            startDate,
+            endDate,
+            onStartDateChange: setStartDate,
+            onEndDateChange: setEndDate,
+            onClear: () => { setStartDate(''); setEndDate('') },
+          }}
+        />
+      )}
 
         {!customersPage || (customersPage.totalElements === 0 && !debouncedSearch) ? (
           <EmptyState
@@ -177,7 +204,13 @@ export default function CustomerList() {
           /* Customer list */
           <>
           <div className="space-y-3">
-            {customersPage.content.map((customer) => {
+            {customersPage.content
+              .filter((customer) => {
+                if (startDate && customer.updatedAt < startDate) return false
+                if (endDate && customer.updatedAt.slice(0, 10) > endDate) return false
+                return true
+              })
+              .map((customer) => {
               const customerReports = reportCountMap[customer.id] ?? []
               const isExpanded = expandedId === customer.id
 
@@ -263,10 +296,16 @@ export default function CustomerList() {
               )
             })}
           </div>
-          <Pagination
-            page={customersPage}
-            onPageChange={setCurrentPage}
-          />
+          <div className="mt-4 flex items-center justify-center">
+            <div className="flex-1" />
+            <Pagination
+              page={customersPage}
+              onPageChange={setCurrentPage}
+            />
+            <div className="flex-1 flex justify-end">
+              <PageSizeSelector pageSize={pageSize} onChange={changePageSize} />
+            </div>
+          </div>
           </>
         ) : null}
       </main>

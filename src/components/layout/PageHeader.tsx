@@ -15,7 +15,7 @@ interface PageHeaderProps {
 export default function PageHeader({ title, subtitle, actions, tabs, activeTab, onTabChange }: PageHeaderProps) {
   return (
     <header className="sticky top-12 bg-white/95 backdrop-blur-sm shadow-xs z-10">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 h-11 lg:h-12 flex items-center justify-between gap-3">
+      <div className="max-w-page mx-auto px-page h-11 lg:h-12 flex items-center justify-between gap-3">
         <div className="min-w-0 flex items-center gap-2">
           <h1 className="text-sm lg:text-base font-semibold text-gray-900 truncate">{title}</h1>
           {subtitle && !tabs && (

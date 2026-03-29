@@ -16,6 +16,7 @@ import { useNavigate } from 'react-router-dom'
 import { ChevronLeftIcon, ChevronRightIcon } from '@/components/icons'
 import DotPattern from '@/components/ui/DotPattern'
 import Button from '@/components/ui/Button'
+import SegmentedControl from '@/components/ui/SegmentedControl'
 import EventTagModal from '@/components/calendar/EventTagModal'
 import CreateEventModal from '@/components/calendar/CreateEventModal'
 import type { CreateEventPayload } from '@/components/calendar/CreateEventModal'
@@ -238,8 +239,8 @@ export default function Calendar() {
 
   return (
     <DotPattern className="min-h-[calc(100vh)] flex flex-col">
-      <div className="bg-white/80 backdrop-blur-xl border-b border-gray-200/60 px-4 sm:px-6 py-3 sticky top-0 z-30">
-        <div className="max-w-[1400px] mx-auto">
+      <div className="bg-white/80 backdrop-blur-xl border-b border-gray-200/60 px-page py-3 sticky top-0 z-30">
+        <div className="max-w-page mx-auto">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-1 mr-1">
@@ -266,21 +267,16 @@ export default function Calendar() {
             </div>
 
             <div className="flex items-center gap-2.5">
-              <div className="flex items-center bg-gray-100/80 rounded-lg p-0.5">
-                {(['month', 'week', 'day'] as CalendarView[]).map((v) => (
-                  <button
-                    key={v}
-                    onClick={() => setView(v)}
-                    className={`px-3 py-1 text-[13px] font-medium rounded-md transition-all ${
-                      view === v
-                        ? 'bg-white text-gray-900 shadow-[0_1px_3px_rgba(0,0,0,0.08)]'
-                        : 'text-gray-500 hover:text-gray-700'
-                    }`}
-                  >
-                    {v === 'month' ? 'Mês' : v === 'week' ? 'Semana' : 'Dia'}
-                  </button>
-                ))}
-              </div>
+              <SegmentedControl
+                options={[
+                  { value: 'month', label: 'Mês' },
+                  { value: 'week', label: 'Semana' },
+                  { value: 'day', label: 'Dia' },
+                ]}
+                value={view}
+                onChange={(v) => setView(v as CalendarView)}
+                size="sm"
+              />
               <div className="w-px h-6 bg-gray-200" />
               <Button size="sm" onClick={() => openNewEvent()}>
                 <span className="flex items-center gap-1.5">
@@ -339,7 +335,7 @@ export default function Calendar() {
       </div>
 
       <div className="flex-1">
-        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-5">
+        <div className="max-w-page mx-auto px-page py-5">
           {view === 'month' && <MonthView days={monthDays} expandedDay={expandedDay} setExpandedDay={setExpandedDay} onDayClick={openNewEvent} onEventClick={handleEventClick} />}
           {view === 'week' && <WeekView days={weekDays} onDayClick={openNewEvent} onEventClick={handleEventClick} />}
           {view === 'day' && <DayView events={dayEvents} onEventClick={handleEventClick} />}

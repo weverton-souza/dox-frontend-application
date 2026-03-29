@@ -8,10 +8,42 @@
 @layer base {
   body {
     @apply bg-surface text-gray-900 font-sans antialiased;
+    font-size: var(--font-size-base);
+    line-height: 1.5;
   }
+
+  h1 { font-size: var(--font-size-3xl); line-height: 1.2; font-weight: 700; }
+  h2 { font-size: var(--font-size-2xl); line-height: 1.25; font-weight: 700; }
+  h3 { font-size: var(--font-size-xl);  line-height: 1.3;  font-weight: 600; }
+  h4 { font-size: var(--font-size-lg);  line-height: 1.35; font-weight: 600; }
+  h5 { font-size: var(--font-size-base); line-height: 1.4; font-weight: 500; }
+  h6 { font-size: var(--font-size-sm);  line-height: 1.45; font-weight: 500; }
 }
 
 @layer components {
+  /* Layout global — container de página responsivo */
+  .page-container {
+    width: 100%;
+    max-width: var(--page-max-width);
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: var(--page-padding-x);
+    padding-right: var(--page-padding-x);
+    padding-top: var(--page-padding-y);
+    padding-bottom: calc(var(--page-padding-y) * 1.33);
+  }
+
+  .page-container-wide {
+    width: 100%;
+    max-width: calc(var(--page-max-width) + 10rem);
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: var(--page-padding-x);
+    padding-right: var(--page-padding-x);
+    padding-top: var(--page-padding-y);
+    padding-bottom: calc(var(--page-padding-y) * 1.33);
+  }
+
   /* Tree connecting lines (file-explorer style) */
   .tree-children {
     --tree-pl: 20px;

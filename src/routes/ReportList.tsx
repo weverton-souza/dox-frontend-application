@@ -8,15 +8,15 @@ import { formatDateTime } from '@/lib/utils'
 import { createEmptyReport } from '@/lib/report-utils'
 import { useConfirmDelete } from '@/lib/hooks/use-confirm-delete'
 import { useError } from '@/contexts/ErrorContext'
-import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
 import Pagination from '@/components/ui/Pagination'
-import PageHeader from '@/components/layout/PageHeader'
 import StatusBadge from '@/components/ui/StatusBadge'
 import ListCard, { ListCardPill, ListCardAction } from '@/components/ui/ListCard'
 import ConfirmDeleteModal from '@/components/ui/ConfirmDeleteModal'
 import EmptyState from '@/components/ui/EmptyState'
 import PageSizeSelector from '@/components/ui/PageSizeSelector'
+import SegmentedControl from '@/components/ui/SegmentedControl'
+import FilterBar from '@/components/ui/FilterBar'
 import { TrashIcon, CopyIcon } from '@/components/icons'
 import { getBlockTitle } from '@/lib/block-constants'
 
@@ -30,6 +30,10 @@ export default function ReportList() {
   const [customTemplates, setCustomTemplates] = useState<ReportTemplate[]>([])
   const [showNewModal, setShowNewModal] = useState(false)
   const [activeTab, setActiveTab] = useState('reports')
+  const [templateFilter, setTemplateFilter] = useState('standard')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+  const [filtersOpen, setFiltersOpen] = useState(false)
 
   const loadData = useCallback(async (page: number, size: number) => {
     try {
@@ -126,29 +130,75 @@ export default function ReportList() {
 
   return (
     <>
-      <PageHeader
-        title="Relatórios"
-        tabs={[
-          { id: 'reports', label: 'Relatórios' },
-          { id: 'templates', label: 'Templates' },
-        ]}
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        actions={
-          activeTab === 'reports'
-            ? <Button onClick={() => setShowNewModal(true)}>+ Novo Relatório</Button>
-            : undefined
-        }
-      />
+      <main className="page-container">
+      <div className="flex items-center justify-between bg-white rounded-full px-5 py-1.5 shadow-card">
+        <h2 className="text-xl font-bold text-gray-700">Relatórios</h2>
+        <div className="flex items-center gap-2">
+          <SegmentedControl
+            options={[
+              { value: 'reports', label: 'Histórico' },
+              { value: 'templates', label: 'Templates' },
+            ]}
+            value={activeTab}
+            onChange={setActiveTab}
+          />
+          <button
+            type="button"
+            onClick={() => setFiltersOpen(!filtersOpen)}
+            className={`h-11 w-11 flex items-center justify-center rounded-full transition-colors shadow-sm shrink-0 ${
+              filtersOpen ? 'bg-gray-600 text-white' : 'bg-gray-500 text-white hover:bg-gray-600'
+            }`}
+            title="Filtros"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+          </button>
+          {activeTab === 'reports' && (
+            <button
+              type="button"
+              onClick={() => setShowNewModal(true)}
+              className="h-11 w-11 flex items-center justify-center rounded-full bg-brand-700 text-white hover:bg-brand-800 transition-colors shadow-sm shrink-0"
+              title="Novo Relatório"
+            >
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="10" y1="4" x2="10" y2="16" />
+                <line x1="4" y1="10" x2="16" y2="10" />
+              </svg>
+            </button>
+          )}
+        </div>
+      </div>
 
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
-      {activeTab === 'reports' ? (<>
-        {/* Filters */}
-        {reportsPage && reportsPage.totalElements > 0 && (
-          <div className="mb-6 hidden sm:flex items-center justify-end">
-            <PageSizeSelector id="page-size-reports" pageSize={pageSize} onChange={changePageSize} />
-          </div>
+      {/* Zona entre toolbar e cards */}
+      <div className="my-6">
+        {activeTab === 'templates' && (
+          <SegmentedControl
+            options={[
+              { value: 'standard', label: 'Padrão' },
+              { value: 'custom', label: 'Personalizados' },
+            ]}
+            value={templateFilter}
+            onChange={setTemplateFilter}
+            size="sm"
+          />
         )}
+      </div>
+      {activeTab === 'reports' && (
+        <FilterBar
+          open={filtersOpen}
+          date={{
+            startDate,
+            endDate,
+            onStartDateChange: setStartDate,
+            onEndDateChange: setEndDate,
+            onClear: () => { setStartDate(''); setEndDate('') },
+          }}
+        />
+      )}
+
+      {activeTab === 'reports' ? (<>
 
         {!reportsPage || reportsPage.totalElements === 0 ? (
           <EmptyState
@@ -169,7 +219,13 @@ export default function ReportList() {
           /* Report list */
           <>
           <div className="space-y-3">
-            {reportsPage.content.map((report) => (
+            {reportsPage.content
+              .filter((report) => {
+                if (startDate && report.updatedAt < startDate) return false
+                if (endDate && report.updatedAt.slice(0, 10) > endDate) return false
+                return true
+              })
+              .map((report) => (
               <ListCard
                 key={report.id}
                 onClick={() => navigate(`/reports/${report.id}`)}
@@ -192,16 +248,23 @@ export default function ReportList() {
               />
             ))}
           </div>
-          <Pagination
-            page={reportsPage}
-            onPageChange={setCurrentPage}
-          />
+          <div className="mt-4 flex items-center justify-center">
+            <div className="flex-1" />
+            <Pagination
+              page={reportsPage}
+              onPageChange={setCurrentPage}
+            />
+            <div className="flex-1 flex justify-end">
+              <PageSizeSelector pageSize={pageSize} onChange={changePageSize} />
+            </div>
+          </div>
           </>
         )}
       </>) : (
         /* Templates tab */
         <TemplatesTab
           templates={allTemplates}
+          filter={templateFilter}
           onDuplicate={handleDuplicateTemplate}
           onDelete={handleDeleteTemplate}
         />
@@ -303,48 +366,71 @@ export default function ReportList() {
 
 function TemplatesTab({
   templates,
+  filter,
   onDuplicate,
   onDelete,
 }: {
   templates: ReportTemplate[]
+  filter: string
   onDuplicate: (id: string) => void
   onDelete: (id: string) => void
 }) {
-  const masterTemplates = templates.filter((t) => t.isMaster)
-  const customTemplates = templates.filter((t) => !t.isMaster)
+  const [page, setPage] = useState(0)
+  const [size, setSize] = useState(10)
+
+  const filtered = templates.filter((t) =>
+    filter === 'standard' ? t.isMaster : !t.isMaster
+  )
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / size))
+  const safePage = Math.min(page, totalPages - 1)
+  const paged = filtered.slice(safePage * size, safePage * size + size)
+
+  useEffect(() => { setPage(0) }, [filter, size])
+
+  if (filtered.length === 0) {
+    return (
+      <p className="text-sm text-gray-400 py-4">
+        {filter === 'standard'
+          ? 'Nenhum template padrão disponível.'
+          : 'Nenhum template personalizado. Duplique um template padrão ou salve um relatório como template.'}
+      </p>
+    )
+  }
+
+  const pageObj: Page<ReportTemplate> = {
+    content: paged,
+    number: safePage,
+    size,
+    totalElements: filtered.length,
+    totalPages,
+    first: safePage === 0,
+    last: safePage === totalPages - 1,
+    empty: filtered.length === 0,
+  }
 
   return (
-    <div className="space-y-8">
-      {masterTemplates.length > 0 && (
-        <section>
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3">
-            Templates Mestre
-          </h2>
-          <div className="space-y-2">
-            {masterTemplates.map((t) => (
-              <TemplateCard key={t.id} template={t} onDuplicate={onDuplicate} />
-            ))}
+    <>
+      <div className="space-y-2">
+        {paged.map((t) => (
+          <TemplateCard
+            key={t.id}
+            template={t}
+            onDuplicate={onDuplicate}
+            onDelete={filter === 'custom' ? onDelete : undefined}
+          />
+        ))}
+      </div>
+      {filtered.length > 0 && (
+        <div className="mt-4 flex items-center justify-center">
+          <div className="flex-1" />
+          <Pagination page={pageObj} onPageChange={setPage} />
+          <div className="flex-1 flex justify-end">
+            <PageSizeSelector pageSize={size} onChange={setSize} />
           </div>
-        </section>
+        </div>
       )}
-
-      <section>
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3">
-          {masterTemplates.length > 0 ? 'Meus Templates' : 'Templates'}
-        </h2>
-        {customTemplates.length === 0 ? (
-          <p className="text-sm text-gray-400 py-4">
-            Nenhum template customizado. Duplique um template mestre ou salve um relatório como template.
-          </p>
-        ) : (
-          <div className="space-y-2">
-            {customTemplates.map((t) => (
-              <TemplateCard key={t.id} template={t} onDuplicate={onDuplicate} onDelete={onDelete} />
-            ))}
-          </div>
-        )}
-      </section>
-    </div>
+    </>
   )
 }
 
@@ -363,17 +449,12 @@ function TemplateCard({
         <div className="flex items-center gap-2">
           <p className="font-medium text-gray-900">{template.name}</p>
           {template.isMaster && (
-            <span className="text-[10px] font-medium uppercase bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">
-              Mestre
-            </span>
-          )}
-          {template.isLocked && (
-            <span className="text-[10px] font-medium uppercase bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded flex items-center gap-0.5">
+            <span className="text-[10px] font-medium uppercase bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded flex items-center gap-0.5">
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                 <path d="M7 11V7a5 5 0 0 1 10 0v4" />
               </svg>
-              Estrutura fixa
+              Padrão
             </span>
           )}
         </div>
@@ -381,11 +462,13 @@ function TemplateCard({
           <p className="text-xs text-gray-500 mt-0.5">{template.description}</p>
         )}
         <div className="mt-2 flex flex-wrap gap-1">
-          {template.blocks.map((block, i) => (
-            <span key={i} className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">
-              {getBlockTitle(block)}
-            </span>
-          ))}
+          {template.blocks
+            .filter((block) => block.type === 'section' || block.type === 'identification')
+            .map((block, i) => (
+              <span key={i} className="text-[10px] uppercase font-medium bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">
+                {getBlockTitle(block)}
+              </span>
+            ))}
         </div>
       </div>
 
