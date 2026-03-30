@@ -979,8 +979,7 @@ function buildChartAnnotations(
       yMin: region.yMin,
       yMax: region.yMax,
       backgroundColor: region.color,
-      borderColor: region.borderColor,
-      borderWidth: 1,
+      borderWidth: 0,
     }
   })
 
@@ -1021,7 +1020,7 @@ function createRegionLegendPlugin(data: ChartData, showRegionLegend: boolean) {
       c.font = `${fontSize}px Calibri, sans-serif`
 
       const entries = data.referenceRegions.map((r) => ({
-        text: `${r.label}: ${r.yMin} \u2013 ${r.yMax}`,
+        text: `${r.label} ${r.yMin} \u2013 ${r.yMax}`,
         color: r.color,
         borderColor: r.borderColor,
       }))
@@ -1046,9 +1045,6 @@ function createRegionLegendPlugin(data: ChartData, showRegionLegend: boolean) {
 
         c.fillStyle = entry.color
         c.fillRect(x + padding, ey, boxSize, boxSize)
-        c.strokeStyle = entry.borderColor
-        c.lineWidth = 1
-        c.strokeRect(x + padding, ey, boxSize, boxSize)
 
         c.fillStyle = '#333'
         c.font = `${fontSize}px Calibri, sans-serif`
@@ -1222,25 +1218,30 @@ async function renderChart(data: ChartData): Promise<(Paragraph | Table)[]> {
   )
 
   // Description / note below the chart
-  const desc = data.description ?? ''
-  if (desc.trim()) {
-    const paragraphs = desc.split('\n').filter((line) => line.trim() !== '')
-    for (const para of paragraphs) {
-      elements.push(
-        new Paragraph({
-          spacing: { after: 100 },
-          alignment: AlignmentType.JUSTIFIED,
-          children: [
-            new TextRun({
-              text: para,
-              italics: true,
-              size: 21,
-              font: 'Calibri',
-              color: '444444',
-            }),
-          ],
-        })
-      )
+  if (data.description) {
+    if (isSlateContent(data.description)) {
+      for (const p of parseSlateToFootnoteParagraphs(data.description)) {
+        elements.push(p)
+      }
+    } else if (typeof data.description === 'string' && data.description.trim()) {
+      const paragraphs = data.description.split('\n').filter((line) => line.trim() !== '')
+      for (const para of paragraphs) {
+        elements.push(
+          new Paragraph({
+            spacing: { after: 100 },
+            alignment: AlignmentType.JUSTIFIED,
+            children: [
+              new TextRun({
+                text: para,
+                italics: true,
+                size: 21,
+                font: 'Calibri',
+                color: '444444',
+              }),
+            ],
+          })
+        )
+      }
     }
   }
 
@@ -1507,6 +1508,12 @@ function createDataCaption(text: string): Paragraph {
   return new Paragraph({
     keepNext: true,
     spacing: { before: 200, after: 100 },
+    border: {
+      top: NO_BORDER,
+      left: NO_BORDER,
+      right: NO_BORDER,
+      bottom: { color: MEDIUM_BLUE, space: 2, style: BorderStyle.SINGLE, size: 2 },
+    },
     children: [
       new TextRun({
         text,

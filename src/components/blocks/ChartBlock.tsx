@@ -9,6 +9,9 @@ import type {
   ChartDisplayMode,
 } from '@/types'
 import Input from '@/components/ui/Input'
+import PlateEditor, { EMPTY_SLATE_CONTENT } from '@/components/ui/PlateEditor'
+import { isSlateContent } from '@/types'
+import type { SlateContent } from '@/types'
 import Button from '@/components/ui/Button'
 import Select from '@/components/ui/Select'
 import { CloseIcon } from '@/components/icons'
@@ -58,7 +61,6 @@ export default function ChartBlock({ data, onChange }: ChartBlockProps) {
 
   // Backwards-compatible defaults for new fields
   const showRegionLegend = data.showRegionLegend ?? true
-  const description = data.description ?? ''
   const displayMode = data.displayMode ?? 'grouped'
   const isSeparated = displayMode === 'separated' && data.chartType !== 'line' && data.series.length > 1
 
@@ -190,8 +192,7 @@ export default function ChartBlock({ data, onChange }: ChartBlockProps) {
         yMin: region.yMin,
         yMax: region.yMax,
         backgroundColor: region.color,
-        borderColor: region.borderColor,
-        borderWidth: 1,
+        borderWidth: 0,
       }
     })
 
@@ -243,7 +244,7 @@ export default function ChartBlock({ data, onChange }: ChartBlockProps) {
         c.font = `${fontSize}px Calibri, sans-serif`
 
         const entries = data.referenceRegions.map((r) => ({
-          text: `${r.label}: ${r.yMin} \u2013 ${r.yMax}`,
+          text: `${r.label} ${r.yMin} \u2013 ${r.yMax}`,
           color: r.color,
           borderColor: r.borderColor,
         }))
@@ -272,9 +273,6 @@ export default function ChartBlock({ data, onChange }: ChartBlockProps) {
           const ey = y + padding + i * lineHeight
           c.fillStyle = entry.color
           c.fillRect(x + padding, ey, boxSize, boxSize)
-          c.strokeStyle = entry.borderColor
-          c.lineWidth = 1
-          c.strokeRect(x + padding, ey, boxSize, boxSize)
 
           c.fillStyle = '#333'
           c.font = `${fontSize}px Calibri, sans-serif`
@@ -655,6 +653,7 @@ export default function ChartBlock({ data, onChange }: ChartBlockProps) {
                           onChange={(e) =>
                             updateCategoryValue(cat.id, s.id, e.target.value)
                           }
+                          onFocus={(e) => e.target.select()}
                           className="w-full bg-transparent border-0 px-2 py-1.5 text-sm text-gray-900 text-center focus:outline-none focus:ring-1 focus:ring-brand-500 rounded"
                         />
                       </td>
@@ -711,6 +710,7 @@ export default function ChartBlock({ data, onChange }: ChartBlockProps) {
             <input
               type="number"
               value={line.value}
+              onFocus={(e) => e.target.select()}
               onChange={(e) =>
                 updateReferenceLine(line.id, {
                   value: parseFloat(e.target.value) || 0,
@@ -761,6 +761,7 @@ export default function ChartBlock({ data, onChange }: ChartBlockProps) {
             <input
               type="number"
               value={region.yMin}
+              onFocus={(e) => e.target.select()}
               onChange={(e) =>
                 updateReferenceRegion(region.id, {
                   yMin: parseFloat(e.target.value) || 0,
@@ -774,6 +775,7 @@ export default function ChartBlock({ data, onChange }: ChartBlockProps) {
             <input
               type="number"
               value={region.yMax}
+              onFocus={(e) => e.target.select()}
               onChange={(e) =>
                 updateReferenceRegion(region.id, {
                   yMax: parseFloat(e.target.value) || 0,
@@ -848,12 +850,10 @@ export default function ChartBlock({ data, onChange }: ChartBlockProps) {
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Descrição / Nota
         </label>
-        <textarea
-          value={description}
-          onChange={(e) => onChange({ ...data, description: e.target.value })}
-          className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none resize-y min-h-[80px]"
+        <PlateEditor
+          content={isSlateContent(data.description) ? data.description : EMPTY_SLATE_CONTENT}
+          onChange={(value: SlateContent) => onChange({ ...data, description: value })}
           placeholder="Texto descritivo ou interpretativo que aparecerá abaixo do gráfico no laudo"
-          rows={3}
         />
       </div>
 

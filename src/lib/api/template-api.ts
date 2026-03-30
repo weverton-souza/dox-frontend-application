@@ -42,14 +42,54 @@ export async function deleteScoreTableTemplate(id: string): Promise<void> {
 
 // ========== Chart Templates ==========
 
+interface ChartTemplateResponse {
+  id: string
+  name: string
+  description: string
+  instrumentName: string
+  category: string
+  data: Record<string, unknown>
+  isDefault: boolean
+  createdAt: string
+  updatedAt: string
+}
+
 export async function getChartTemplates(): Promise<ChartTemplate[]> {
-  const { data } = await api.get<ChartTemplate[]>('/templates/charts')
-  return data
+  const { data } = await api.get<ChartTemplateResponse[]>('/templates/charts')
+  return data.map((t) => ({
+    ...t.data,
+    id: t.id,
+    name: t.name,
+    description: t.description ?? '',
+    instrumentName: t.instrumentName ?? '',
+    category: t.category ?? '',
+    isDefault: t.isDefault,
+    createdAt: t.createdAt,
+    updatedAt: t.updatedAt,
+  } as ChartTemplate))
 }
 
 export async function createChartTemplate(template: Partial<ChartTemplate>): Promise<ChartTemplate> {
-  const { data } = await api.post<ChartTemplate>('/templates/charts', template)
-  return data
+  const { name, description, instrumentName, category, ...chartData } = template
+  const payload = {
+    name,
+    description,
+    instrumentName,
+    category,
+    data: chartData,
+  }
+  const { data } = await api.post<ChartTemplateResponse>('/templates/charts', payload)
+  return {
+    ...data.data,
+    id: data.id,
+    name: data.name,
+    description: data.description ?? '',
+    instrumentName: data.instrumentName ?? '',
+    category: data.category ?? '',
+    isDefault: data.isDefault,
+    createdAt: data.createdAt,
+    updatedAt: data.updatedAt,
+  } as ChartTemplate
 }
 
 export async function deleteChartTemplate(id: string): Promise<void> {

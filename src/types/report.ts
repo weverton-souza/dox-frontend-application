@@ -97,6 +97,7 @@ export interface ScoreTableTemplateRow {
 export interface ScoreTableTemplate extends BaseTemplate {
   columns: ScoreTableTemplateColumn[]
   rows: ScoreTableTemplateRow[]
+  footnote?: SlateContent | null
 }
 
 // ========== Chart Templates ==========
@@ -112,6 +113,7 @@ export interface ChartTemplate extends BaseTemplate {
   showValues: boolean
   showLegend: boolean
   showRegionLegend: boolean
+  defaultDescription?: SlateContent | null
 }
 
 export interface InfoBoxData {
@@ -164,7 +166,7 @@ export interface ChartData {
   showValues: boolean
   showLegend: boolean
   showRegionLegend: boolean
-  description: string
+  description: string | SlateContent
 }
 
 // ========== References ==========
@@ -444,31 +446,11 @@ export function createScoreTableFromTemplate(template: ScoreTableTemplate): Scor
     values: { ...r.defaultValues },
   }))
 
-  const footnotes: Record<string, SlateContent> = {
-    'WAIS-III': [
-      { type: 'p', children: [
-        { text: 'Nota: ', bold: true, italic: true },
-        { text: 'PP', bold: true },
-        { text: ' = Pontos Ponderados · ' },
-        { text: 'IC 95%', bold: true },
-        { text: ' = Intervalo de Confiança 95% · ' },
-        { text: 'Percentil', bold: true },
-        { text: ' = posição relativa comparada à população da mesma faixa etária (ex: 99,6 = supera 99,6% das pessoas de mesma idade)' },
-      ] },
-    ],
-    'ETDAH-AD': [
-      { type: 'p', children: [
-        { text: 'Nota: ', bold: true, italic: true },
-        { text: 'A Autorregulação é analisada em três pontos: Atenção, Motivação e Ação' },
-      ] },
-    ],
-  }
-
   return {
     title: template.name,
     columns,
     rows,
-    footnote: footnotes[template.instrumentName ?? ''] ?? '',
+    footnote: template.footnote ?? '',
     templateId: template.id,
   }
 }
@@ -503,6 +485,6 @@ export function createChartFromTemplate(template: ChartTemplate): ChartData {
     showValues: template.showValues,
     showLegend: template.showLegend,
     showRegionLegend: template.showRegionLegend,
-    description: '',
+    description: template.defaultDescription ?? '',
   }
 }
