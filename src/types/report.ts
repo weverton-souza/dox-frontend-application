@@ -63,7 +63,7 @@ export interface ScoreTableData {
   title: string
   columns: ScoreTableColumn[]
   rows: ScoreTableRow[]
-  footnote: string
+  footnote: string | SlateContent
   templateId?: string | null
 }
 
@@ -86,6 +86,7 @@ export interface ScoreTableTemplateColumn {
   id: string
   label: string
   formula: string | null  // fórmula de texto ou null para input manual
+  alignment?: 'left' | 'center' | 'right'
 }
 
 export interface ScoreTableTemplateRow {
@@ -435,6 +436,7 @@ export function createScoreTableFromTemplate(template: ScoreTableTemplate): Scor
     id: c.id,
     label: c.label,
     formula: c.formula ?? undefined,
+    alignment: c.alignment,
   }))
 
   const rows: ScoreTableRow[] = template.rows.map(r => ({
@@ -442,11 +444,31 @@ export function createScoreTableFromTemplate(template: ScoreTableTemplate): Scor
     values: { ...r.defaultValues },
   }))
 
+  const footnotes: Record<string, SlateContent> = {
+    'WAIS-III': [
+      { type: 'p', children: [
+        { text: 'Nota: ', bold: true, italic: true },
+        { text: 'PP', bold: true },
+        { text: ' = Pontos Ponderados · ' },
+        { text: 'IC 95%', bold: true },
+        { text: ' = Intervalo de Confiança 95% · ' },
+        { text: 'Percentil', bold: true },
+        { text: ' = posição relativa comparada à população da mesma faixa etária (ex: 99,6 = supera 99,6% das pessoas de mesma idade)' },
+      ] },
+    ],
+    'ETDAH-AD': [
+      { type: 'p', children: [
+        { text: 'Nota: ', bold: true, italic: true },
+        { text: 'A Autorregulação é analisada em três pontos: Atenção, Motivação e Ação' },
+      ] },
+    ],
+  }
+
   return {
     title: template.name,
     columns,
     rows,
-    footnote: '',
+    footnote: footnotes[template.instrumentName ?? ''] ?? '',
     templateId: template.id,
   }
 }

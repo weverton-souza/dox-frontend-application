@@ -31,12 +31,13 @@ export function SortableRow({ id, rowIndex, children }: { id: string; rowIndex: 
 }
 
 
-export function SortableTh({ id, children, className }: { id: string; children: React.ReactNode; className?: string }) {
+export function SortableTh({ id, children, className, style: extraStyle }: { id: string; children: React.ReactNode; className?: string; style?: React.CSSProperties }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
+    ...extraStyle,
   }
   return (
     <th ref={setNodeRef} style={style} className={className} {...attributes}>
