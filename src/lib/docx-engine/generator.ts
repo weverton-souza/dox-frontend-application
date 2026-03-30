@@ -419,6 +419,31 @@ function slateLeafToTextRun(
   })
 }
 
+function parseSlateToFootnoteParagraphs(content: SlateContent): Paragraph[] {
+  const paragraphs: Paragraph[] = []
+  for (const node of content) {
+    if (node.type === 'p' && Array.isArray(node.children)) {
+      const runs: TextRun[] = node.children
+        .filter((c): c is SlateNode & { text: string } => typeof c.text === 'string')
+        .map(c => new TextRun({
+          text: c.text,
+          size: 18,
+          font: 'Calibri',
+          color: '666666',
+          italics: true,
+          bold: c.bold || undefined,
+          underline: c.underline ? {} : undefined,
+        }))
+      paragraphs.push(new Paragraph({
+        spacing: { after: 10 },
+        indent: { left: 0, right: 0 },
+        children: runs.length > 0 ? runs : [new TextRun({ text: '', size: 18, font: 'Calibri' })],
+      }))
+    }
+  }
+  return paragraphs
+}
+
 function parseSlateToDocxParagraphs(content: SlateContent): Paragraph[] {
   const paragraphs: Paragraph[] = []
 
@@ -529,15 +554,30 @@ function renderScoreTable(data: ScoreTableData): (Paragraph | Table)[] {
   const elements: (Paragraph | Table)[] = []
 
   if (data.title) {
-    elements.push(createSectionHeader(data.title.toUpperCase()))
+    elements.push(createDataCaption(data.title))
   }
 
   if (data.columns.length === 0 || data.rows.length === 0) {
     return elements
   }
 
-  const colCount = data.columns.length
-  const colWidth = Math.floor(PAGE_CONTENT_WIDTH / colCount)
+  // Balanced column widths — wider for text-heavy columns, narrower for numeric
+  const colWeights = data.columns.map((col) => {
+    let maxLen = col.label.length + 2
+    const hasFormula = !!col.formula
+    for (const row of data.rows) {
+      const val = row.values[col.id] ?? ''
+      if (val.startsWith('=')) {
+        maxLen = Math.max(maxLen, 28)
+      } else {
+        maxLen = Math.max(maxLen, val.length)
+      }
+    }
+    if (hasFormula) maxLen = Math.max(maxLen, 28)
+    return Math.max(10, Math.min(50, maxLen))
+  })
+  const totalWeight = colWeights.reduce((s, w) => s + w, 0)
+  const balancedWidths = colWeights.map((w) => Math.floor((w / totalWeight) * PAGE_CONTENT_WIDTH))
 
   // Header row
   const getDocxAlignment = (col: { alignment?: 'left' | 'center' | 'right' }) => {
@@ -545,10 +585,13 @@ function renderScoreTable(data: ScoreTableData): (Paragraph | Table)[] {
     return a === 'left' ? AlignmentType.LEFT : a === 'right' ? AlignmentType.RIGHT : AlignmentType.CENTER
   }
 
+  const cellMargins = { top: 30, bottom: 30, left: 80, right: 10 }
+
   const headerCells = data.columns.map(
-    (col) =>
+    (col, idx) =>
       new TableCell({
-        width: { size: colWidth, type: WidthType.DXA },
+        width: { size: balancedWidths[idx], type: WidthType.DXA },
+        margins: cellMargins,
         shading: { fill: DARK_BLUE, type: ShadingType.CLEAR, color: 'auto' },
         borders: {
           top: THIN_BORDER,
@@ -579,13 +622,13 @@ function renderScoreTable(data: ScoreTableData): (Paragraph | Table)[] {
   // Data rows
   const dataRows = data.rows.map((row, index) => {
     const defaultBgColor = index % 2 === 0 ? WHITE : LIGHT_GRAY
-    const cells = data.columns.map((col) => {
+    const cells = data.columns.map((col, idx) => {
       const result = computeCellResult(data, row.id, col.id)
-      const cellBgColor = result.bgColor ? result.bgColor.replace('#', '') : defaultBgColor
-      const cellTextColor = result.bgColor && result.textColor ? result.textColor.replace('#', '') : undefined
+      const dotColor = result.bgColor ? result.bgColor.replace('#', '') : null
       return new TableCell({
-        width: { size: colWidth, type: WidthType.DXA },
-        shading: { fill: cellBgColor, type: ShadingType.CLEAR, color: 'auto' },
+        width: { size: balancedWidths[idx], type: WidthType.DXA },
+        margins: cellMargins,
+        shading: { fill: defaultBgColor, type: ShadingType.CLEAR, color: 'auto' },
         borders: {
           top: THIN_BORDER,
           bottom: THIN_BORDER,
@@ -596,14 +639,12 @@ function renderScoreTable(data: ScoreTableData): (Paragraph | Table)[] {
           new Paragraph({
             alignment: getDocxAlignment(col),
             spacing: { before: 20, after: 20 },
-            children: [
-              new TextRun({
-                text: result.text,
-                size: 20,
-                font: 'Calibri',
-                ...(cellTextColor ? { color: cellTextColor } : {}),
-              }),
-            ],
+            children: dotColor
+              ? [
+                  new TextRun({ text: '● ', size: 20, font: 'Calibri', color: dotColor }),
+                  new TextRun({ text: result.text.replace(/^●\s*/, ''), size: 20, font: 'Calibri' }),
+                ]
+              : [new TextRun({ text: result.text, size: 20, font: 'Calibri' })],
           }),
         ],
       })
@@ -614,7 +655,7 @@ function renderScoreTable(data: ScoreTableData): (Paragraph | Table)[] {
   const table = new Table({
     rows: [headerRow, ...dataRows],
     width: { size: PAGE_CONTENT_WIDTH, type: WidthType.DXA },
-    columnWidths: Array(colCount).fill(colWidth),
+    columnWidths: balancedWidths,
     borders: {
       top: THIN_BORDER,
       bottom: THIN_BORDER,
@@ -628,20 +669,29 @@ function renderScoreTable(data: ScoreTableData): (Paragraph | Table)[] {
   elements.push(table)
 
   if (data.footnote) {
-    elements.push(
-      new Paragraph({
-        spacing: { before: 60, after: 200 },
-        children: [
-          new TextRun({
-            text: data.footnote,
-            italics: true,
-            size: 18,
-            font: 'Calibri',
-            color: '666666',
-          }),
-        ],
+    if (isSlateContent(data.footnote)) {
+      for (const p of parseSlateToFootnoteParagraphs(data.footnote)) {
+        elements.push(p)
+      }
+    } else if (typeof data.footnote === 'string' && data.footnote.trim()) {
+      const footnoteRuns = data.footnote.split('\n').flatMap((line, i) => {
+        const run = new TextRun({
+          text: line,
+          italics: true,
+          size: 18,
+          font: 'Calibri',
+          color: '666666',
+          ...(i > 0 ? { break: 1 } : {}),
+        })
+        return [run]
       })
-    )
+      elements.push(
+        new Paragraph({
+          spacing: { before: 60, after: 200 },
+          children: footnoteRuns,
+        })
+      )
+    }
   }
 
   return elements
@@ -929,8 +979,7 @@ function buildChartAnnotations(
       yMin: region.yMin,
       yMax: region.yMax,
       backgroundColor: region.color,
-      borderColor: region.borderColor,
-      borderWidth: 1,
+      borderWidth: 0,
     }
   })
 
@@ -971,7 +1020,7 @@ function createRegionLegendPlugin(data: ChartData, showRegionLegend: boolean) {
       c.font = `${fontSize}px Calibri, sans-serif`
 
       const entries = data.referenceRegions.map((r) => ({
-        text: `${r.label}: ${r.yMin} \u2013 ${r.yMax}`,
+        text: `${r.label} ${r.yMin} \u2013 ${r.yMax}`,
         color: r.color,
         borderColor: r.borderColor,
       }))
@@ -996,9 +1045,6 @@ function createRegionLegendPlugin(data: ChartData, showRegionLegend: boolean) {
 
         c.fillStyle = entry.color
         c.fillRect(x + padding, ey, boxSize, boxSize)
-        c.strokeStyle = entry.borderColor
-        c.lineWidth = 1
-        c.strokeRect(x + padding, ey, boxSize, boxSize)
 
         c.fillStyle = '#333'
         c.font = `${fontSize}px Calibri, sans-serif`
@@ -1058,7 +1104,7 @@ async function renderChart(data: ChartData): Promise<(Paragraph | Table)[]> {
   const elements: (Paragraph | Table)[] = []
 
   if (data.title) {
-    elements.push(createSectionHeader(data.title.toUpperCase()))
+    elements.push(createDataCaption(data.title))
   }
 
   if (data.categories.length === 0 || data.series.length === 0) {
@@ -1172,25 +1218,30 @@ async function renderChart(data: ChartData): Promise<(Paragraph | Table)[]> {
   )
 
   // Description / note below the chart
-  const desc = data.description ?? ''
-  if (desc.trim()) {
-    const paragraphs = desc.split('\n').filter((line) => line.trim() !== '')
-    for (const para of paragraphs) {
-      elements.push(
-        new Paragraph({
-          spacing: { after: 100 },
-          alignment: AlignmentType.JUSTIFIED,
-          children: [
-            new TextRun({
-              text: para,
-              italics: true,
-              size: 21,
-              font: 'Calibri',
-              color: '444444',
-            }),
-          ],
-        })
-      )
+  if (data.description) {
+    if (isSlateContent(data.description)) {
+      for (const p of parseSlateToFootnoteParagraphs(data.description)) {
+        elements.push(p)
+      }
+    } else if (typeof data.description === 'string' && data.description.trim()) {
+      const paragraphs = data.description.split('\n').filter((line) => line.trim() !== '')
+      for (const para of paragraphs) {
+        elements.push(
+          new Paragraph({
+            spacing: { after: 100 },
+            alignment: AlignmentType.JUSTIFIED,
+            children: [
+              new TextRun({
+                text: para,
+                italics: true,
+                size: 21,
+                font: 'Calibri',
+                color: '444444',
+              }),
+            ],
+          })
+        )
+      }
     }
   }
 
@@ -1452,6 +1503,29 @@ async function renderClosingPage(data: ClosingPageData, report: Report, prof: im
 }
 
 // ========== Helpers ==========
+
+function createDataCaption(text: string): Paragraph {
+  return new Paragraph({
+    keepNext: true,
+    spacing: { before: 200, after: 100 },
+    border: {
+      top: NO_BORDER,
+      left: NO_BORDER,
+      right: NO_BORDER,
+      bottom: { color: MEDIUM_BLUE, space: 2, style: BorderStyle.SINGLE, size: 2 },
+    },
+    children: [
+      new TextRun({
+        text,
+        bold: true,
+        italics: true,
+        size: 20,
+        font: 'Calibri',
+        color: MEDIUM_BLUE,
+      }),
+    ],
+  })
+}
 
 function createSectionHeader(text: string): Paragraph {
   return new Paragraph({

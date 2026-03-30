@@ -205,6 +205,17 @@ function EditorToolbar({
         </svg>
       </ToolbarButton>
 
+      <ToolbarDivider />
+
+      {/* Inserir bolinha ● */}
+      <ToolbarButton
+        active={false}
+        onClick={() => editor.tf.insertText('● ')}
+        title="Inserir indicador ●"
+      >
+        <span className="text-xs">●</span>
+      </ToolbarButton>
+
       {/* Variable picker */}
       {variables && variables.length > 0 && (
         <>

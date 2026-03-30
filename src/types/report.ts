@@ -63,7 +63,7 @@ export interface ScoreTableData {
   title: string
   columns: ScoreTableColumn[]
   rows: ScoreTableRow[]
-  footnote: string
+  footnote: string | SlateContent
   templateId?: string | null
 }
 
@@ -86,6 +86,7 @@ export interface ScoreTableTemplateColumn {
   id: string
   label: string
   formula: string | null  // fórmula de texto ou null para input manual
+  alignment?: 'left' | 'center' | 'right'
 }
 
 export interface ScoreTableTemplateRow {
@@ -96,6 +97,7 @@ export interface ScoreTableTemplateRow {
 export interface ScoreTableTemplate extends BaseTemplate {
   columns: ScoreTableTemplateColumn[]
   rows: ScoreTableTemplateRow[]
+  footnote?: SlateContent | null
 }
 
 // ========== Chart Templates ==========
@@ -111,6 +113,7 @@ export interface ChartTemplate extends BaseTemplate {
   showValues: boolean
   showLegend: boolean
   showRegionLegend: boolean
+  defaultDescription?: SlateContent | null
 }
 
 export interface InfoBoxData {
@@ -163,7 +166,7 @@ export interface ChartData {
   showValues: boolean
   showLegend: boolean
   showRegionLegend: boolean
-  description: string
+  description: string | SlateContent
 }
 
 // ========== References ==========
@@ -435,6 +438,7 @@ export function createScoreTableFromTemplate(template: ScoreTableTemplate): Scor
     id: c.id,
     label: c.label,
     formula: c.formula ?? undefined,
+    alignment: c.alignment,
   }))
 
   const rows: ScoreTableRow[] = template.rows.map(r => ({
@@ -446,7 +450,7 @@ export function createScoreTableFromTemplate(template: ScoreTableTemplate): Scor
     title: template.name,
     columns,
     rows,
-    footnote: '',
+    footnote: template.footnote ?? '',
     templateId: template.id,
   }
 }
@@ -481,6 +485,6 @@ export function createChartFromTemplate(template: ChartTemplate): ChartData {
     showValues: template.showValues,
     showLegend: template.showLegend,
     showRegionLegend: template.showRegionLegend,
-    description: '',
+    description: template.defaultDescription ?? '',
   }
 }

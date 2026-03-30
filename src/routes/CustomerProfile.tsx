@@ -562,7 +562,7 @@ export default function CustomerProfile() {
       {/* Profile hero */}
       <div className="bg-gradient-to-b from-gray-50 to-white border-b border-gray-200">
         {/* Breadcrumb */}
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-4 pb-2">
+        <div className="max-w-page mx-auto px-page pt-4 pb-2">
           <div className="flex items-center gap-2 text-sm">
             <button
               onClick={() => navigate('/customers')}
@@ -580,7 +580,7 @@ export default function CustomerProfile() {
         </div>
 
         {/* Profile card */}
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+        <div className="max-w-page mx-auto px-page py-6">
           <div className="flex flex-col sm:flex-row gap-5 sm:gap-8">
             {/* Avatar */}
             <div className="shrink-0">
@@ -642,7 +642,7 @@ export default function CustomerProfile() {
 
       {/* Tabs */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+        <div className="max-w-page mx-auto px-page">
           <nav className="flex gap-1 -mb-px">
             {TABS.map((tab) => {
               const isActive = activeSection === tab.key
@@ -669,7 +669,7 @@ export default function CustomerProfile() {
 
       {/* Tab content */}
       <div className="flex-1 bg-gray-50/50">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+        <div className="max-w-page mx-auto px-page py-6">
           {sectionRenderers[activeSection]()}
         </div>
       </div>

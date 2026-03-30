@@ -6,6 +6,31 @@ export default {
   ],
   theme: {
     extend: {
+      screens: {
+        '3xl': '1920px',
+        '4xl': '2560px',
+      },
+      fontSize: {
+        'fluid-xs':   ['var(--font-size-xs)',   { lineHeight: '1.4' }],
+        'fluid-sm':   ['var(--font-size-sm)',   { lineHeight: '1.45' }],
+        'fluid-base': ['var(--font-size-base)', { lineHeight: '1.5' }],
+        'fluid-lg':   ['var(--font-size-lg)',   { lineHeight: '1.4' }],
+        'fluid-xl':   ['var(--font-size-xl)',   { lineHeight: '1.35' }],
+        'fluid-2xl':  ['var(--font-size-2xl)',  { lineHeight: '1.3' }],
+        'fluid-3xl':  ['var(--font-size-3xl)',  { lineHeight: '1.2' }],
+      },
+      spacing: {
+        'page':    'var(--page-padding-x)',
+        'page-y':  'var(--page-padding-y)',
+        'content': 'var(--content-gap)',
+        'section': 'var(--section-gap)',
+        'card':    'var(--card-padding)',
+      },
+      maxWidth: {
+        'page': 'var(--page-max-width)',
+        '8xl': '88rem',
+        '9xl': '108rem',
+      },
       colors: {
         /* Cinzas quentes Apple — sobrescreve o gray padrão do Tailwind */
         gray: {

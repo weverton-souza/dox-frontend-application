@@ -9,12 +9,11 @@ import { formatDateTime } from '@/lib/utils'
 import { useConfirmDelete } from '@/lib/hooks/use-confirm-delete'
 import { usePagination } from '@/lib/hooks/use-pagination'
 import { useError } from '@/contexts/ErrorContext'
-import Button from '@/components/ui/Button'
 import Pagination from '@/components/ui/Pagination'
-import PageHeader from '@/components/layout/PageHeader'
 import ConfirmDeleteModal from '@/components/ui/ConfirmDeleteModal'
 import EmptyState from '@/components/ui/EmptyState'
 import PageSizeSelector from '@/components/ui/PageSizeSelector'
+import FilterBar from '@/components/ui/FilterBar'
 import ListCard, { ListCardPill, ListCardAction } from '@/components/ui/ListCard'
 import { CopyIcon, TrashIcon } from '@/components/icons'
 
@@ -25,6 +24,9 @@ export default function FormList() {
   const [forms, setForms] = useState<Form[]>([])
   const [responseCounts, setResponseCounts] = useState<Record<string, number>>({})
   const [templates, setTemplates] = useState(() => getAllTemplates([]))
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+  const [filtersOpen, setFiltersOpen] = useState(false)
 
   const loadData = useCallback(async () => {
     try {
@@ -102,27 +104,61 @@ export default function FormList() {
     return templates.find(t => t.id === templateId)?.name ?? null
   }
 
-  const { page: paginatedPage, setCurrentPage, pageSize, changePageSize } = usePagination(forms)
+  const filteredForms = forms.filter((form) => {
+    if (startDate && form.updatedAt < startDate) return false
+    if (endDate && form.updatedAt.slice(0, 10) > endDate) return false
+    return true
+  })
+
+  const { page: paginatedPage, setCurrentPage, pageSize, changePageSize } = usePagination(filteredForms)
 
   return (
     <>
-      <PageHeader
-        title="Formulários"
-        subtitle="Anamnese e questionários para clientes"
-        actions={
-          <Button onClick={handleCreate}>+ Novo Formulário</Button>
-        }
+      <main className="page-container">
+      <div className="flex items-center justify-between bg-white rounded-full px-5 py-1.5 shadow-card">
+        <h2 className="text-xl font-bold text-gray-700">Formulários</h2>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setFiltersOpen(!filtersOpen)}
+            className={`h-11 w-11 flex items-center justify-center rounded-full transition-colors shadow-sm shrink-0 ${
+              filtersOpen ? 'bg-gray-600 text-white' : 'bg-gray-500 text-white hover:bg-gray-600'
+            }`}
+            title="Filtros"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={handleCreate}
+            className="h-11 w-11 flex items-center justify-center rounded-full bg-brand-700 text-white hover:bg-brand-800 transition-colors shadow-sm shrink-0"
+            title="Novo Formulário"
+          >
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="10" y1="4" x2="10" y2="16" />
+            <line x1="4" y1="10" x2="16" y2="10" />
+          </svg>
+          </button>
+        </div>
+      </div>
+
+      {/* Espaço fixo + Filtros colapsáveis */}
+      <div className="mt-6" />
+      <FilterBar
+        open={filtersOpen}
+        date={{
+          startDate,
+          endDate,
+          onStartDateChange: setStartDate,
+          onEndDateChange: setEndDate,
+          onClear: () => { setStartDate(''); setEndDate('') },
+        }}
       />
 
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
-        {/* Page size */}
-        {forms.length > 0 && (
-          <div className="mb-6 hidden sm:flex items-center justify-end">
-            <PageSizeSelector id="page-size-forms" pageSize={pageSize} onChange={changePageSize} />
-          </div>
-        )}
-
-        {forms.length === 0 ? (
+        {filteredForms.length === 0 ? (
           <EmptyState
             icon={
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-brand-500" strokeLinecap="round" strokeLinejoin="round">
@@ -198,7 +234,13 @@ export default function FormList() {
                 )
               })}
             </div>
-            <Pagination page={paginatedPage} onPageChange={setCurrentPage} />
+            <div className="mt-4 flex items-center justify-center">
+              <div className="flex-1" />
+              <Pagination page={paginatedPage} onPageChange={setCurrentPage} />
+              <div className="flex-1 flex justify-end">
+                <PageSizeSelector pageSize={pageSize} onChange={changePageSize} />
+              </div>
+            </div>
           </>
         )}
       </main>

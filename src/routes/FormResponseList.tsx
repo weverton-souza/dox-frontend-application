@@ -9,12 +9,11 @@ import { useError } from '@/contexts/ErrorContext'
 import { formatDateTime } from '@/lib/utils'
 import { useConfirmDelete } from '@/lib/hooks/use-confirm-delete'
 import { usePagination } from '@/lib/hooks/use-pagination'
-import Button from '@/components/ui/Button'
 import Pagination from '@/components/ui/Pagination'
-import PageHeader from '@/components/layout/PageHeader'
 import ConfirmDeleteModal from '@/components/ui/ConfirmDeleteModal'
 import EmptyState from '@/components/ui/EmptyState'
 import PageSizeSelector from '@/components/ui/PageSizeSelector'
+import FilterBar from '@/components/ui/FilterBar'
 import Spinner from '@/components/ui/Spinner'
 import ListCard, { ListCardPill, ListCardAction } from '@/components/ui/ListCard'
 import { TrashIcon } from '@/components/icons'
@@ -30,6 +29,10 @@ export default function FormResponseList() {
   const [responses, setResponses] = useState<FormResponse[]>([])
   const [generateForResponse, setGenerateForResponse] = useState<FormResponse | null>(null)
   const [showLinkModal, setShowLinkModal] = useState(false)
+  const [searchResponses, setSearchResponses] = useState('')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+  const [filtersOpen, setFiltersOpen] = useState(false)
   const [allTemplates, setAllTemplates] = useState(() => getAllTemplates([]))
 
   const linkedTemplate = useMemo((): ReportTemplate | null => {
@@ -72,7 +75,15 @@ export default function FormResponseList() {
   }, [id, loadData, showError])
 
   const { confirmId: confirmDeleteId, requestDelete: setConfirmDeleteId, confirmDelete, cancelDelete } = useConfirmDelete(handleDeleteResponse)
-  const { page: paginatedPage, setCurrentPage, pageSize, changePageSize } = usePagination(responses)
+
+  const filteredResponses = responses.filter((resp) => {
+    if (searchResponses && !(resp.customerName || '').toLowerCase().includes(searchResponses.toLowerCase())) return false
+    if (startDate && resp.updatedAt < startDate) return false
+    if (endDate && resp.updatedAt.slice(0, 10) > endDate) return false
+    return true
+  })
+
+  const { page: paginatedPage, setCurrentPage, pageSize, changePageSize } = usePagination(filteredResponses)
 
   const handleNewResponse = useCallback(() => {
     navigate(`/forms/${id}/fill`)
@@ -88,37 +99,74 @@ export default function FormResponseList() {
 
   return (
     <>
-      <PageHeader
-        title={`Respostas — ${form.title || 'Formulário'}`}
-        subtitle={`${responses.length} ${responses.length === 1 ? 'resposta' : 'respostas'}`}
-        actions={
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" onClick={() => navigate(`/forms/${id}/edit`)}>
-              Editar Formulário
-            </Button>
-            <Button variant="ghost" onClick={() => setShowLinkModal(true)}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="inline -mt-0.5 mr-1">
-                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-              </svg>
-              Gerar Link
-            </Button>
-            <Button onClick={handleNewResponse}>
-              + Nova Resposta
-            </Button>
-          </div>
-        }
+      <main className="page-container">
+      <div className="flex items-center justify-between bg-white rounded-full px-5 py-1.5 shadow-card">
+        <h2 className="text-xl font-bold text-gray-700">Respostas</h2>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setFiltersOpen(!filtersOpen)}
+            className={`h-11 w-11 flex items-center justify-center rounded-full transition-colors shadow-sm shrink-0 ${
+              filtersOpen ? 'bg-gray-600 text-white' : 'bg-gray-500 text-white hover:bg-gray-600'
+            }`}
+            title="Filtros"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate(`/forms/${id}/edit`)}
+            className="h-11 w-11 flex items-center justify-center rounded-full bg-gray-200 text-gray-600 hover:bg-gray-300 transition-colors shadow-sm shrink-0"
+            title="Editar Formulário"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowLinkModal(true)}
+            className="h-11 w-11 flex items-center justify-center rounded-full bg-gray-200 text-gray-600 hover:bg-gray-300 transition-colors shadow-sm shrink-0"
+            title="Gerar Link"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={handleNewResponse}
+            className="h-11 w-11 flex items-center justify-center rounded-full bg-brand-700 text-white hover:bg-brand-800 transition-colors shadow-sm shrink-0"
+            title="Nova Resposta"
+          >
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="10" y1="4" x2="10" y2="16" />
+              <line x1="4" y1="10" x2="16" y2="10" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      {/* Espaço fixo + Filtros colapsáveis */}
+      <div className="mt-6" />
+      <FilterBar
+        open={filtersOpen}
+        search={{ value: searchResponses, onChange: setSearchResponses, placeholder: 'Buscar por cliente...' }}
+        date={{
+          startDate,
+          endDate,
+          onStartDateChange: setStartDate,
+          onEndDateChange: setEndDate,
+          onClear: () => { setStartDate(''); setEndDate('') },
+        }}
       />
 
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
-        {/* Page size */}
-        {responses.length > 0 && (
-          <div className="mb-6 flex items-center justify-end">
-            <PageSizeSelector id="page-size-responses" pageSize={pageSize} onChange={changePageSize} />
-          </div>
-        )}
-
-        {responses.length === 0 ? (
+        {filteredResponses.length === 0 ? (
           <EmptyState
             icon={
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-brand-500" strokeLinecap="round" strokeLinejoin="round">
@@ -192,7 +240,13 @@ export default function FormResponseList() {
                 )
               })}
             </div>
-            <Pagination page={paginatedPage} onPageChange={setCurrentPage} />
+            <div className="mt-4 flex items-center justify-center">
+              <div className="flex-1" />
+              <Pagination page={paginatedPage} onPageChange={setCurrentPage} />
+              <div className="flex-1 flex justify-end">
+                <PageSizeSelector pageSize={pageSize} onChange={changePageSize} />
+              </div>
+            </div>
           </>
         )}
       </main>

@@ -14,10 +14,13 @@ import {
   horizontalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import type { ScoreTableData, ScoreTableColumn } from '@/types'
+import { isSlateContent } from '@/types'
+import type { SlateContent } from '@/types'
 import { createEmptyScoreTableRow, createScoreTableColumn } from '@/types'
 import { isFormulaColumn, computeCellResult, cellHasFormula, getCellFormulaText, getFormulaFunctions } from '@/lib/docx-engine/table'
 import { adjustFormulaRefs, isFormula, remapFormulaRefs, indexToLetter } from '@/lib/docx-engine/table'
 import Input from '@/components/ui/Input'
+import PlateEditor, { EMPTY_SLATE_CONTENT } from '@/components/ui/PlateEditor'
 import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
 import { CloseIcon, PlusIcon, AlignIcon } from '@/components/icons'
@@ -125,6 +128,35 @@ export default function ScoreTableBlock({ data, onChange }: ScoreTableBlockProps
   const tableRef = useRef<HTMLTableElement>(null)
   const cursorPosRef = useRef<number | null>(null)
   const modalOpenRef = useRef(false)
+
+  // Column width balancing — wider for text-heavy columns, narrower for numeric
+  const columnWidths = useMemo(() => {
+    const cols = data.columns
+    if (cols.length === 0) return {}
+
+    const weights = cols.map((col) => {
+      let maxLen = col.label.length + 2
+      const hasFormulas = !!col.formula
+      for (const row of data.rows) {
+        const val = row.values[col.id] ?? ''
+        if (isFormula(val)) {
+          hasFormulas || (maxLen = Math.max(maxLen, 28))
+        } else {
+          maxLen = Math.max(maxLen, val.length)
+        }
+      }
+      if (hasFormulas) maxLen = Math.max(maxLen, 28)
+      return Math.max(6, Math.min(50, maxLen))
+    })
+
+    const total = weights.reduce((sum, w) => sum + w, 0)
+    const result: Record<string, string> = {}
+    cols.forEach((col, i) => {
+      const pct = Math.round((weights[i] / total) * 100)
+      result[col.id] = `${Math.max(8, pct)}%`
+    })
+    return result
+  }, [data.columns, data.rows])
 
   // Reset color picker state when cell changes
   useEffect(() => { setCpEditIndex(null); setCpBaseHsl(null); cursorPosRef.current = null }, [editingCellId])
@@ -967,7 +999,8 @@ export default function ScoreTableBlock({ data, onChange }: ScoreTableBlockProps
                 {data.columns.map((_col, idx) => (
                   <th
                     key={`letter-${idx}`}
-                    className="px-3 py-1 text-center text-[10px] font-semibold text-gray-500 min-w-[120px]"
+                    className="px-3 py-1 text-center text-[10px] font-semibold text-gray-500"
+                    style={{ width: columnWidths[data.columns[idx]?.id] }}
                   >
                     {indexToLetter(idx)}
                   </th>
@@ -986,9 +1019,10 @@ export default function ScoreTableBlock({ data, onChange }: ScoreTableBlockProps
                       <SortableTh
                         key={col.id}
                         id={`col-${col.id}`}
-                        className={`px-3 py-2 text-center text-xs font-semibold uppercase tracking-wider text-white min-w-[120px] ${
+                        className={`px-3 py-2 text-center text-xs font-semibold uppercase tracking-wider text-white ${
                           hasFormula ? 'bg-brand-800' : ''
                         }`}
+                        style={{ width: columnWidths[col.id] }}
                       >
                         {editingColumnId === col.id ? (
                           <input
@@ -1099,20 +1133,18 @@ export default function ScoreTableBlock({ data, onChange }: ScoreTableBlockProps
                           )
                         }
 
-                        // Célula inativa com fórmula: mostra resultado calculado (com cor opcional)
+                        // Célula inativa com fórmula: mostra resultado calculado (com cor opcional via ● dot)
                         if (hasFormulaCell && cellResult) {
                           const hasBgColor = !!cellResult.bgColor
                           return (
                             <td
                               key={col.id}
                               className="px-1 py-1"
-                              style={hasBgColor ? { backgroundColor: cellResult.bgColor } : undefined}
                             >
                               <div
                                 className={`w-full px-2 py-1.5 text-sm cursor-pointer rounded flex items-center gap-1 ${alignClass(col)} ${
-                                  hasBgColor ? 'hover:opacity-80' : 'text-gray-700 bg-blue-50 hover:bg-blue-100/50'
+                                  hasBgColor ? 'text-gray-700 hover:bg-gray-50' : 'text-gray-700 bg-blue-50 hover:bg-blue-100/50'
                                 }`}
-                                style={hasBgColor ? { color: cellResult.textColor } : undefined}
                                 onClick={() => setEditingCellId(cellKey)}
                               >
                                 <span className="flex-1">{displayValue || '-'}</span>
@@ -1169,12 +1201,14 @@ export default function ScoreTableBlock({ data, onChange }: ScoreTableBlockProps
         + Adicionar linha
       </Button>
 
-      <Input
-        label="Nota de rodapé"
-        value={data.footnote}
-        onChange={(e) => onChange({ ...data, footnote: e.target.value })}
-        placeholder="Nota de rodapé (opcional)"
-      />
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Nota de rodapé</label>
+        <PlateEditor
+          content={isSlateContent(data.footnote) ? data.footnote : EMPTY_SLATE_CONTENT}
+          onChange={(value: SlateContent) => onChange({ ...data, footnote: value })}
+          placeholder="Nota de rodapé (opcional)"
+        />
+      </div>
 
       {/* Modal salvar como template */}
       <SaveScoreTableTemplateModal
