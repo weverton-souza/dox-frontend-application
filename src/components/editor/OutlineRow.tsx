@@ -62,7 +62,12 @@ function getBlockSummary(block: Block): string {
     }
     case 'references': {
       const d = block.data as ReferencesData
-      const count = d.references.filter((r) => r.trim()).length
+      if (Array.isArray(d.references) && d.references.length > 0 && typeof d.references[0] === 'object' && 'type' in d.references[0]) {
+        const text = slateContentToPlainText(d.references as import('@/types').SlateContent)
+        const count = text.split('\n').filter(l => l.trim()).length
+        return `${count} ${count === 1 ? 'referência' : 'referências'}`
+      }
+      const count = (d.references as string[]).filter((r) => typeof r === 'string' && r.trim()).length
       return `${count} ${count === 1 ? 'referência' : 'referências'}`
     }
     case 'closing-page': {
