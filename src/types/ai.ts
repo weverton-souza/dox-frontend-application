@@ -27,11 +27,17 @@ export interface AiGenerationResponse {
   regenerationLimit: number
 }
 
+export interface SectionInstruction {
+  sectionTitle: string
+  instruction?: string | null
+}
+
 export interface GenerateFullReportRequest {
-  formResponseId?: string
   formResponseIds?: string[]
   quantitativeData?: QuantitativeDataPayload
-  selectedSections?: string[]
+  quantitativeContext?: string
+  includeCustomerData?: boolean
+  selectedSections?: SectionInstruction[]
 }
 
 export interface QuantitativeDataPayload {

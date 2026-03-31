@@ -16,7 +16,8 @@ import {
   regenerateSection as apiRegenerateSection,
   generateFullReport as apiGenerateFullReport,
 } from '@/lib/api/ai-api'
-import { buildQuantitativePayload } from '@/lib/ai-context-builder'
+import type { SectionInstruction } from '@/types'
+import { buildQuantitativePayload, serializeBlocksForAi } from '@/lib/ai-context-builder'
 
 interface UseAiGenerationReturn {
   aiStatus: AiStatusResponse | null
@@ -31,7 +32,10 @@ interface UseAiGenerationReturn {
     formResponseIds: string[],
     blocks: Block[],
     onBlockGenerated: (sectionType: string, text: string, generationId: string) => void,
-    selectedSections?: string[],
+    selectedSections?: SectionInstruction[],
+    dataInstructions?: Record<string, string>,
+    selectedDataBlockIds?: string[],
+    includeCustomerData?: boolean,
   ) => void
   generateSection: (
     reportId: string,
@@ -104,12 +108,39 @@ export function useAiGeneration(): UseAiGenerationReturn {
       formResponseIds: string[],
       blocks: Block[],
       onBlockGenerated: (sectionType: string, text: string, generationId: string) => void,
-      selectedSections?: string[],
+      selectedSections?: SectionInstruction[],
+      dataInstructions?: Record<string, string>,
+      selectedDataBlockIds?: string[],
+      includeCustomerData?: boolean,
     ) => {
       setGenerationStatus('loading')
       setError(null)
 
-      const quantitativeData = buildQuantitativePayload(blocks)
+      const selectedBlocks = selectedDataBlockIds
+        ? blocks.filter(b => (b.type !== 'score-table' && b.type !== 'chart') || selectedDataBlockIds.includes(b.id))
+        : blocks
+      const quantitativeData = buildQuantitativePayload(selectedBlocks)
+      const quantitativeContext = serializeBlocksForAi(selectedBlocks)
+
+      if (dataInstructions && selectedSections) {
+        for (const [blockId, instruction] of Object.entries(dataInstructions)) {
+          if (!instruction) continue
+          const dataBlock = blocks.find(b => b.id === blockId)
+          if (!dataBlock?.parentId) continue
+          const parentBlock = blocks.find(b => b.id === dataBlock.parentId)
+          if (!parentBlock) continue
+          const parentTitle = parentBlock.type === 'info-box'
+            ? (parentBlock.data as { label?: string }).label
+            : (parentBlock.data as { title?: string }).title
+          if (!parentTitle) continue
+          const section = selectedSections.find(s => s.sectionTitle === parentTitle)
+          if (section) {
+            section.instruction = section.instruction
+              ? `${section.instruction}. ${instruction}`
+              : instruction
+          }
+        }
+      }
 
       const newProgress: AiGenerationProgress = {
         currentSection: '',
@@ -122,10 +153,11 @@ export function useAiGeneration(): UseAiGenerationReturn {
       setProgress(newProgress)
 
       const request: GenerateFullReportRequest = {
-        formResponseId: formResponseIds[0],
         formResponseIds,
         quantitativeData,
+        quantitativeContext: quantitativeContext || undefined,
         selectedSections,
+        includeCustomerData: includeCustomerData !== false,
       }
 
       const handle = apiGenerateFullReport(reportId, request, {

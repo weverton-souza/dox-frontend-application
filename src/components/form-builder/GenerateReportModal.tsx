@@ -156,7 +156,7 @@ export default function GenerateReportModal({
 
       const handle = generateFullReport(
         report.id,
-        { formResponseId: response.id, quantitativeData },
+        { formResponseIds: [response.id], quantitativeData },
         {
           onSectionProgress: (event: SectionProgressEvent) => {
             setSections(prev => prev.map(s => {
