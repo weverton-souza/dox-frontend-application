@@ -3,8 +3,8 @@ import type { ReferencesData } from '@/types'
 import type { SlateContent } from '@/types'
 import { slateContentToPlainText } from '@/types'
 import PlateEditor, { EMPTY_SLATE_CONTENT } from '@/components/ui/PlateEditor'
-import { getReferenceEntries } from '@/lib/api/reference-api'
-import type { ReferenceEntry } from '@/lib/api/reference-api'
+import { getContentLibrary } from '@/lib/api/content-library-api'
+import type { ContentLibraryEntry } from '@/lib/api/content-library-api'
 
 interface ReferencesBlockProps {
   data: ReferencesData
@@ -31,15 +31,15 @@ export default function ReferencesBlock({ data, onChange }: ReferencesBlockProps
 
   const [showSearch, setShowSearch] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
-  const [searchResults, setSearchResults] = useState<ReferenceEntry[]>([])
-  const [allEntries, setAllEntries] = useState<ReferenceEntry[]>([])
+  const [searchResults, setSearchResults] = useState<ContentLibraryEntry[]>([])
+  const [allEntries, setAllEntries] = useState<ContentLibraryEntry[]>([])
   const [loadingEntries, setLoadingEntries] = useState(false)
   const searchRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!showSearch) return
     setLoadingEntries(true)
-    getReferenceEntries()
+    getContentLibrary(undefined, 'reference')
       .then(setAllEntries)
       .catch(() => {})
       .finally(() => setLoadingEntries(false))
@@ -53,7 +53,7 @@ export default function ReferencesBlock({ data, onChange }: ReferencesBlockProps
     const q = searchQuery.toLowerCase()
     setSearchResults(
       allEntries.filter(e =>
-        e.text.toLowerCase().includes(q) ||
+        e.title.toLowerCase().includes(q) ||
         e.instrument?.toLowerCase().includes(q) ||
         e.authors?.toLowerCase().includes(q)
       )
@@ -74,17 +74,14 @@ export default function ReferencesBlock({ data, onChange }: ReferencesBlockProps
 
   const plainText = useMemo(() => slateContentToPlainText(slateContent), [slateContent])
 
-  const addFromEntry = useCallback((entry: ReferenceEntry) => {
-    if (plainText.includes(entry.text)) return
-    const newParagraph = {
-      id: Math.random().toString(36).slice(2, 12),
-      type: 'p' as const,
-      children: [{ text: entry.text }],
-    }
+  const addFromEntry = useCallback((entry: ContentLibraryEntry) => {
+    const entryNodes = entry.content as SlateContent
+    const entryText = slateContentToPlainText(entryNodes).trim()
+    if (plainText.includes(entryText)) return
     const isCurrentlyEmpty = slateContentToPlainText(slateContent).trim() === ''
     const updatedContent: SlateContent = isCurrentlyEmpty
-      ? [newParagraph]
-      : [...slateContent, newParagraph]
+      ? entryNodes
+      : [...slateContent, ...entryNodes]
     onChange({ ...data, references: updatedContent })
   }, [data, onChange, slateContent, plainText])
 
@@ -135,7 +132,8 @@ export default function ReferencesBlock({ data, onChange }: ReferencesBlockProps
                 <div className="px-4 py-3 text-[13px] text-gray-400">Nenhuma referência encontrada</div>
               ) : (
                 searchResults.map(entry => {
-                  const alreadyAdded = plainText.includes(entry.text)
+                  const entryPlainText = slateContentToPlainText(entry.content as SlateContent).trim()
+                  const alreadyAdded = plainText.includes(entryPlainText)
                   return (
                     <button
                       key={entry.id}
@@ -161,7 +159,7 @@ export default function ReferencesBlock({ data, onChange }: ReferencesBlockProps
                         </div>
                         <div className="flex-1 min-w-0">
                           <span className={`text-[13px] leading-snug block ${alreadyAdded ? 'text-brand-700' : 'text-gray-700'}`}>
-                            {entry.text}
+                            {entryPlainText}
                           </span>
                           <div className="flex items-center gap-2 mt-1">
                             {entry.instrument && (
