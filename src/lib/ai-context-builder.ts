@@ -8,6 +8,7 @@ import type {
   ComputedChartData,
   ComputedChartSeries,
 } from '@/types'
+import { isSlateContent, slateContentToPlainText } from '@/types'
 import { computeCellDisplayValue, isFormulaColumn } from '@/lib/docx-engine/table/formula-engine'
 import { isFormula } from '@/lib/docx-engine/table/formula-engine'
 
@@ -180,4 +181,84 @@ export function countAnsweredFields(
     total: totalFields,
     percentage: totalFields > 0 ? Math.round((answered / totalFields) * 100) : 0,
   }
+}
+
+export function serializeBlocksForAi(blocks: Block[]): string {
+  const parts: string[] = []
+
+  for (const block of blocks) {
+    if (block.type === 'score-table') {
+      const data = block.data as ScoreTableData
+      if (classifyTableData(data) === 'empty') continue
+      parts.push(serializeTable(data))
+    } else if (block.type === 'chart') {
+      const data = block.data as ChartData
+      if (classifyChartData(data) === 'empty') continue
+      parts.push(serializeChart(data))
+    }
+  }
+
+  return parts.join('\n\n')
+}
+
+function serializeTable(data: ScoreTableData): string {
+  const lines: string[] = []
+  const labelCol = data.columns[0]
+
+  lines.push(`${data.title || 'Tabela sem título'}:`)
+
+  for (const row of data.rows) {
+    const label = row.values[labelCol?.id] ?? ''
+    if (!label) continue
+
+    const vals: string[] = []
+    for (const col of data.columns) {
+      if (col.id === labelCol?.id) continue
+      const displayValue = computeCellDisplayValue(data, row.id, col.id)
+      if (displayValue) {
+        vals.push(`${col.label}=${displayValue}`)
+      }
+    }
+
+    if (vals.length > 0) {
+      lines.push(`  ${label}: ${vals.join(', ')}`)
+    }
+  }
+
+  const footnoteText = extractFootnoteText(data.footnote)
+  if (footnoteText) {
+    lines.push(`  Nota: ${footnoteText}`)
+  }
+
+  return lines.join('\n')
+}
+
+function serializeChart(data: ChartData): string {
+  const lines: string[] = []
+
+  lines.push(`${data.title || 'Gráfico sem título'}:`)
+
+  for (const series of data.series) {
+    const vals: string[] = []
+    for (const cat of data.categories) {
+      const val = cat.values[series.id]
+      if (val !== undefined && val !== 0) {
+        vals.push(`${cat.label}=${val}`)
+      }
+    }
+    if (vals.length > 0) {
+      lines.push(`  ${series.label}: ${vals.join(', ')}`)
+    }
+  }
+
+  return lines.join('\n')
+}
+
+function extractFootnoteText(footnote: unknown): string {
+  if (!footnote) return ''
+  if (typeof footnote === 'string') return footnote.trim()
+  if (Array.isArray(footnote) && isSlateContent(footnote)) {
+    return slateContentToPlainText(footnote).trim()
+  }
+  return ''
 }

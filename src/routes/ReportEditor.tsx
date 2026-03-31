@@ -34,6 +34,7 @@ import AiFinalizationModal from '@/components/ai/AiFinalizationModal'
 import AiUsageDashboard from '@/components/ai/AiUsageDashboard'
 import AiSectionChecklist from '@/components/ai/AiSectionChecklist'
 import type { ReviewSectionConfig } from '@/components/ai/AiSectionChecklist'
+import type { SectionInstruction } from '@/types'
 import { reviewText as reviewTextApi } from '@/lib/api/ai-api'
 import AiReviewModal from '@/components/ai/AiReviewModal'
 
@@ -343,16 +344,20 @@ export default function ReportEditor() {
   }, [report, id])
 
   const [isReviewing, setIsReviewing] = useState(false)
+  const [generatingSectionNames, setGeneratingSectionNames] = useState<string[]>([])
+  const [versionFeedback, setVersionFeedback] = useState<{ type: 'success' | 'info'; message: string } | null>(null)
 
-  const handleConfirmGeneration = useCallback(async (selectedSections: string[], formResponseIds: string[], reviewSections?: ReviewSectionConfig[]) => {
+  const handleConfirmGeneration = useCallback(async (selectedSections: SectionInstruction[], formResponseIds: string[], reviewSections?: ReviewSectionConfig[], dataInstructions?: Record<string, string>, selectedDataBlockIds?: string[], includeCustomerData?: boolean) => {
     if (!report || !id) return
 
     const reviewTitles = new Set(reviewSections?.map(r => r.sectionTitle) || [])
-    const generateSections = selectedSections.filter(s => !reviewTitles.has(s))
+    const generateSections = selectedSections.filter(s => !reviewTitles.has(s.sectionTitle))
     const hasGenerate = generateSections.length > 0
     const hasReview = reviewSections && reviewSections.length > 0
 
     if (hasGenerate) {
+      await createSnapshot('Antes da redação com Assistente')
+      setGeneratingSectionNames(generateSections.map(s => s.sectionTitle))
       updateAiModals({ showSectionChecklist: false })
       ai.generateFullReport(
         id,
@@ -360,6 +365,9 @@ export default function ReportEditor() {
         report.blocks,
         () => {},
         generateSections,
+        dataInstructions,
+        selectedDataBlockIds,
+        includeCustomerData,
       )
     }
 
@@ -451,6 +459,7 @@ export default function ReportEditor() {
   const warningCount = report?.blocks.filter(b => b.skippedByAi).length ?? 0
 
   const sectionNamesForOverlay = useMemo(() => {
+    if (generatingSectionNames.length > 0) return generatingSectionNames
     if (!report) return []
     return report.blocks
       .filter(b => b.type === 'section' || b.type === 'info-box')
@@ -459,17 +468,16 @@ export default function ReportEditor() {
         const d = b.data as { title?: string; label?: string }
         return d.title || d.label || 'Seção'
       })
-  }, [report])
+  }, [report, generatingSectionNames])
 
   const handleRestoreVersion = useCallback(
     (version: ReportVersion) => {
-      createSnapshot('Estado antes de restaurar versão')
       handleUpdateReport({
         customerName: version.customerName,
         blocks: JSON.parse(JSON.stringify(version.blocks)),
       })
     },
-    [createSnapshot, handleUpdateReport]
+    [handleUpdateReport]
   )
 
   const handleOpenVersionHistory = useCallback(() => {
@@ -716,7 +724,15 @@ export default function ReportEditor() {
         <div className="hidden lg:flex shrink-0 w-12 pt-12">
           <div className="sticky top-28 h-fit z-30">
             <EditorFloatingToolbar
-              onSaveVersion={createManualSnapshot}
+              onSaveVersion={async () => {
+                const created = await createManualSnapshot()
+                if (created) {
+                  setVersionFeedback({ type: 'success', message: 'Versão salva com sucesso' })
+                } else {
+                  setVersionFeedback({ type: 'info', message: 'Sem alterações desde a última versão' })
+                }
+                setTimeout(() => setVersionFeedback(null), 3000)
+              }}
               onOpenVersionHistory={handleOpenVersionHistory}
               onSaveAsTemplate={() => updateTemplateModal({ showSaveTemplate: true })}
               onTogglePreview={() => setShowDocxPreview((v) => !v)}
@@ -1031,6 +1047,29 @@ export default function ReportEditor() {
         limit={ai.usageSummary?.limit ?? 0}
         warningCount={warningCount}
       />
+
+      {/* Version feedback modal */}
+      <Modal isOpen={!!versionFeedback} onClose={() => setVersionFeedback(null)} title="" size="sm">
+        <div className="px-5 pb-5 pt-2 text-center">
+          <div className={`inline-flex items-center justify-center w-12 h-12 rounded-full mb-3 ${
+            versionFeedback?.type === 'success' ? 'bg-emerald-50' : 'bg-amber-50'
+          }`}>
+            {versionFeedback?.type === 'success' ? (
+              <svg className="w-6 h-6 text-emerald-500" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+            ) : (
+              <svg className="w-6 h-6 text-amber-500" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+              </svg>
+            )}
+          </div>
+          <p className="text-[15px] font-medium text-gray-900">{versionFeedback?.message}</p>
+          <Button onClick={() => setVersionFeedback(null)} className="mt-4 w-full">
+            OK
+          </Button>
+        </div>
+      </Modal>
 
     </div>
   )

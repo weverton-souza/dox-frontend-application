@@ -20,17 +20,29 @@ export function useVersioning(
   }, [report, onError])
 
   const createSnapshot = useCallback(
-    async (description: string) => {
-      if (!report) return
+    async (description: string, skipDuplicateCheck = false): Promise<boolean> => {
+      if (!report) return false
+
+      if (!skipDuplicateCheck && versions.length > 0) {
+        const latestVersion = versions[0]
+        const currentBlocksJson = JSON.stringify(report.blocks)
+        const latestBlocksJson = JSON.stringify(latestVersion.blocks)
+        if (currentBlocksJson === latestBlocksJson) {
+          return false
+        }
+      }
+
       try {
         await createReportVersion(report.id, { description })
         const v = await getReportVersions(report.id)
         setVersions(v)
+        return true
       } catch (err) {
         onError?.(err)
+        return false
       }
     },
-    [report, onError]
+    [report, versions, onError]
   )
 
   const createStatusChangeSnapshot = useCallback(
@@ -47,8 +59,9 @@ export function useVersioning(
     [createSnapshot]
   )
 
-  const createManualSnapshot = useCallback(() => {
-    createSnapshot('Versão salva manualmente')
+  const createManualSnapshot = useCallback(async (): Promise<boolean> => {
+    const created = await createSnapshot('Versão salva manualmente')
+    return created
   }, [createSnapshot])
 
   return {

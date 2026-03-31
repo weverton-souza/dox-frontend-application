@@ -1,13 +1,14 @@
-import { useState, useEffect, useMemo } from 'react'
-import type { Block, SectionData, InfoBoxData, TextBlockData, FormResponse, ReviewAction } from '@/types'
+import { useState, useEffect, useMemo, useRef } from 'react'
+import type { Block, SectionData, InfoBoxData, TextBlockData, ScoreTableData, ChartData, FormResponse, ReviewAction, SectionInstruction } from '@/types'
 import { FORM_RESPONSE_STATUS_LABELS, FORM_RESPONSE_STATUS_COLORS, isSlateContent, slateContentToPlainText } from '@/types'
 import { getFormResponsesByCustomerId } from '@/lib/api/form-api'
 import { getForms } from '@/lib/api/form-api'
+import { classifyTableData, classifyChartData } from '@/lib/ai-context-builder'
 import { formatDateTime } from '@/lib/utils'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import AiSparkleIcon from '@/components/ai/AiSparkleIcon'
-import { CheckIcon } from '@/components/icons'
+import { CheckIcon, EditIcon } from '@/components/icons'
 
 type SectionStatus = 'empty' | 'ai-generated' | 'skipped' | 'has-content'
 
@@ -24,7 +25,7 @@ export interface ReviewSectionConfig {
 interface AiSectionChecklistProps {
   isOpen: boolean
   onClose: () => void
-  onConfirm: (selectedSections: string[], formResponseIds: string[], reviewSections?: ReviewSectionConfig[]) => void
+  onConfirm: (selectedSections: SectionInstruction[], formResponseIds: string[], reviewSections?: ReviewSectionConfig[], dataInstructions?: Record<string, string>, selectedDataBlockIds?: string[], includeCustomerData?: boolean) => void
   blocks: Block[]
   loading?: boolean
   customerId?: string | null
@@ -80,7 +81,7 @@ export default function AiSectionChecklist({ isOpen, onClose, onConfirm, blocks,
   const [selected, setSelected] = useState<Set<string>>(() => {
     const initial = new Set<string>()
     sections.forEach(s => {
-      if (s.status === 'empty') initial.add(s.title)
+      if (s.status === 'empty' || s.status === 'skipped' || s.status === 'ai-generated') initial.add(s.title)
     })
     return initial
   })
@@ -89,6 +90,64 @@ export default function AiSectionChecklist({ isOpen, onClose, onConfirm, blocks,
   const [formTitles, setFormTitles] = useState<Record<string, string>>({})
   const [selectedFormResponseIds, setSelectedFormResponseIds] = useState<Set<string>>(new Set())
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set())
+  const [includeCustomerData, setIncludeCustomerData] = useState(true)
+  const [sectionInstructions, setSectionInstructions] = useState<Record<string, string>>({})
+  const [instructionPopover, setInstructionPopover] = useState<string | null>(null)
+  const [instructionDraft, setInstructionDraft] = useState('')
+  const popoverRef = useRef<HTMLDivElement>(null)
+
+  interface QuantitativeItem {
+    blockId: string
+    title: string
+    type: 'table' | 'chart'
+    icon: string
+  }
+
+  const sectionBlocks = useMemo(() => {
+    return blocks
+      .filter(b => b.type === 'section' || b.type === 'info-box')
+      .sort((a, b) => a.order - b.order)
+  }, [blocks])
+
+  const quantitativeItemsBySection = useMemo<Record<string, QuantitativeItem[]>>(() => {
+    const map: Record<string, QuantitativeItem[]> = {}
+    for (const sectionBlock of sectionBlocks) {
+      const sectionTitle = getSectionTitle(sectionBlock)
+      const children = blocks.filter(b => b.parentId === sectionBlock.id)
+      const items: QuantitativeItem[] = []
+      for (const child of children) {
+        if (child.type === 'score-table') {
+          const data = child.data as ScoreTableData
+          if (classifyTableData(data) !== 'empty') {
+            items.push({ blockId: child.id, title: data.title || 'Tabela sem título', type: 'table', icon: '📊' })
+          }
+        } else if (child.type === 'chart') {
+          const data = child.data as ChartData
+          if (classifyChartData(data) !== 'empty') {
+            items.push({ blockId: child.id, title: data.title || 'Gráfico sem título', type: 'chart', icon: '📈' })
+          }
+        }
+      }
+      if (items.length > 0) map[sectionTitle] = items
+    }
+    return map
+  }, [blocks, sectionBlocks])
+
+  const allQuantitativeItems = useMemo(() => {
+    return Object.values(quantitativeItemsBySection).flat()
+  }, [quantitativeItemsBySection])
+
+  const [dataInstructions, setDataInstructions] = useState<Record<string, string>>({})
+  const [selectedDataIds, setSelectedDataIds] = useState<Set<string>>(() => new Set(allQuantitativeItems.map(q => q.blockId)))
+
+  const toggleDataItem = (blockId: string) => {
+    setSelectedDataIds(prev => {
+      const next = new Set(prev)
+      if (next.has(blockId)) next.delete(blockId)
+      else next.add(blockId)
+      return next
+    })
+  }
 
   useEffect(() => {
     if (isOpen && customerId) {
@@ -136,6 +195,53 @@ export default function AiSectionChecklist({ isOpen, onClose, onConfirm, blocks,
       return next
     })
   }
+
+  const openInstructionPopover = (key: string, e: React.MouseEvent, isData = false) => {
+    e.stopPropagation()
+    const source = isData ? dataInstructions : sectionInstructions
+    setInstructionDraft(source[key] || '')
+    setInstructionPopover(isData ? `data:${key}` : key)
+  }
+
+  const saveInstruction = () => {
+    if (!instructionPopover) return
+    const trimmed = instructionDraft.trim()
+    const isData = instructionPopover.startsWith('data:')
+    const key = isData ? instructionPopover.slice(5) : instructionPopover
+    const setter = isData ? setDataInstructions : setSectionInstructions
+    setter(prev => {
+      const next = { ...prev }
+      if (trimmed) next[key] = trimmed
+      else delete next[key]
+      return next
+    })
+    setInstructionPopover(null)
+  }
+
+  const clearInstruction = () => {
+    if (!instructionPopover) return
+    const isData = instructionPopover.startsWith('data:')
+    const key = isData ? instructionPopover.slice(5) : instructionPopover
+    const setter = isData ? setDataInstructions : setSectionInstructions
+    setter(prev => {
+      const next = { ...prev }
+      delete next[key]
+      return next
+    })
+    setInstructionDraft('')
+    setInstructionPopover(null)
+  }
+
+  useEffect(() => {
+    if (!instructionPopover) return
+    function handleClickOutside(e: MouseEvent) {
+      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
+        setInstructionPopover(null)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [instructionPopover])
 
   const selectAll = () => setSelected(new Set(sections.map(s => s.title)))
   const deselectAll = () => setSelected(new Set())
@@ -201,6 +307,8 @@ export default function AiSectionChecklist({ isOpen, onClose, onConfirm, blocks,
             const isExpanded = expandedSections.has(section.title)
             const isFirst = idx === 0
             const isLast = idx === sections.length - 1
+            const hasInstruction = !!sectionInstructions[section.title]
+            const isPopoverOpen = instructionPopover === section.title
 
             return (
               <div key={section.title}>
@@ -225,6 +333,58 @@ export default function AiSectionChecklist({ isOpen, onClose, onConfirm, blocks,
                     {section.title}
                   </span>
 
+                  {/* Instruction icon */}
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={(e) => openInstructionPopover(section.title, e)}
+                      className={`p-1 rounded-lg transition-colors shrink-0 ${
+                        hasInstruction
+                          ? 'text-brand-500 hover:text-brand-600 hover:bg-brand-50'
+                          : 'text-gray-300 hover:text-gray-500 hover:bg-gray-100'
+                      }`}
+                      title={hasInstruction ? 'Editar instrução' : 'Adicionar instrução'}
+                    >
+                      <EditIcon className="w-4 h-4" />
+                    </button>
+
+                    {/* Instruction popover */}
+                    {isPopoverOpen && (
+                      <div
+                        ref={popoverRef}
+                        className="absolute right-0 top-8 z-50 w-72 bg-white rounded-xl border border-gray-200 shadow-dropdown p-3"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <span className="text-[12px] font-medium text-gray-500 block mb-2">
+                          {section.title}
+                        </span>
+                        <textarea
+                          value={instructionDraft}
+                          onChange={(e) => setInstructionDraft(e.target.value)}
+                          placeholder="Instruções para o Assistente nesta seção..."
+                          className="w-full h-20 text-[13px] text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 placeholder:text-gray-400"
+                          autoFocus
+                        />
+                        <div className="flex justify-end gap-2 mt-2">
+                          <button
+                            type="button"
+                            onClick={clearInstruction}
+                            className="text-[12px] text-gray-400 hover:text-gray-600 px-2 py-1"
+                          >
+                            Limpar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={saveInstruction}
+                            className="text-[12px] text-brand-600 hover:text-brand-700 font-medium px-2 py-1"
+                          >
+                            OK
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                   {/* Status pill */}
                   {!isExpanded && (
                     <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${status.bg} ${status.text_color}`}>
@@ -243,6 +403,16 @@ export default function AiSectionChecklist({ isOpen, onClose, onConfirm, blocks,
                     </button>
                   )}
                 </div>
+
+                {/* Manual content warning */}
+                {isChecked && section.status === 'has-content' && (
+                  <div className="flex items-center gap-2 mx-4 mb-2 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg text-[11px] text-amber-700">
+                    <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                    Esta seção contém texto manual que será substituído
+                  </div>
+                )}
 
                 {/* Expanded: review actions + data sources */}
                 {isExpanded && (
@@ -284,12 +454,39 @@ export default function AiSectionChecklist({ isOpen, onClose, onConfirm, blocks,
                     )}
 
                     {/* Data sources */}
-                    {hasFormResponses && (
+                    {(customerId || hasFormResponses || (quantitativeItemsBySection[section.title] || []).length > 0) && (
                       <>
                     <span className="text-[11px] text-gray-400 font-medium uppercase tracking-wide">
                       Fontes de dados
                     </span>
                     <div className="mt-1.5 space-y-1">
+                      {/* Customer data toggle */}
+                      {customerId && (
+                        <div
+                          className={`flex items-center gap-2.5 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
+                            includeCustomerData ? 'bg-white shadow-sm' : 'hover:bg-white/60'
+                          }`}
+                          onClick={() => setIncludeCustomerData(prev => !prev)}
+                        >
+                          <div className={`w-[18px] h-[18px] rounded-full flex items-center justify-center shrink-0 transition-colors ${
+                            includeCustomerData ? 'bg-emerald-500' : 'border-[1.5px] border-gray-300'
+                          }`}>
+                            {includeCustomerData && (
+                              <svg width="10" height="10" viewBox="0 0 20 20" fill="white">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            )}
+                          </div>
+                          <span className="text-[14px] shrink-0">👤</span>
+                          <span className={`text-[13px] flex-1 ${includeCustomerData ? 'text-gray-800' : 'text-gray-500'}`}>
+                            Dados do cliente
+                          </span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-gray-100 text-gray-500">
+                            Cadastro
+                          </span>
+                        </div>
+                      )}
+
                       {formResponses.map(response => {
                         const isSourceChecked = selectedFormResponseIds.has(response.id)
                         const formTitle = formTitles[response.formId] || 'Formulário'
@@ -324,6 +521,81 @@ export default function AiSectionChecklist({ isOpen, onClose, onConfirm, blocks,
                           </div>
                         )
                       })}
+
+                      {/* Quantitative data items for this section */}
+                      {(quantitativeItemsBySection[section.title] || []).map(item => {
+                        const isDataChecked = selectedDataIds.has(item.blockId)
+                        const hasDataInstruction = !!dataInstructions[item.blockId]
+                        const isDataPopoverOpen = instructionPopover === `data:${item.blockId}`
+
+                        return (
+                          <div
+                            key={item.blockId}
+                            className={`flex items-center gap-2.5 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
+                              isDataChecked ? 'bg-white shadow-sm' : 'hover:bg-white/60'
+                            }`}
+                            onClick={() => toggleDataItem(item.blockId)}
+                          >
+                            <div className={`w-[18px] h-[18px] rounded-full flex items-center justify-center shrink-0 transition-colors ${
+                              isDataChecked ? 'bg-emerald-500' : 'border-[1.5px] border-gray-300'
+                            }`}>
+                              {isDataChecked && (
+                                <svg width="10" height="10" viewBox="0 0 20 20" fill="white">
+                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                </svg>
+                              )}
+                            </div>
+                            <span className="text-[14px] shrink-0">{item.icon}</span>
+                            <span className={`text-[13px] flex-1 ${isDataChecked ? 'text-gray-800' : 'text-gray-500'}`}>
+                              {item.title}
+                            </span>
+                            <div className="relative">
+                              <button
+                                type="button"
+                                onClick={(e) => openInstructionPopover(item.blockId, e, true)}
+                                className={`p-1 rounded-lg transition-colors shrink-0 ${
+                                  hasDataInstruction
+                                    ? 'text-brand-500 hover:text-brand-600 hover:bg-brand-50'
+                                    : 'text-gray-300 hover:text-gray-500 hover:bg-gray-100'
+                                }`}
+                                title={hasDataInstruction ? 'Editar instrução' : 'Adicionar instrução'}
+                              >
+                                <EditIcon className="w-3.5 h-3.5" />
+                              </button>
+
+                              {isDataPopoverOpen && (
+                                <div
+                                  ref={popoverRef}
+                                  className="absolute right-0 top-8 z-50 w-72 bg-white rounded-xl border border-gray-200 shadow-dropdown p-3"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <span className="text-[12px] font-medium text-gray-500 block mb-2">
+                                    {item.icon} {item.title}
+                                  </span>
+                                  <textarea
+                                    value={instructionDraft}
+                                    onChange={(e) => setInstructionDraft(e.target.value)}
+                                    placeholder="Ex: Foque na discrepância entre QIV e QIE..."
+                                    className="w-full h-20 text-[13px] text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 placeholder:text-gray-400"
+                                    autoFocus
+                                  />
+                                  <div className="flex justify-end gap-2 mt-2">
+                                    <button type="button" onClick={clearInstruction} className="text-[12px] text-gray-400 hover:text-gray-600 px-2 py-1">
+                                      Limpar
+                                    </button>
+                                    <button type="button" onClick={saveInstruction} className="text-[12px] text-brand-600 hover:text-brand-700 font-medium px-2 py-1">
+                                      OK
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${item.type === 'table' ? 'bg-amber-50 text-amber-600' : 'bg-rose-50 text-rose-600'}`}>
+                              {item.type === 'table' ? 'Tabela' : 'Gráfico'}
+                            </span>
+                          </div>
+                        )
+                      })}
                     </div>
                       </>
                     )}
@@ -335,13 +607,17 @@ export default function AiSectionChecklist({ isOpen, onClose, onConfirm, blocks,
         </div>
 
         {/* Source count footer */}
-        {hasFormResponses && (
+        {(hasFormResponses || allQuantitativeItems.length > 0) && (
           <div className="flex items-center gap-2 mt-3 px-1">
             <svg className="w-3.5 h-3.5 text-gray-300" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
             </svg>
             <span className="text-[12px] text-gray-400">
-              {selectedSourceCount} {selectedSourceCount === 1 ? 'fonte selecionada' : 'fontes selecionadas'}
+              {selectedSourceCount} {selectedSourceCount === 1 ? 'formulário' : 'formulários'}
+              {allQuantitativeItems.length > 0 && (() => {
+                const selectedCount = allQuantitativeItems.filter(q => selectedDataIds.has(q.blockId)).length
+                return ` · ${selectedCount}/${allQuantitativeItems.length} dados quantitativos`
+              })()}
             </span>
           </div>
         )}
@@ -364,8 +640,13 @@ export default function AiSectionChecklist({ isOpen, onClose, onConfirm, blocks,
           <Button
             onClick={() => {
               const reviewConfigs: ReviewSectionConfig[] = []
+              const sectionInstructionList: SectionInstruction[] = []
               selected.forEach(title => {
                 const section = sections.find(s => s.title === title)
+                sectionInstructionList.push({
+                  sectionTitle: title,
+                  instruction: sectionInstructions[title] || null,
+                })
                 if (section && (section.status === 'has-content' || section.status === 'ai-generated')) {
                   reviewConfigs.push({
                     sectionTitle: title,
@@ -373,10 +654,14 @@ export default function AiSectionChecklist({ isOpen, onClose, onConfirm, blocks,
                   })
                 }
               })
+              const hasDataInstructions = Object.keys(dataInstructions).length > 0
               onConfirm(
-                Array.from(selected),
+                sectionInstructionList,
                 Array.from(selectedFormResponseIds),
                 reviewConfigs.length > 0 ? reviewConfigs : undefined,
+                hasDataInstructions ? dataInstructions : undefined,
+                Array.from(selectedDataIds),
+                includeCustomerData,
               )
             }}
             disabled={selected.size === 0 || loading}
