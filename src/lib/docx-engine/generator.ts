@@ -1253,30 +1253,45 @@ async function renderChart(data: ChartData): Promise<(Paragraph | Table)[]> {
 function renderReferences(data: ReferencesData): Paragraph[] {
   const elements: Paragraph[] = []
 
-  if (data.title) {
-    elements.push(createSectionHeader(data.title.toUpperCase()))
-  }
+  const useHangingIndent = data.hangingIndent !== false
+  const abntIndent = useHangingIndent ? { left: 720, hanging: 720 } : undefined
+  const refs = data.references
 
-  // Each reference with ABNT hanging indent
-  for (const ref of data.references) {
-    if (!ref.trim()) continue
-    elements.push(
-      new Paragraph({
-        spacing: { after: 120 },
-        alignment: AlignmentType.LEFT,
-        indent: {
-          left: 720,     // 720 twips = 1.27cm total left margin
-          hanging: 720,  // first line goes back to margin = hanging indent
-        },
-        children: [
-          new TextRun({
-            text: ref,
-            size: 22,
-            font: 'Calibri',
-          }),
-        ],
-      })
-    )
+  if (Array.isArray(refs) && refs.length > 0 && typeof refs[0] === 'object' && refs[0] !== null && 'type' in refs[0]) {
+    for (const node of refs as SlateContent) {
+      if (node.type === 'p' && Array.isArray(node.children)) {
+        const hasText = node.children.some(child => typeof child.text === 'string' && child.text.trim())
+        if (!hasText) continue
+        const runs: TextRun[] = []
+        for (const child of node.children) {
+          if (typeof child.text === 'string') {
+            runs.push(slateLeafToTextRun(child))
+          }
+        }
+        elements.push(
+          new Paragraph({
+            spacing: { after: 120 },
+            alignment: AlignmentType.LEFT,
+            indent: abntIndent,
+            children: runs,
+          })
+        )
+      }
+    }
+  } else if (Array.isArray(refs)) {
+    for (const ref of refs) {
+      if (typeof ref !== 'string' || !ref.trim()) continue
+      elements.push(
+        new Paragraph({
+          spacing: { after: 120 },
+          alignment: AlignmentType.LEFT,
+          indent: abntIndent,
+          children: [
+            new TextRun({ text: ref, size: 22, font: 'Calibri' }),
+          ],
+        })
+      )
+    }
   }
 
   return elements

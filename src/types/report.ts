@@ -173,7 +173,8 @@ export interface ChartData {
 
 export interface ReferencesData {
   title: string
-  references: string[]
+  references: string[] | SlateContent
+  hangingIndent?: boolean
 }
 
 // ========== Closing Page ==========
