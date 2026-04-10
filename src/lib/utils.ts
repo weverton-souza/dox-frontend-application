@@ -131,6 +131,21 @@ export function formatDate(dateStr: string): string {
   }
 }
 
+export function calculateAge(birthDateStr: string): string {
+  if (!birthDateStr) return ''
+  const birth = new Date(birthDateStr + 'T00:00:00')
+  if (isNaN(birth.getTime())) return ''
+  const today = new Date()
+  let years = today.getFullYear() - birth.getFullYear()
+  let months = today.getMonth() - birth.getMonth()
+  if (today.getDate() < birth.getDate()) months--
+  if (months < 0) { years--; months += 12 }
+  if (years <= 0 && months <= 0) return ''
+  if (years === 0) return `${months} ${months === 1 ? 'mês' : 'meses'}`
+  if (months === 0) return `${years} ${years === 1 ? 'ano' : 'anos'}`
+  return `${years} ${years === 1 ? 'ano' : 'anos'} e ${months} ${months === 1 ? 'mês' : 'meses'}`
+}
+
 export function formatDateTime(dateStr: string): string {
   if (!dateStr) return ''
   try {

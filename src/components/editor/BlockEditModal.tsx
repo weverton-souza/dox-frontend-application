@@ -256,6 +256,7 @@ export default function BlockEditModal({
         icon: getBlockTypeIcon(block.type, 18),
       }}
       footer={footer}
+      dismissable={false}
     >
       <BlockErrorBoundary blockType={block.type}>
         {renderContent()}

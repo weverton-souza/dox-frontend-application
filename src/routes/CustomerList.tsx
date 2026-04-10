@@ -4,7 +4,8 @@ import type { Customer, CustomerData, Report, Page } from '@/types'
 import { createEmptyCustomer } from '@/types'
 import { getCustomers, createCustomer, updateCustomer, deleteCustomer } from '@/lib/api/customer-api'
 import { getReports } from '@/lib/api/report-api'
-import { formatDateTime } from '@/lib/utils'
+import { formatDateTime, calculateAge } from '@/lib/utils'
+import { applyMask } from '@/lib/masks'
 import { useConfirmDelete } from '@/lib/hooks/use-confirm-delete'
 import { useCreateReport } from '@/lib/hooks/use-create-report'
 import { useError } from '@/contexts/ErrorContext'
@@ -123,13 +124,12 @@ export default function CustomerList() {
 
   const updateEditingField = useCallback(
     (field: keyof CustomerData, value: string) => {
-      if (!editingCustomer) return
-      setEditingCustomer({
-        ...editingCustomer,
-        data: { ...editingCustomer.data, [field]: value },
+      setEditingCustomer((prev) => {
+        if (!prev) return prev
+        return { ...prev, data: { ...prev.data, [field]: value } }
       })
     },
-    [editingCustomer]
+    []
   )
 
   return (
@@ -228,7 +228,7 @@ export default function CustomerList() {
                     title={customer.data.name || 'Cliente sem nome'}
                     pills={
                       <>
-                        {customer.data.cpf && <ListCardPill>{customer.data.cpf}</ListCardPill>}
+                        {customer.data.cpf && <ListCardPill>{applyMask(customer.data.cpf, 'cpf')}</ListCardPill>}
                         {customer.data.age && <ListCardPill>{customer.data.age}</ListCardPill>}
                         <ListCardPill>Atualizado {formatDateTime(customer.updatedAt)}</ListCardPill>
                       </>
@@ -330,19 +330,20 @@ export default function CustomerList() {
                 label="CPF"
                 value={editingCustomer.data.cpf}
                 onChange={(e) => updateEditingField('cpf', e.target.value)}
-                placeholder="000.000.000-00"
+                mask="cpf"
               />
               <Input
                 label="Data de Nascimento"
                 type="date"
                 value={editingCustomer.data.birthDate}
-                onChange={(e) => updateEditingField('birthDate', e.target.value)}
+                onChange={(e) => { updateEditingField('birthDate', e.target.value); updateEditingField('age', calculateAge(e.target.value)) }}
               />
               <Input
                 label="Idade"
                 value={editingCustomer.data.age}
                 onChange={(e) => updateEditingField('age', e.target.value)}
                 placeholder="Ex: 32 anos e 4 meses"
+                readOnly
               />
               <Input
                 label="Escolaridade"

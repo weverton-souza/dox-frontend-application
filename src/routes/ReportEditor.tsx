@@ -81,6 +81,7 @@ export default function ReportEditor() {
 
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set())
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null)
+  const [pendingNewBlock, setPendingNewBlock] = useState<{ block: Block; afterBlockId: string | null } | null>(null)
   const [customers, setCustomers] = useState<Customer[]>([])
   const [showVersionHistory, setShowVersionHistory] = useState(false)
   const [showDocxPreview, setShowDocxPreview] = useState(false)
@@ -194,8 +195,6 @@ export default function ReportEditor() {
     (type: BlockType, templateId?: string) => {
       if (!report) return
 
-      const sorted = [...report.blocks].sort((a, b) => a.order - b.order)
-
       const newBlock = createBlock(type, 0, undefined, blockSelector.insertParentId)
 
       // Subseção: usar título contextual quando criado dentro de outra seção
@@ -219,6 +218,15 @@ export default function ReportEditor() {
         }
       }
 
+      // Tabelas e gráficos: defer — só adiciona ao relatório quando salvar no modal
+      if (type === 'score-table' || type === 'chart') {
+        setPendingNewBlock({ block: newBlock, afterBlockId: blockSelector.insertAfterBlockId })
+        updateBlockSelector({ insertAfterBlockId: null, insertParentId: null })
+        return
+      }
+
+      const sorted = [...report.blocks].sort((a, b) => a.order - b.order)
+
       let newBlocks: Block[]
       if (blockSelector.insertAfterBlockId) {
         const afterIndex = sorted.findIndex((b) => b.id === blockSelector.insertAfterBlockId)
@@ -234,11 +242,6 @@ export default function ReportEditor() {
 
       updateBlockSelector({ insertAfterBlockId: null, insertParentId: null })
       handleUpdateReport({ blocks: newBlocks })
-
-      // Abrir edição automaticamente para tabelas e gráficos
-      if (type === 'score-table' || type === 'chart') {
-        setEditingBlockId(newBlock.id)
-      }
     },
     [report, handleUpdateReport, blockSelector.insertAfterBlockId, blockSelector.insertParentId, scoreTableTemplates, chartTemplatesState]
   )
@@ -542,11 +545,12 @@ export default function ReportEditor() {
     return meta?.section || undefined
   }, [blockSelector.insertAfterBlockId, report, blockMetas])
 
-  // Find the block being edited
+  // Find the block being edited (includes pending new blocks not yet saved)
   const editingBlock = useMemo(() => {
+    if (pendingNewBlock) return pendingNewBlock.block
     if (!editingBlockId || !report) return null
     return report.blocks.find((b) => b.id === editingBlockId) ?? null
-  }, [editingBlockId, report])
+  }, [editingBlockId, report, pendingNewBlock])
 
   const reviewingBlockText = useMemo(() => {
     if (!aiModals.reviewingBlockId || !report) return ''
@@ -934,8 +938,36 @@ export default function ReportEditor() {
       {/* Block Edit Modal */}
       <BlockEditModal
         block={editingBlock}
-        onClose={() => setEditingBlockId(null)}
-        onChange={handleBlockDataChange}
+        onClose={() => {
+          setPendingNewBlock(null)
+          setEditingBlockId(null)
+        }}
+        onChange={(blockId, data) => {
+          if (pendingNewBlock && report) {
+            // Bloco novo: adicionar ao relatório com os dados editados
+            const finalBlock = { ...pendingNewBlock.block, data }
+            const sorted = [...report.blocks].sort((a, b) => a.order - b.order)
+
+            let newBlocks: Block[]
+            if (pendingNewBlock.afterBlockId) {
+              const afterIndex = sorted.findIndex((b) => b.id === pendingNewBlock.afterBlockId)
+              if (afterIndex !== -1) {
+                sorted.splice(afterIndex + 1, 0, finalBlock)
+                newBlocks = sorted.map((b, i) => ({ ...b, order: i }))
+              } else {
+                newBlocks = [...sorted, finalBlock].map((b, i) => ({ ...b, order: i }))
+              }
+            } else {
+              newBlocks = [...sorted, finalBlock].map((b, i) => ({ ...b, order: i }))
+            }
+
+            handleUpdateReport({ blocks: newBlocks })
+            setPreviewRefreshKey((k) => k + 1)
+            setPendingNewBlock(null)
+          } else {
+            handleBlockDataChange(blockId, data)
+          }
+        }}
         customers={customers}
         onCustomerSelected={handleCustomerSelected}
         aiAvailable={ai.isAvailable && report.status !== 'finalizado'}
