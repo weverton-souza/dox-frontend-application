@@ -1,13 +1,28 @@
-import { forwardRef, InputHTMLAttributes } from 'react'
+import { forwardRef, useCallback, type InputHTMLAttributes, type ChangeEvent } from 'react'
+import { applyMask, unmask } from '@/lib/masks'
+
+type MaskType = 'cpf' | 'phone' | 'cep'
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string
   error?: string
+  /** Aplica máscara visual. O value deve ser dígitos puros — onChange retorna dígitos puros. */
+  mask?: MaskType
 }
 
 const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, className = '', id, ...props }, ref) => {
+  ({ label, error, className = '', id, mask, onChange, value, ...props }, ref) => {
     const inputId = id || label?.toLowerCase().replace(/\s+/g, '-')
+
+    const displayValue = mask && typeof value === 'string' ? applyMask(value, mask) : value
+
+    const handleChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+      if (mask) {
+        const raw = unmask(e.target.value)
+        e.target.value = raw
+      }
+      onChange?.(e)
+    }, [mask, onChange])
 
     return (
       <div>
@@ -29,6 +44,8 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             ${error ? 'border-red-500' : 'border-gray-300'}
             ${className}
           `.trim()}
+          value={displayValue}
+          onChange={handleChange}
           {...props}
         />
         {error && (

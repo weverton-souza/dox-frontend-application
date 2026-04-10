@@ -14,12 +14,14 @@ interface ModalProps {
   footer?: React.ReactNode
   size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl'
   accent?: ModalAccent
+  /** Se false, modal só fecha via botões (não fecha com Escape, overlay ou botão X). Default: true */
+  dismissable?: boolean
 }
 
 const MIN_WIDTH = 360
 const MIN_HEIGHT = 300
 
-export default function Modal({ isOpen, onClose, title, children, footer, size = 'md', accent }: ModalProps) {
+export default function Modal({ isOpen, onClose, title, children, footer, size = 'md', accent, dismissable = true }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null)
   const [customSize, setCustomSize] = useState<{ w: number; h: number } | null>(null)
   const dragging = useRef(false)
@@ -27,7 +29,7 @@ export default function Modal({ isOpen, onClose, title, children, footer, size =
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape' && dismissable) onClose()
     }
     if (isOpen) {
       document.addEventListener('keydown', handleEscape)
@@ -91,7 +93,7 @@ export default function Modal({ isOpen, onClose, title, children, footer, size =
     ? (size === 'sm' ? 'max-w-sm' : size === 'md' ? 'max-w-2xl' : size === 'lg' ? 'max-w-4xl' : size === 'xl' ? 'max-w-5xl' : 'max-w-6xl')
     : ''
 
-  const closeButton = (
+  const closeButton = dismissable ? (
     <button
       onClick={onClose}
       className="p-1.5 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
@@ -103,13 +105,13 @@ export default function Modal({ isOpen, onClose, title, children, footer, size =
         <line x1="6" y1="6" x2="18" y2="18" />
       </svg>
     </button>
-  )
+  ) : null
 
   return createPortal(
     <div
       className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-3 sm:p-4"
       onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose()
+        if (e.target === e.currentTarget && dismissable) onClose()
       }}
     >
       <div
@@ -128,15 +130,17 @@ export default function Modal({ isOpen, onClose, title, children, footer, size =
               )}
               <h2 className="text-lg font-semibold text-gray-900 truncate">{title}</h2>
             </div>
-            <div className="flex items-center gap-1 shrink-0 ml-4">
-              {closeButton}
-            </div>
+            {closeButton && (
+              <div className="flex items-center gap-1 shrink-0 ml-4">
+                {closeButton}
+              </div>
+            )}
           </div>
-        ) : (
+        ) : closeButton ? (
           <div className="flex justify-end px-4 sm:px-6 pt-3 sm:pt-4 shrink-0">
             {closeButton}
           </div>
-        )}
+        ) : null}
 
         {/* Scrollable content */}
         <div className="px-4 sm:px-6 py-3 sm:py-4 overflow-y-auto flex-1">{children}</div>
