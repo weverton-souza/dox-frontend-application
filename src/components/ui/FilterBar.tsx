@@ -25,8 +25,8 @@ export default function FilterBar({
 }: FilterBarProps) {
   return (
     <div
-      className={`transition-all duration-500 ease-in-out overflow-hidden ${
-        open ? 'max-h-40 opacity-100 mb-6' : 'max-h-0 opacity-0 mb-0'
+      className={`transition-all duration-500 ease-in-out ${
+        open ? 'max-h-40 opacity-100 mb-6 overflow-visible' : 'max-h-0 opacity-0 mb-0 overflow-hidden'
       } ${className}`}
     >
       <div className="w-full bg-white rounded-2xl px-5 py-4 shadow-card">

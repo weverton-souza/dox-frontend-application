@@ -67,7 +67,6 @@ export async function createReportFromTemplate(
     customerName: customer.data.name,
     customerId: customer.id,
     templateId: template.id,
-    isStructureLocked: template.isLocked,
     blocks: remappedBlocks,
   }
 

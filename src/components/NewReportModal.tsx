@@ -91,11 +91,13 @@ export default function NewReportModal({
 
             {/* Templates */}
             {templates.map((template) => (
-              <button
+              <div
                 key={template.id}
-                type="button"
+                role="button"
+                tabIndex={0}
                 onClick={() => { onSelectTemplate(template); onClose() }}
-                className="w-full text-left p-4 rounded-xl border border-gray-200 hover:border-brand-300 hover:bg-brand-50/50 transition-all"
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectTemplate(template); onClose() } }}
+                className="w-full text-left p-4 rounded-xl border border-gray-200 hover:border-brand-300 hover:bg-brand-50/50 transition-all cursor-pointer"
               >
                 <div className="flex items-center gap-3">
                   <div className="p-2.5 rounded-lg bg-brand-100">
@@ -152,7 +154,7 @@ export default function NewReportModal({
                     </span>
                   ))}
                 </div>
-              </button>
+              </div>
             ))}
           </div>
         )}
