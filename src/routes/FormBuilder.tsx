@@ -363,7 +363,6 @@ export default function FormBuilder() {
                 options={[
                   { value: 'editor', label: 'Perguntas' },
                   { value: 'preview', label: 'Preview' },
-                  { value: 'mapping', label: 'Mapeamento' },
                 ]}
                 value={viewMode}
                 onChange={(v) => setViewMode(v as ViewMode)}
