@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import type {
@@ -111,6 +112,8 @@ export default function OutlineRow({
   const [showMenu, setShowMenu] = useState(false)
   const [confirmingRemove, setConfirmingRemove] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
+  const menuBtnRef = useRef<HTMLButtonElement>(null)
+  const menuPos = useRef({ top: 0, left: 0 })
 
   const {
     attributes,
@@ -129,10 +132,11 @@ export default function OutlineRow({
   useEffect(() => {
     if (!showMenu) return
     const handleClick = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setShowMenu(false)
-        setConfirmingRemove(false)
-      }
+      const target = e.target as Node
+      if (menuRef.current?.contains(target)) return
+      if (menuBtnRef.current?.contains(target)) return
+      setShowMenu(false)
+      setConfirmingRemove(false)
     }
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
@@ -345,10 +349,17 @@ export default function OutlineRow({
         )}
 
         {/* Three-dot menu */}
-        <div className="relative" ref={menuRef}>
+        <div>
           <button
+            ref={menuBtnRef}
             type="button"
-            onClick={() => setShowMenu(!showMenu)}
+            onClick={() => {
+              if (!showMenu && menuBtnRef.current) {
+                const r = menuBtnRef.current.getBoundingClientRect()
+                menuPos.current = { top: r.bottom + 4, left: r.right - 192 }
+              }
+              setShowMenu(!showMenu)
+            }}
             className="p-1.5 rounded-md hover:bg-gray-200 text-gray-400 hover:text-gray-700 transition-colors"
             title="Mais opções"
           >
@@ -357,9 +368,9 @@ export default function OutlineRow({
             </svg>
           </button>
 
-          {/* Dropdown menu */}
-          {showMenu && (
-            <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+          {/* Dropdown menu (portal to escape dnd-kit transform stacking context) */}
+          {showMenu && createPortal(
+            <div ref={menuRef} style={{ position: 'fixed', top: menuPos.current.top, left: menuPos.current.left, zIndex: 9999 }} className="w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1">
               {/* Edit content option for text blocks without content */}
               {isTextBlock && !hasContent && (
                 <button
@@ -429,7 +440,8 @@ export default function OutlineRow({
                 </svg>
                 {isContainerBlock(block.type) ? 'Excluir seção' : confirmingRemove ? 'Confirmar remoção' : 'Remover'}
               </button>}
-            </div>
+            </div>,
+            document.body
           )}
         </div>
       </div>

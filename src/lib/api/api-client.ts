@@ -197,11 +197,11 @@ api.interceptors.response.use(
       const problemData = data as ProblemDetail | null
       const errorCode = problemData?.properties?.errorCode
 
-      // Tenta refresh se: TOKEN_EXPIRED explícito, ou 403 sem ProblemDetail (Spring Security default)
+      // Tenta refresh se: qualquer 401, TOKEN_EXPIRED explícito, ou 403 sem ProblemDetail (Spring Security default)
       const rawData = data as Record<string, unknown> | null
       const isProblemDetail = rawData && typeof rawData.type === 'string'
         && rawData.type.startsWith('urn:dox:error:')
-      const shouldRefresh = errorCode === 'TOKEN_EXPIRED' || (status === 403 && !isProblemDetail)
+      const shouldRefresh = status === 401 || errorCode === 'TOKEN_EXPIRED' || (status === 403 && !isProblemDetail)
 
       if (shouldRefresh) {
         (originalRequest as InternalAxiosRequestConfig & { _retry?: boolean })._retry = true
