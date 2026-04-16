@@ -56,7 +56,7 @@ export default function ReportSummary({
   const items = useMemo(() => buildSummaryItems(blocks), [blocks])
 
   return (
-    <aside className="w-72 lg:w-80 shrink-0 flex flex-col self-start sticky top-24 max-h-[calc(100vh-7rem)]">
+    <aside className="w-72 lg:w-80 shrink-0 flex flex-col self-start sticky top-24 max-h-[calc(100vh-7rem)] bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
       <div className="px-3 pt-4 pb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
         Sumário
       </div>
