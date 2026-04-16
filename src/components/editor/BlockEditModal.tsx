@@ -18,7 +18,8 @@ import { getRegenerationInfo } from '@/lib/api/ai-api'
 import { BLOCK_TYPE_COLORS, getBlockTypeIcon } from '@/lib/block-constants'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
-import AiGenerateButton from '@/components/ai/AiGenerateButton'
+// TODO: reativar quando botão Assistente individual voltar
+// import AiGenerateButton from '@/components/ai/AiGenerateButton'
 import AiRegenerateBar from '@/components/ai/AiRegenerateBar'
 import IdentificationBlock from '@/components/blocks/IdentificationBlock'
 import TextBlockModal from '@/components/blocks/TextBlockModal'
@@ -90,7 +91,7 @@ function getModalTitle(block: Block): string {
 
 export default function BlockEditModal({
   block, onClose, onChange, customers, onCustomerSelected,
-  aiAvailable = false, onGenerateSection, onRegenerateSection, aiLoading = false,
+  aiAvailable = false, onGenerateSection, onRegenerateSection, aiLoading: _aiLoading = false,
   reportId,
 }: BlockEditModalProps) {
   const [localData, setLocalData] = useState<BlockData | null>(null)
@@ -113,7 +114,7 @@ export default function BlockEditModal({
   }, [block, reportId])
 
   const isAiEligible = block?.type === 'text' || block?.type === 'info-box'
-  const showAiButton = aiAvailable && isAiEligible && onGenerateSection
+  void (aiAvailable && isAiEligible && onGenerateSection) // TODO: showAiButton — reativar
   const isGeneratedByAi = block?.generatedByAi === true
 
   const sectionType = block ? (() => {
@@ -121,6 +122,7 @@ export default function BlockEditModal({
     return d.title || d.label || 'Seção'
   })() : ''
 
+  /* TODO: reativar quando botão Assistente individual voltar
   const handleAiGenerate = useCallback(async () => {
     if (!onGenerateSection || !block) return
     setGenerating(true)
@@ -134,6 +136,7 @@ export default function BlockEditModal({
     }
     setGenerating(false)
   }, [onGenerateSection, block, sectionType])
+  */
 
   const handleAiRegenerate = useCallback(async () => {
     if (!onRegenerateSection || !block?.generationId) return
@@ -225,6 +228,7 @@ export default function BlockEditModal({
   const footer = (
     <div className="flex items-center justify-between gap-3">
       <div>
+        {/* TODO: reativar botão Assistente individual por seção
         {showAiButton && (
           <AiGenerateButton
             onClick={handleAiGenerate}
@@ -233,6 +237,7 @@ export default function BlockEditModal({
             size="sm"
           />
         )}
+        */}
       </div>
       <div className="flex gap-3">
         <Button variant="ghost" onClick={handleCancel}>

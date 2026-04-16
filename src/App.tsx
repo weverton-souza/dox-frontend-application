@@ -14,6 +14,7 @@ import FormResponseList from '@/routes/FormResponseList'
 import FormulaGuide from '@/routes/FormulaGuide'
 import PublicFormFill from '@/routes/PublicFormFill'
 import Calendar from '@/routes/Calendar'
+import TemplateEditor from '@/routes/TemplateEditor'
 
 function NotFound() {
   return (
@@ -37,6 +38,8 @@ export default function App() {
         <Route element={<AppLayout />}>
           <Route path="/" element={<ReportList />} />
           <Route path="/reports/:id" element={<ReportEditor />} />
+          <Route path="/templates/new" element={<TemplateEditor />} />
+          <Route path="/templates/:id" element={<TemplateEditor />} />
           <Route path="/customers" element={<CustomerList />} />
           <Route path="/customers/:id" element={<CustomerProfile />} />
           <Route path="/forms" element={<FormList />} />

@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import type { Block, BlockType, BlockData, Report, ReportStatus, ReportVersion, Customer, ScoreTableTemplate, ChartTemplate } from '@/types'
-import { createScoreTableFromTemplate, createChartFromTemplate, isSlateContent, slateContentToPlainText } from '@/types'
+import { createScoreTableFromTemplate, createChartFromTemplate, isSlateContent, slateContentToPlainText, REPORT_STATUS_LABELS, REPORT_STATUS_COLORS } from '@/types'
 import type { TextBlockData, SectionData, InfoBoxData } from '@/types'
 import { getReport, updateReport, getExportData } from '@/lib/api/report-api'
 import { getCustomers } from '@/lib/api/customer-api'
-import { createReportTemplate, getScoreTableTemplates, getChartTemplates } from '@/lib/api/template-api'
+import { createReportTemplate, getReportTemplates, getScoreTableTemplates, getChartTemplates } from '@/lib/api/template-api'
 import { getFormById, getFormResponseById } from '@/lib/api/form-api'
 import { useError } from '@/contexts/ErrorContext'
 import { createBlock, computeBlockMetas } from '@/lib/utils'
@@ -20,7 +20,6 @@ import DocxPreviewPanel from '@/components/editor/DocxPreviewPanel'
 import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
 import Input from '@/components/ui/Input'
-import StatusSelector from '@/components/editor/StatusSelector'
 import EditorFloatingToolbar from '@/components/editor/EditorFloatingToolbar'
 import SaveStatusIndicator from '@/components/ui/SaveStatusIndicator'
 import { useAiGeneration } from '@/lib/hooks/use-ai-generation'
@@ -84,12 +83,15 @@ export default function ReportEditor() {
   const [pendingNewBlock, setPendingNewBlock] = useState<{ block: Block; afterBlockId: string | null } | null>(null)
   const [customers, setCustomers] = useState<Customer[]>([])
   const [showVersionHistory, setShowVersionHistory] = useState(false)
+  const [showFinalizeConfirm, setShowFinalizeConfirm] = useState(false)
+  const [finalizeInput, setFinalizeInput] = useState('')
   const [showDocxPreview, setShowDocxPreview] = useState(false)
   const [previewRefreshKey, setPreviewRefreshKey] = useState(0)
   const [formProvenanceLabel, setFormProvenanceLabel] = useState<string | null>(null)
   const [formProvenanceId, setFormProvenanceId] = useState<string | null>(null)
   const [scoreTableTemplates, setScoreTableTemplates] = useState<ScoreTableTemplate[]>([])
   const [chartTemplatesState, setChartTemplatesState] = useState<ChartTemplate[]>([])
+  const [templateName, setTemplateName] = useState<string | null>(null)
   const sectionSelectorRef = useRef<HTMLDivElement>(null)
 
   const saveReportFn = useCallback((data: Report) => updateReport(data), [])
@@ -121,6 +123,17 @@ export default function ReportEditor() {
         setCustomers(customersPage.content)
         setScoreTableTemplates(stTemplates)
         setChartTemplatesState(cTemplates)
+
+        // Load template name if report was created from a template
+        if (loaded.templateId) {
+          try {
+            const rTemplates = await getReportTemplates()
+            const tpl = rTemplates.find(t => t.id === loaded.templateId)
+            if (tpl) setTemplateName(tpl.name)
+          } catch {
+            // template name is optional
+          }
+        }
 
         // Load provenance info if report was generated from a form response
         if (loaded.formResponseId && loaded.formId) {
@@ -321,9 +334,13 @@ export default function ReportEditor() {
 
   const handleStatusChange = useCallback(
     (newStatus: ReportStatus) => {
-      if (newStatus === 'finalizado' && report?.blocks.some(b => b.generatedByAi || b.skippedByAi)) {
-        setPendingStatusChange(newStatus)
-        updateAiModals({ showFinalizationModal: true })
+      if (newStatus === 'finalizado') {
+        if (report?.blocks.some(b => b.generatedByAi || b.skippedByAi)) {
+          setPendingStatusChange(newStatus)
+          updateAiModals({ showFinalizationModal: true })
+          return
+        }
+        setShowFinalizeConfirm(true)
         return
       }
       if (report) createStatusChangeSnapshot(report.status)
@@ -332,14 +349,36 @@ export default function ReportEditor() {
     [report, handleUpdateReport, createStatusChangeSnapshot]
   )
 
-  const handleConfirmFinalization = useCallback(() => {
+  const handleConfirmFinalize = useCallback(async () => {
+    if (!report) return
+    createStatusChangeSnapshot(report.status)
+    try {
+      let current = report
+      if (current.status === 'rascunho') {
+        current = await updateReport({ ...current, status: 'em_revisao' })
+      }
+      const saved = await updateReport({ ...current, status: 'finalizado' })
+      setReport(saved)
+      setShowFinalizeConfirm(false)
+      setFinalizeInput('')
+    } catch (err) {
+      showError(err)
+    }
+  }, [report, createStatusChangeSnapshot, showError])
+
+  const handleConfirmFinalization = useCallback(async () => {
     if (report && pendingStatusChange) {
       createStatusChangeSnapshot(report.status)
-      handleUpdateReport({ status: pendingStatusChange })
+      try {
+        const saved = await updateReport({ ...report, status: pendingStatusChange })
+        setReport(saved)
+      } catch (err) {
+        showError(err)
+      }
     }
     updateAiModals({ showFinalizationModal: false })
     setPendingStatusChange(null)
-  }, [report, pendingStatusChange, handleUpdateReport, createStatusChangeSnapshot])
+  }, [report, pendingStatusChange, createStatusChangeSnapshot, showError])
 
   const handleGenerateFullReport = useCallback(() => {
     if (!report || !id) return
@@ -650,79 +689,103 @@ export default function ReportEditor() {
         backgroundSize: '22px 22px',
       }}
     >
-      {/* Header — pill toolbar */}
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 pt-2 lg:pt-3 pb-2 lg:pb-3">
-        <div className="flex items-center justify-between bg-white rounded-full px-3 lg:px-4 py-2 lg:py-2.5 shadow-card">
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <button
-              type="button"
-              onClick={() => {
-                handleForceSave()
-                navigate('/')
-              }}
-              className="h-9 w-9 lg:h-11 lg:w-11 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors shrink-0"
-              title="Voltar"
-            >
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z" clipRule="evenodd" />
-              </svg>
-            </button>
-
-            <input
-              type="text"
-              value={report.customerName || ''}
-              onChange={(e) => handleUpdateReport({ customerName: e.target.value })}
-              placeholder="Nome do cliente"
-              className="text-sm font-medium text-gray-700 bg-transparent border-0 focus:outline-none focus:ring-0 flex-1 min-w-0 truncate placeholder:text-gray-400"
-            />
-
-            <SaveStatusIndicator status={saveStatus} />
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0">
-            <StatusSelector status={report.status} onChange={handleStatusChange} />
-
-            {/* AI */}
-            {showAiButton && fillableCount > 0 && (
+      {/* Header — Figma-style centered */}
+      <div className="sticky top-0 z-30 bg-white/90 backdrop-blur-md shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-2 lg:py-2.5">
+          <div className="flex items-center justify-between">
+            {/* Left: back + save status */}
+            <div className="flex items-center gap-2 w-40 shrink-0">
               <button
                 type="button"
-                onClick={handleGenerateFullReport}
-                disabled={ai.isGenerating}
-                className="h-9 flex items-center gap-2 px-4 rounded-full bg-brand-700 text-white hover:bg-brand-800 transition-colors shadow-sm shrink-0 disabled:opacity-50 text-sm font-medium"
-                title="Redigir com Assistente"
+                onClick={() => {
+                  handleForceSave()
+                  navigate('/')
+                }}
+                className="h-9 w-9 flex items-center justify-center rounded-full hover:bg-white/80 text-gray-500 hover:text-gray-700 transition-colors"
+                title="Voltar"
               >
-                {ai.isGenerating ? (
-                  <svg className="animate-spin" width={16} height={16} viewBox="0 0 24 24" fill="none">
-                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="32" strokeLinecap="round" />
-                  </svg>
-                ) : (
-                  <AiSparkleIcon size={16} />
-                )}
-                <span className="hidden sm:inline">Assistente</span>
+                <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z" clipRule="evenodd" />
+                </svg>
               </button>
-            )}
+              <SaveStatusIndicator status={saveStatus} showLabel={false} />
+            </div>
 
-            {/* Download */}
-            <button
-              type="button"
-              onClick={handleGenerateDocx}
-              disabled={report.status !== 'finalizado'}
-              className="h-9 flex items-center gap-2 px-4 rounded-full bg-brand-700 text-white hover:bg-brand-800 transition-colors shadow-sm shrink-0 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
-              title={report.status !== 'finalizado' ? 'Finalize o relatório para baixar' : 'Baixar .docx'}
-            >
-              <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M10.75 2.75a.75.75 0 00-1.5 0v8.614L6.295 8.235a.75.75 0 10-1.09 1.03l4.25 4.5a.75.75 0 001.09 0l4.25-4.5a.75.75 0 00-1.09-1.03l-2.955 3.129V2.75z" />
-                <path d="M3.5 12.75a.75.75 0 00-1.5 0v2.5A2.75 2.75 0 004.75 18h10.5A2.75 2.75 0 0018 15.25v-2.5a.75.75 0 00-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5z" />
-              </svg>
-              <span className="hidden sm:inline">Baixar</span>
-            </button>
+            {/* Center: template name · client name · status badge */}
+            <div className="flex items-center gap-2 min-w-0 justify-center flex-1">
+              {templateName && (
+                <>
+                  <span className="text-xs text-gray-400 truncate hidden sm:inline">{templateName}</span>
+                  <span className="text-gray-300 hidden sm:inline">—</span>
+                </>
+              )}
+              <input
+                type="text"
+                value={report.customerName || ''}
+                onChange={(e) => handleUpdateReport({ customerName: e.target.value })}
+                placeholder="Nome do cliente"
+                className="text-sm font-medium text-gray-700 bg-transparent border-0 focus:outline-none focus:ring-0 text-center min-w-0 max-w-xs truncate placeholder:text-gray-400"
+              />
+              <span className="text-gray-300">·</span>
+              <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${REPORT_STATUS_COLORS[report.status].bg} ${REPORT_STATUS_COLORS[report.status].text}`}>
+                {REPORT_STATUS_LABELS[report.status]}
+              </span>
+            </div>
+
+            {/* Right: actions */}
+            <div className="flex items-center gap-2 shrink-0">
+              {showAiButton && fillableCount > 0 && (
+                <button
+                  type="button"
+                  onClick={handleGenerateFullReport}
+                  disabled={ai.isGenerating}
+                  className="h-8 flex items-center gap-1.5 px-3 rounded-full bg-brand-50 text-brand-700 hover:bg-brand-100 transition-colors text-xs font-medium disabled:opacity-50"
+                  title="Redigir com Assistente"
+                >
+                  {ai.isGenerating ? (
+                    <svg className="animate-spin" width={14} height={14} viewBox="0 0 24 24" fill="none">
+                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="32" strokeLinecap="round" />
+                    </svg>
+                  ) : (
+                    <AiSparkleIcon size={14} />
+                  )}
+                  Assistente
+                </button>
+              )}
+
+              {report.status === 'finalizado' ? (
+                <button
+                  type="button"
+                  onClick={handleGenerateDocx}
+                  className="h-8 flex items-center gap-1.5 px-3 rounded-full bg-brand-700 text-white hover:bg-brand-800 transition-colors text-xs font-medium"
+                  title="Baixar .docx"
+                >
+                  <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M10.75 2.75a.75.75 0 00-1.5 0v8.614L6.295 8.235a.75.75 0 10-1.09 1.03l4.25 4.5a.75.75 0 001.09 0l4.25-4.5a.75.75 0 00-1.09-1.03l-2.955 3.129V2.75z" />
+                    <path d="M3.5 12.75a.75.75 0 00-1.5 0v2.5A2.75 2.75 0 004.75 18h10.5A2.75 2.75 0 0018 15.25v-2.5a.75.75 0 00-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5z" />
+                  </svg>
+                  Baixar
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => handleStatusChange('finalizado')}
+                  className="h-8 flex items-center gap-1.5 px-3 rounded-full bg-green-600 text-white hover:bg-green-700 transition-colors text-xs font-medium"
+                >
+                  <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+                  </svg>
+                  Finalizar
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
       {/* Main content area */}
       <div
-        className={`flex-1 flex w-full px-2 sm:px-4 ${showDocxPreview ? '3xl:gap-6' : 'max-w-5xl mx-auto'}`}
+        className={`flex-1 flex w-full px-2 sm:px-4 mt-4 ${showDocxPreview ? '3xl:gap-6' : 'max-w-5xl mx-auto'}`}
       >
         {/* Floating toolbar — left column */}
         <div className="hidden lg:flex shrink-0 w-12 pt-12">
@@ -1079,6 +1142,56 @@ export default function ReportEditor() {
         limit={ai.usageSummary?.limit ?? 0}
         warningCount={warningCount}
       />
+
+      {/* Finalize confirmation modal */}
+      <Modal
+        isOpen={showFinalizeConfirm}
+        onClose={() => { setShowFinalizeConfirm(false); setFinalizeInput('') }}
+        title="Finalizar Relatório"
+        size="sm"
+      >
+        <div className="p-5 space-y-4">
+          <div className="flex items-start gap-3 bg-amber-50 rounded-lg p-3">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" className="text-amber-500 shrink-0 mt-0.5">
+              <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.168 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+            </svg>
+            <div>
+              <p className="text-sm font-medium text-amber-800">Ação irreversível</p>
+              <p className="text-xs text-amber-700 mt-1">
+                Após finalizar, o relatório não poderá mais ser editado. Certifique-se de que todas as informações estão corretas.
+              </p>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm text-gray-600 mb-1.5">
+              Digite <span className="font-semibold text-gray-900">finalizar</span> para confirmar
+            </label>
+            <input
+              type="text"
+              value={finalizeInput}
+              onChange={(e) => setFinalizeInput(e.target.value)}
+              placeholder="finalizar"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              autoFocus
+            />
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" onClick={() => { setShowFinalizeConfirm(false); setFinalizeInput('') }}>
+              Cancelar
+            </Button>
+            <button
+              type="button"
+              disabled={finalizeInput.toLowerCase() !== 'finalizar'}
+              onClick={handleConfirmFinalize}
+              className="px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Finalizar
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Version feedback modal */}
       <Modal isOpen={!!versionFeedback} onClose={() => setVersionFeedback(null)} title="" size="sm">
