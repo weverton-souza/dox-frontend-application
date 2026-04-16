@@ -13,10 +13,12 @@ import { useVersioning } from '@/lib/hooks/use-versioning'
 import { useAutoSave } from '@/lib/hooks/use-auto-save'
 import { useClickOutside } from '@/lib/hooks/use-click-outside'
 import OutlineTree from '@/components/editor/OutlineTree'
+import ReportSummary from '@/components/editor/ReportSummary'
+import SectionEditor from '@/components/editor/SectionEditor'
+import PreviewModal from '@/components/editor/PreviewModal'
 import BlockSelector from '@/components/editor/BlockSelector'
 import BlockEditModal from '@/components/editor/BlockEditModal'
 import VersionHistoryModal from '@/components/editor/VersionHistoryModal'
-import DocxPreviewPanel from '@/components/editor/DocxPreviewPanel'
 import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
 import Input from '@/components/ui/Input'
@@ -84,7 +86,9 @@ export default function ReportEditor() {
   const [pendingNewBlock, setPendingNewBlock] = useState<{ block: Block; afterBlockId: string | null } | null>(null)
   const [customers, setCustomers] = useState<Customer[]>([])
   const [showVersionHistory, setShowVersionHistory] = useState(false)
-  const [showDocxPreview, setShowDocxPreview] = useState(false)
+  const [showPreviewModal, setShowPreviewModal] = useState(false)
+  const [editorMode, setEditorMode] = useState<'document' | 'structure'>('document')
+  const [activeItemId, setActiveItemId] = useState<string | null>(null)
   const [previewRefreshKey, setPreviewRefreshKey] = useState(0)
   const [formProvenanceLabel, setFormProvenanceLabel] = useState<string | null>(null)
   const [formProvenanceId, setFormProvenanceId] = useState<string | null>(null)
@@ -170,6 +174,34 @@ export default function ReportEditor() {
       handleUpdateReport({ blocks })
     },
     [handleUpdateReport]
+  )
+
+  const handleDuplicateBlock = useCallback(
+    (blockId: string) => {
+      if (!report) return
+      const block = report.blocks.find((b) => b.id === blockId)
+      if (!block) return
+      const sorted = [...report.blocks].sort((a, b) => a.order - b.order)
+      const idx = sorted.findIndex((b) => b.id === blockId)
+      if (idx === -1) return
+      const newBlock: Block = {
+        ...block,
+        id: crypto.randomUUID(),
+        data: JSON.parse(JSON.stringify(block.data)),
+      }
+      sorted.splice(idx + 1, 0, newBlock)
+      handleBlocksChange(sorted.map((b, i) => ({ ...b, order: i })))
+    },
+    [report, handleBlocksChange]
+  )
+
+  const handleRemoveBlock = useCallback(
+    (blockId: string) => {
+      if (!report) return
+      const filtered = report.blocks.filter((b) => b.id !== blockId)
+      handleBlocksChange(filtered.map((b, i) => ({ ...b, order: i })))
+    },
+    [report, handleBlocksChange]
   )
 
   const handleBlockDataChange = useCallback(
@@ -269,6 +301,7 @@ export default function ReportEditor() {
     const newBlocks = sorted.map((b, i) => ({ ...b, order: i }))
     handleUpdateReport({ blocks: newBlocks })
     updateBlockSelector({ showSectionSelector: false })
+    setActiveItemId(newBlock.id)
   }, [report, handleUpdateReport])
 
   const handleAddClosingPage = useCallback(() => {
@@ -488,6 +521,31 @@ export default function ReportEditor() {
     setShowVersionHistory(true)
   }, [refreshVersions])
 
+  // Summary items in order — roots of the summary (sections + identification + closing-page)
+  const summaryItemIds = useMemo(() => {
+    if (!report) return [] as string[]
+    const collect: string[] = []
+    const roots = report.blocks
+      .filter((b) => (b.parentId ?? null) === null && (b.type === 'section' || b.type === 'identification' || b.type === 'closing-page'))
+      .sort((a, b) => a.order - b.order)
+    function walk(id: string) {
+      collect.push(id)
+      const children = report!.blocks
+        .filter((b) => b.parentId === id && b.type === 'section')
+        .sort((a, b) => a.order - b.order)
+      for (const c of children) walk(c.id)
+    }
+    for (const r of roots) walk(r.id)
+    return collect
+  }, [report])
+
+  // Initialize active item when report loads
+  useEffect(() => {
+    if (!report) return
+    if (activeItemId && summaryItemIds.includes(activeItemId)) return
+    setActiveItemId(summaryItemIds[0] ?? null)
+  }, [report, activeItemId, summaryItemIds])
+
   // Section collapse/expand (with cascade for subsections)
   const toggleSectionCollapse = useCallback((sectionBlockId: string, subsectionIds?: string[]) => {
     setCollapsedSections((prev) => {
@@ -680,6 +738,42 @@ export default function ReportEditor() {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            {/* Mode tabs */}
+            <div className="hidden sm:flex items-center bg-gray-100 rounded-full p-0.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => setEditorMode('document')}
+                className={`h-8 px-3 text-xs font-medium rounded-full transition-colors ${
+                  editorMode === 'document' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Documento
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditorMode('structure')}
+                className={`h-8 px-3 text-xs font-medium rounded-full transition-colors ${
+                  editorMode === 'structure' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Estrutura
+              </button>
+            </div>
+
+            {/* Preview */}
+            <button
+              type="button"
+              onClick={() => setShowPreviewModal(true)}
+              className="h-9 flex items-center gap-2 px-3 rounded-full border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors shrink-0 text-sm font-medium"
+              title="Pré-visualizar .docx"
+            >
+              <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                <path fillRule="evenodd" d="M.664 10.59a1.651 1.651 0 010-1.186A10.004 10.004 0 0110 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0110 17c-4.257 0-7.893-2.66-9.336-6.41zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
+              </svg>
+              <span className="hidden md:inline">Pré-visualizar</span>
+            </button>
+
             <StatusSelector status={report.status} onChange={handleStatusChange} />
 
             {/* AI */}
@@ -721,9 +815,7 @@ export default function ReportEditor() {
       </div>
 
       {/* Main content area */}
-      <div
-        className={`flex-1 flex w-full px-2 sm:px-4 ${showDocxPreview ? '3xl:gap-6' : 'max-w-5xl mx-auto'}`}
-      >
+      <div className="flex-1 flex w-full px-2 sm:px-4 max-w-6xl mx-auto">
         {/* Floating toolbar — left column */}
         <div className="hidden lg:flex shrink-0 w-12 pt-12">
           <div className="sticky top-28 h-fit z-30">
@@ -739,14 +831,14 @@ export default function ReportEditor() {
               }}
               onOpenVersionHistory={handleOpenVersionHistory}
               onSaveAsTemplate={() => updateTemplateModal({ showSaveTemplate: true })}
-              onTogglePreview={() => setShowDocxPreview((v) => !v)}
-              showPreview={showDocxPreview}
+              onTogglePreview={() => setShowPreviewModal(true)}
+              showPreview={showPreviewModal}
             />
           </div>
         </div>
 
-        {/* Left: blocks — hidden below 3xl when preview is active (toggle mode) */}
-        <div className={`min-w-0 flex flex-col ${showDocxPreview ? 'hidden 3xl:flex 3xl:w-2/5 3xl:shrink-0' : 'flex-1 max-w-3xl mx-auto'}`}>
+        {/* Left: blocks */}
+        <div className="min-w-0 flex flex-col flex-1">
           {/* Form provenance banner */}
           {formProvenanceLabel && (
             <div className="pt-3">
@@ -843,21 +935,45 @@ export default function ReportEditor() {
             </div>
           </div>
 
-          {/* Outline Tree */}
+          {/* Outline Tree / Document view */}
           <main className="flex-1 pb-6">
-            <OutlineTree
-              blocks={report.blocks}
-              onBlocksChange={handleBlocksChange}
-              collapsedSections={collapsedSections}
-              onToggleSectionCollapse={toggleSectionCollapse}
-              onRequestAddBlock={handleRequestAddBlock}
-              onEditBlock={setEditingBlockId}
-              onReviewBlock={ai.isAvailable && report.status !== 'finalizado' ? (id: string) => updateAiModals({ reviewingBlockId: id }) : undefined}
-              insertAfterBlockId={blockSelector.insertAfterBlockId}
-              locked={report.isStructureLocked}
-            />
+            {editorMode === 'structure' ? (
+              <OutlineTree
+                blocks={report.blocks}
+                onBlocksChange={handleBlocksChange}
+                collapsedSections={collapsedSections}
+                onToggleSectionCollapse={toggleSectionCollapse}
+                onRequestAddBlock={handleRequestAddBlock}
+                onEditBlock={setEditingBlockId}
+                onReviewBlock={ai.isAvailable && report.status !== 'finalizado' ? (id: string) => updateAiModals({ reviewingBlockId: id }) : undefined}
+                insertAfterBlockId={blockSelector.insertAfterBlockId}
+                locked={report.isStructureLocked}
+              />
+            ) : (
+              <div className="flex gap-6">
+                <ReportSummary
+                  blocks={report.blocks}
+                  activeItemId={activeItemId}
+                  onSelect={setActiveItemId}
+                  onRequestAddSection={() => updateBlockSelector({ showSectionSelector: !blockSelector.showSectionSelector })}
+                  locked={report.isStructureLocked}
+                />
+                <SectionEditor
+                  blocks={report.blocks}
+                  activeItemId={activeItemId}
+                  blockMetas={blockMetas}
+                  onEditBlock={setEditingBlockId}
+                  onDuplicateBlock={handleDuplicateBlock}
+                  onRemoveBlock={handleRemoveBlock}
+                  onChangeBlock={handleBlockDataChange}
+                  onRequestAddBlock={handleRequestAddBlock}
+                  onReviewBlock={ai.isAvailable && report.status !== 'finalizado' ? (id: string) => updateAiModals({ reviewingBlockId: id }) : undefined}
+                  locked={report.isStructureLocked}
+                />
+              </div>
+            )}
 
-            {!report.isStructureLocked && <div className="mt-6 flex justify-center">
+            {editorMode === 'structure' && !report.isStructureLocked && <div className="mt-6 flex justify-center">
               <div className="relative w-full max-w-md" ref={sectionSelectorRef}>
                 <Button
                   variant="ghost"
@@ -922,18 +1038,15 @@ export default function ReportEditor() {
           </main>
         </div>
 
-        {/* Right: preview panel — full width toggle below 3xl, side-by-side on 3xl+ */}
-        {showDocxPreview && (
-          <div className="hidden lg:block flex-1 min-w-0 max-w-3xl mx-auto 3xl:max-w-none 3xl:mx-0 sticky top-16 h-[calc(100vh-4rem)] py-4">
-            <div className="h-full overflow-hidden">
-              <DocxPreviewPanel
-                report={report}
-                refreshKey={previewRefreshKey}
-              />
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* Preview Modal */}
+      <PreviewModal
+        isOpen={showPreviewModal}
+        onClose={() => setShowPreviewModal(false)}
+        report={report}
+        refreshKey={previewRefreshKey}
+      />
 
       {/* Block Edit Modal */}
       <BlockEditModal

@@ -54,6 +54,10 @@ export function flattenTree(nodes: TreeNode[]): Block[] {
   return result
 }
 
+export function getDirectChildren(blocks: Block[], parentId: string | null): Block[] {
+  return blocks.filter(b => (b.parentId ?? null) === parentId).sort((a, b) => a.order - b.order)
+}
+
 export function getDescendantIds(blocks: Block[], blockId: string): string[] {
   const childrenMap = new Map<string, Block[]>()
   for (const block of blocks) {
