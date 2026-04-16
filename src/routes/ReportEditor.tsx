@@ -815,7 +815,7 @@ export default function ReportEditor() {
       </div>
 
       {/* Main content area */}
-      <div className="flex-1 flex w-full px-4 sm:px-6 lg:px-8">
+      <div className="flex-1 flex gap-4 lg:gap-8 w-full px-4 sm:px-6 lg:px-8">
         {/* Floating toolbar — left column */}
         <div className="hidden lg:flex shrink-0 w-12 pt-12">
           <div className="sticky top-28 h-fit z-30">
