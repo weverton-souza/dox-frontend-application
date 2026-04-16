@@ -39,7 +39,7 @@ import {
 import { Chart as ChartJS } from 'chart.js'
 import './chart/setup'
 import { getProfessional } from '@/lib/api/professional-api'
-import { formatDate } from '@/lib/utils'
+import { formatDate, buildBlockTree, flattenTree } from '@/lib/utils'
 import { base64ToUint8Array } from './shared/social-icons'
 import type { ContactType } from '@/types'
 
@@ -1657,7 +1657,7 @@ function createKeyValueTable(rows: string[][]): Table {
 
 export async function generateDocx(report: Report): Promise<Blob> {
   const prof = await getProfessional()
-  const sortedBlocks = [...report.blocks].sort((a, b) => a.order - b.order)
+  const sortedBlocks = flattenTree(buildBlockTree(report.blocks))
 
   const sectionChildren: (Paragraph | Table)[] = []
 
