@@ -4,7 +4,7 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import type { Block, BlockData, SectionData } from '@/types'
 import { getDirectChildren } from '@/lib/utils'
 import type { BlockMeta } from '@/lib/utils'
-import OutlineRow from '@/components/editor/OutlineRow'
+import InlineBlock from '@/components/editor/InlineBlock'
 import Button from '@/components/ui/Button'
 
 interface SectionEditorProps {
@@ -77,18 +77,15 @@ export default function SectionEditor({
               </p>
             ) : (
               visibleBlocks.map((block) => (
-                <OutlineRow
+                <InlineBlock
                   key={block.id}
                   block={block}
                   meta={blockMetas[block.id]}
-                  depth={0}
-                  siblingIndex={0}
                   onEdit={onEditBlock}
                   onChange={onChangeBlock}
                   onDuplicate={locked ? undefined : onDuplicateBlock}
                   onRemove={locked ? undefined : onRemoveBlock}
                   onReviewBlock={onReviewBlock}
-                  dragDisabled
                 />
               ))
             )}
