@@ -815,7 +815,7 @@ export default function ReportEditor() {
       </div>
 
       {/* Main content area */}
-      <div className="flex-1 flex w-full px-2 sm:px-4 max-w-6xl mx-auto">
+      <div className="flex-1 flex w-full px-4 sm:px-6 lg:px-8">
         {/* Floating toolbar — left column */}
         <div className="hidden lg:flex shrink-0 w-12 pt-12">
           <div className="sticky top-28 h-fit z-30">
@@ -950,7 +950,7 @@ export default function ReportEditor() {
                 locked={report.isStructureLocked}
               />
             ) : (
-              <div className="flex gap-6">
+              <div className="flex gap-8 lg:gap-12">
                 <ReportSummary
                   blocks={report.blocks}
                   activeItemId={activeItemId}

@@ -56,12 +56,12 @@ export default function ReportSummary({
   const items = useMemo(() => buildSummaryItems(blocks), [blocks])
 
   return (
-    <aside className="w-64 shrink-0 flex flex-col">
+    <aside className="w-72 lg:w-80 shrink-0 flex flex-col self-start sticky top-24 max-h-[calc(100vh-7rem)]">
       <div className="px-3 pt-4 pb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
         Sumário
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-1">
+      <nav className="flex-1 overflow-y-auto px-1 min-h-0">
         {items.length === 0 ? (
           <p className="px-3 py-4 text-sm text-gray-400 italic">Sem seções.</p>
         ) : (
@@ -74,7 +74,7 @@ export default function ReportSummary({
                     type="button"
                     onClick={() => onSelect(item.block.id)}
                     style={{ paddingLeft: `${12 + item.depth * 16}px` }}
-                    className={`w-full text-left pr-3 py-1.5 rounded-md text-sm transition-colors truncate ${
+                    className={`w-full text-left pr-3 py-1.5 rounded-md text-sm leading-snug transition-colors ${
                       isActive
                         ? 'bg-brand-50 text-brand-700 font-medium'
                         : 'text-gray-700 hover:bg-gray-100'

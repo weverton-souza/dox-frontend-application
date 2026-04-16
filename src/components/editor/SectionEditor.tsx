@@ -62,8 +62,8 @@ export default function SectionEditor({
 
   return (
     <section className="flex-1 min-w-0 flex flex-col pb-6">
-      <div className="pt-4 pb-3">
-        <h2 className="text-sm font-semibold text-gray-800 uppercase tracking-wide truncate">
+      <div className="pt-4 pb-3 mb-3 border-b border-gray-200">
+        <h2 className="text-sm font-semibold text-gray-800 uppercase tracking-wide">
           {headerTitle}
         </h2>
       </div>
