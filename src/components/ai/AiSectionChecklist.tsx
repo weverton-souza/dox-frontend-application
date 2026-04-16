@@ -8,7 +8,7 @@ import { formatDateTime } from '@/lib/utils'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import AiSparkleIcon from '@/components/ai/AiSparkleIcon'
-import { CheckIcon, EditIcon } from '@/components/icons'
+import { EditIcon } from '@/components/icons'
 
 type SectionStatus = 'empty' | 'ai-generated' | 'skipped' | 'has-content'
 
@@ -88,9 +88,8 @@ export default function AiSectionChecklist({ isOpen, onClose, onConfirm, blocks,
 
   const [formResponses, setFormResponses] = useState<FormResponse[]>([])
   const [formTitles, setFormTitles] = useState<Record<string, string>>({})
-  const [selectedFormResponseIds, setSelectedFormResponseIds] = useState<Set<string>>(new Set())
+  const [sectionSources, setSectionSources] = useState<Record<string, { formResponseIds: Set<string>; includeCustomerData: boolean }>>({})
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set())
-  const [includeCustomerData, setIncludeCustomerData] = useState(true)
   const [sectionInstructions, setSectionInstructions] = useState<Record<string, string>>({})
   const [instructionPopover, setInstructionPopover] = useState<string | null>(null)
   const [instructionDraft, setInstructionDraft] = useState('')
@@ -159,12 +158,16 @@ export default function AiSectionChecklist({ isOpen, onClose, onConfirm, blocks,
         const titles: Record<string, string> = {}
         forms.forEach(f => { titles[f.id] = f.title })
         setFormTitles(titles)
-        const initial = new Set<string>()
-        if (currentFormResponseId) initial.add(currentFormResponseId)
+        const defaultIds = new Set<string>()
+        if (currentFormResponseId) defaultIds.add(currentFormResponseId)
         responses.forEach(r => {
-          if (r.status === 'concluido') initial.add(r.id)
+          if (r.status === 'concluido') defaultIds.add(r.id)
         })
-        setSelectedFormResponseIds(initial)
+        const initialSources: Record<string, { formResponseIds: Set<string>; includeCustomerData: boolean }> = {}
+        sections.forEach(s => {
+          initialSources[s.title] = { formResponseIds: new Set(defaultIds), includeCustomerData: true }
+        })
+        setSectionSources(initialSources)
       }).catch(() => {})
     }
   }, [isOpen, customerId, currentFormResponseId])
@@ -178,12 +181,20 @@ export default function AiSectionChecklist({ isOpen, onClose, onConfirm, blocks,
     })
   }
 
-  const toggleFormResponse = (id: string) => {
-    setSelectedFormResponseIds(prev => {
-      const next = new Set(prev)
+  const toggleFormResponse = (sectionTitle: string, id: string) => {
+    setSectionSources(prev => {
+      const current = prev[sectionTitle] || { formResponseIds: new Set(), includeCustomerData: true }
+      const next = new Set(current.formResponseIds)
       if (next.has(id)) next.delete(id)
       else next.add(id)
-      return next
+      return { ...prev, [sectionTitle]: { ...current, formResponseIds: next } }
+    })
+  }
+
+  const toggleCustomerData = (sectionTitle: string) => {
+    setSectionSources(prev => {
+      const current = prev[sectionTitle] || { formResponseIds: new Set(), includeCustomerData: true }
+      return { ...prev, [sectionTitle]: { ...current, includeCustomerData: !current.includeCustomerData } }
     })
   }
 
@@ -270,7 +281,11 @@ export default function AiSectionChecklist({ isOpen, onClose, onConfirm, blocks,
 
 
   const hasFormResponses = formResponses.length > 0
-  const selectedSourceCount = selectedFormResponseIds.size
+  const selectedSourceCount = useMemo(() => {
+    const allIds = new Set<string>()
+    Object.values(sectionSources).forEach(src => src.formResponseIds.forEach(id => allIds.add(id)))
+    return allIds.size
+  }, [sectionSources])
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="" size="md">
@@ -299,36 +314,45 @@ export default function AiSectionChecklist({ isOpen, onClose, onConfirm, blocks,
           </div>
         </div>
 
-        {/* Section list — iOS grouped style */}
-        <div className="rounded-xl border border-gray-200 bg-white overflow-hidden divide-y divide-gray-100 max-h-[26rem] overflow-y-auto">
-          {sections.map((section, idx) => {
+        {/* Section list — Apple/Carbon style */}
+        <div className="space-y-1.5 max-h-[26rem] overflow-y-auto pr-0.5">
+          {sections.map((section) => {
             const isChecked = selected.has(section.title)
             const status = statusConfig(section.status)
             const isExpanded = expandedSections.has(section.title)
-            const isFirst = idx === 0
-            const isLast = idx === sections.length - 1
             const hasInstruction = !!sectionInstructions[section.title]
             const isPopoverOpen = instructionPopover === section.title
 
             return (
-              <div key={section.title}>
+              <div
+                key={section.title}
+                className={`rounded-xl border transition-all ${
+                  isChecked
+                    ? 'border-brand-200 bg-white shadow-sm'
+                    : 'border-gray-100 bg-gray-50/60 hover:bg-white/80 hover:border-gray-200'
+                }`}
+              >
                 {/* Section row */}
                 <div
-                  className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors active:bg-gray-50 ${
-                    isFirst ? 'rounded-t-xl' : ''
-                  } ${isLast && !isExpanded ? 'rounded-b-xl' : ''}`}
+                  className="flex items-center gap-3 px-4 py-3.5 cursor-pointer"
                   onClick={() => toggle(section.title)}
                 >
                   {/* Checkmark circle */}
-                  <div className={`w-[22px] h-[22px] rounded-full flex items-center justify-center shrink-0 transition-colors ${
-                    isChecked ? 'bg-brand-500' : 'border-2 border-gray-300'
+                  <div className={`w-[18px] h-[18px] rounded-full flex items-center justify-center shrink-0 transition-colors ${
+                    isChecked
+                      ? 'bg-brand-500'
+                      : 'border-[1.5px] border-gray-300'
                   }`}>
-                    {isChecked && <CheckIcon className="text-white" />}
+                    {isChecked && (
+                      <svg width="10" height="10" viewBox="0 0 20 20" fill="white">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    )}
                   </div>
 
                   {/* Title */}
-                  <span className={`text-[15px] flex-1 leading-tight ${
-                    isChecked ? 'text-gray-900 font-medium' : 'text-gray-500'
+                  <span className={`text-[13px] flex-1 leading-tight tracking-wide ${
+                    isChecked ? 'text-gray-900 font-semibold' : 'text-gray-400 font-medium'
                   }`}>
                     {section.title}
                   </span>
@@ -352,33 +376,39 @@ export default function AiSectionChecklist({ isOpen, onClose, onConfirm, blocks,
                     {isPopoverOpen && (
                       <div
                         ref={popoverRef}
-                        className="absolute right-0 top-8 z-50 w-72 bg-white rounded-xl border border-gray-200 shadow-dropdown p-3"
+                        className="absolute right-0 top-8 z-50 w-80 bg-white/95 backdrop-blur-md rounded-2xl border border-gray-200/80 shadow-lg p-4"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <span className="text-[12px] font-medium text-gray-500 block mb-2">
-                          {section.title}
-                        </span>
+                        <div className="flex items-center gap-2 mb-2.5">
+                          <AiSparkleIcon size={14} />
+                          <span className="text-[12px] font-semibold text-gray-700">
+                            Orientação para o Assistente
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-gray-400 mb-2">
+                          Descreva como o Assistente deve redigir a seção "{section.title}"
+                        </p>
                         <textarea
                           value={instructionDraft}
                           onChange={(e) => setInstructionDraft(e.target.value)}
-                          placeholder="Instruções para o Assistente nesta seção..."
-                          className="w-full h-20 text-[13px] text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-400 placeholder:text-gray-400"
+                          placeholder="Ex: Foque nos aspectos emocionais. Use linguagem técnica mas acessível..."
+                          className="w-full h-20 text-[13px] text-gray-800 bg-gray-50/80 border border-gray-200 rounded-xl px-3 py-2.5 resize-none focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-300 placeholder:text-gray-400"
                           autoFocus
                         />
-                        <div className="flex justify-end gap-2 mt-2">
+                        <div className="flex justify-between items-center mt-3">
                           <button
                             type="button"
                             onClick={clearInstruction}
-                            className="text-[12px] text-gray-400 hover:text-gray-600 px-2 py-1"
+                            className="text-[12px] text-gray-400 hover:text-gray-600 transition-colors"
                           >
                             Limpar
                           </button>
                           <button
                             type="button"
                             onClick={saveInstruction}
-                            className="text-[12px] text-brand-600 hover:text-brand-700 font-medium px-2 py-1"
+                            className="text-[12px] font-medium text-white bg-brand-500 hover:bg-brand-600 px-4 py-1.5 rounded-lg transition-colors"
                           >
-                            OK
+                            Salvar
                           </button>
                         </div>
                       </div>
@@ -387,7 +417,7 @@ export default function AiSectionChecklist({ isOpen, onClose, onConfirm, blocks,
 
                   {/* Status pill */}
                   {!isExpanded && (
-                    <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${status.bg} ${status.text_color}`}>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium tracking-wide ${status.bg} ${status.text_color}`}>
                       {status.text}
                     </span>
                   )}
@@ -416,7 +446,7 @@ export default function AiSectionChecklist({ isOpen, onClose, onConfirm, blocks,
 
                 {/* Expanded: review actions + data sources */}
                 {isExpanded && (
-                  <div className="bg-gray-50/80 px-4 pb-3 pt-1">
+                  <div className="bg-gray-50/50 border-t border-gray-100 px-4 pb-3 pt-2 rounded-b-xl">
                     {/* Review action selector for sections with content */}
                     {isChecked && (section.status === 'has-content' || section.status === 'ai-generated') && (
                       <>
@@ -461,34 +491,38 @@ export default function AiSectionChecklist({ isOpen, onClose, onConfirm, blocks,
                     </span>
                     <div className="mt-1.5 space-y-1">
                       {/* Customer data toggle */}
-                      {customerId && (
+                      {customerId && (() => {
+                        const src = sectionSources[section.title]
+                        const isChecked = src?.includeCustomerData ?? true
+                        return (
                         <div
                           className={`flex items-center gap-2.5 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
-                            includeCustomerData ? 'bg-white shadow-sm' : 'hover:bg-white/60'
+                            isChecked ? 'bg-white shadow-sm' : 'hover:bg-white/60'
                           }`}
-                          onClick={() => setIncludeCustomerData(prev => !prev)}
+                          onClick={() => toggleCustomerData(section.title)}
                         >
                           <div className={`w-[18px] h-[18px] rounded-full flex items-center justify-center shrink-0 transition-colors ${
-                            includeCustomerData ? 'bg-emerald-500' : 'border-[1.5px] border-gray-300'
+                            isChecked ? 'bg-emerald-500' : 'border-[1.5px] border-gray-300'
                           }`}>
-                            {includeCustomerData && (
+                            {isChecked && (
                               <svg width="10" height="10" viewBox="0 0 20 20" fill="white">
                                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                               </svg>
                             )}
                           </div>
                           <span className="text-[14px] shrink-0">👤</span>
-                          <span className={`text-[13px] flex-1 ${includeCustomerData ? 'text-gray-800' : 'text-gray-500'}`}>
+                          <span className={`text-[13px] flex-1 ${isChecked ? 'text-gray-800' : 'text-gray-500'}`}>
                             Dados do cliente
                           </span>
                           <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-gray-100 text-gray-500">
                             Cadastro
                           </span>
                         </div>
-                      )}
+                        )
+                      })()}
 
                       {formResponses.map(response => {
-                        const isSourceChecked = selectedFormResponseIds.has(response.id)
+                        const isSourceChecked = (sectionSources[section.title]?.formResponseIds ?? new Set()).has(response.id)
                         const formTitle = formTitles[response.formId] || 'Formulário'
                         const statusColors = FORM_RESPONSE_STATUS_COLORS[response.status]
 
@@ -498,7 +532,7 @@ export default function AiSectionChecklist({ isOpen, onClose, onConfirm, blocks,
                             className={`flex items-center gap-2.5 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
                               isSourceChecked ? 'bg-white shadow-sm' : 'hover:bg-white/60'
                             }`}
-                            onClick={() => toggleFormResponse(response.id)}
+                            onClick={() => toggleFormResponse(section.title, response.id)}
                           >
                             <div className={`w-[18px] h-[18px] rounded-full flex items-center justify-center shrink-0 transition-colors ${
                               isSourceChecked ? 'bg-emerald-500' : 'border-[1.5px] border-gray-300'
@@ -655,13 +689,22 @@ export default function AiSectionChecklist({ isOpen, onClose, onConfirm, blocks,
                 }
               })
               const hasDataInstructions = Object.keys(dataInstructions).length > 0
+              const allFormResponseIds = new Set<string>()
+              let anyIncludeCustomerData = false
+              for (const title of selected) {
+                const src = sectionSources[title]
+                if (src) {
+                  src.formResponseIds.forEach(id => allFormResponseIds.add(id))
+                  if (src.includeCustomerData) anyIncludeCustomerData = true
+                }
+              }
               onConfirm(
                 sectionInstructionList,
-                Array.from(selectedFormResponseIds),
+                Array.from(allFormResponseIds),
                 reviewConfigs.length > 0 ? reviewConfigs : undefined,
                 hasDataInstructions ? dataInstructions : undefined,
                 Array.from(selectedDataIds),
-                includeCustomerData,
+                anyIncludeCustomerData,
               )
             }}
             disabled={selected.size === 0 || loading}
