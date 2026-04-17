@@ -5,7 +5,7 @@ import { createScoreTableFromTemplate, createChartFromTemplate, isSlateContent, 
 import type { TextBlockData, SectionData, InfoBoxData } from '@/types'
 import { getReport, updateReport, getExportData } from '@/lib/api/report-api'
 import { getCustomers } from '@/lib/api/customer-api'
-import { createReportTemplate, getScoreTableTemplates, getChartTemplates } from '@/lib/api/template-api'
+import { createReportTemplate, getReportTemplates, getScoreTableTemplates, getChartTemplates } from '@/lib/api/template-api'
 import { getFormById, getFormResponseById } from '@/lib/api/form-api'
 import { useError } from '@/contexts/ErrorContext'
 import { createBlock, computeBlockMetas, getDescendantIds } from '@/lib/utils'
@@ -90,6 +90,7 @@ export default function ReportEditor() {
   const [formProvenanceId, setFormProvenanceId] = useState<string | null>(null)
   const [scoreTableTemplates, setScoreTableTemplates] = useState<ScoreTableTemplate[]>([])
   const [chartTemplatesState, setChartTemplatesState] = useState<ChartTemplate[]>([])
+  const [templateName, setTemplateName] = useState<string | null>(null)
 
   const saveReportFn = useCallback((data: Report) => updateReport(data), [])
   const { saveStatus, scheduleSave, forceSave } = useAutoSave<Report>(saveReportFn)
@@ -120,6 +121,17 @@ export default function ReportEditor() {
         setCustomers(customersPage.content)
         setScoreTableTemplates(stTemplates)
         setChartTemplatesState(cTemplates)
+
+        // Load template name if report was created from a template
+        if (loaded.templateId) {
+          try {
+            const rTemplates = await getReportTemplates()
+            const tpl = rTemplates.find(t => t.id === loaded.templateId)
+            if (tpl) setTemplateName(tpl.name)
+          } catch {
+            // template name is optional
+          }
+        }
 
         // Load provenance info if report was generated from a form response
         if (loaded.formResponseId && loaded.formId) {
@@ -703,87 +715,93 @@ export default function ReportEditor() {
         backgroundSize: '22px 22px',
       }}
     >
-      {/* Header — pill toolbar */}
-      <div className="w-full px-3 sm:px-4 lg:px-[25%] pt-3 lg:pt-4 pb-3 lg:pb-4">
-        <div className="flex items-center justify-between bg-white rounded-full px-4 lg:px-5 py-3 lg:py-3.5 shadow-card">
-          <div className="flex items-center gap-3 flex-1 min-w-0">
-            <button
-              type="button"
-              onClick={() => {
-                handleForceSave()
-                navigate('/')
-              }}
-              className="h-10 w-10 lg:h-12 lg:w-12 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors shrink-0"
-              title="Voltar"
-            >
-              <svg width="22" height="22" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z" clipRule="evenodd" />
-              </svg>
-            </button>
+      {/* Header — Figma-style centered */}
+      <div className="sticky top-0 z-30 bg-white/90 backdrop-blur-md shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-2 lg:py-2.5">
+          <div className="flex items-center justify-between">
+            {/* Left: back + save status */}
+            <div className="flex items-center gap-2 w-40 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  handleForceSave()
+                  navigate('/')
+                }}
+                className="h-9 w-9 flex items-center justify-center rounded-full hover:bg-white/80 text-gray-500 hover:text-gray-700 transition-colors"
+                title="Voltar"
+              >
+                <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z" clipRule="evenodd" />
+                </svg>
+              </button>
+              <SaveStatusIndicator status={saveStatus} showLabel={false} />
+            </div>
 
-            <SaveStatusIndicator status={saveStatus} showLabel={false} />
-
-            <input
-              type="text"
-              value={report.customerName || ''}
-              onChange={(e) => handleUpdateReport({ customerName: e.target.value })}
-              placeholder="Nome do cliente"
-              className="text-lg font-medium text-gray-800 bg-transparent border-0 focus:outline-none focus:ring-0 flex-1 min-w-0 truncate placeholder:text-gray-400"
-            />
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0">
-            <div className="flex items-center gap-2 shrink-0">
-              {/* Status pill (read-only) */}
-              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${REPORT_STATUS_COLORS[report.status].bg} ${REPORT_STATUS_COLORS[report.status].text}`}>
+            {/* Center: template name · client name · status badge */}
+            <div className="flex items-center gap-2 min-w-0 justify-center flex-1">
+              {templateName && (
+                <>
+                  <span className="text-xs text-gray-400 truncate hidden sm:inline">{templateName}</span>
+                  <span className="text-gray-300 hidden sm:inline">—</span>
+                </>
+              )}
+              <input
+                type="text"
+                value={report.customerName || ''}
+                onChange={(e) => handleUpdateReport({ customerName: e.target.value })}
+                placeholder="Nome do cliente"
+                className="text-sm font-medium text-gray-700 bg-transparent border-0 focus:outline-none focus:ring-0 text-center min-w-0 max-w-xs truncate placeholder:text-gray-400"
+              />
+              <span className="text-gray-300">·</span>
+              <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${REPORT_STATUS_COLORS[report.status].bg} ${REPORT_STATUS_COLORS[report.status].text}`}>
                 {REPORT_STATUS_LABELS[report.status]}
               </span>
+            </div>
 
-              {/* AI — secondary */}
+            {/* Right: actions */}
+            <div className="flex items-center gap-2 shrink-0">
               {showAiButton && fillableCount > 0 && (
                 <button
                   type="button"
                   onClick={handleGenerateFullReport}
                   disabled={ai.isGenerating}
-                  className="h-10 flex items-center gap-2 px-4 rounded-full bg-brand-50 text-brand-700 border border-brand-200 hover:bg-brand-100 transition-colors shrink-0 disabled:opacity-50 text-sm font-medium"
+                  className="h-8 flex items-center gap-1.5 px-3 rounded-full bg-brand-50 text-brand-700 hover:bg-brand-100 transition-colors text-xs font-medium disabled:opacity-50"
                   title="Redigir com Assistente"
                 >
                   {ai.isGenerating ? (
-                    <svg className="animate-spin" width={16} height={16} viewBox="0 0 24 24" fill="none">
+                    <svg className="animate-spin" width={14} height={14} viewBox="0 0 24 24" fill="none">
                       <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="32" strokeLinecap="round" />
                     </svg>
                   ) : (
-                    <AiSparkleIcon size={16} />
+                    <AiSparkleIcon size={14} />
                   )}
-                  <span className="hidden sm:inline">Assistente</span>
+                  Assistente
                 </button>
               )}
 
-              {/* Primary action: Finalizar (se rascunho/em_revisao) ou Baixar (se finalizado) */}
-              {report.status !== 'finalizado' ? (
+              {report.status === 'finalizado' ? (
                 <button
                   type="button"
-                  onClick={() => handleStatusChange('finalizado')}
-                  className="h-10 flex items-center gap-2 px-4 rounded-full bg-brand-700 text-white hover:bg-brand-800 transition-colors shadow-sm shrink-0 text-sm font-medium"
-                  title="Finalizar relatório"
+                  onClick={handleGenerateDocx}
+                  className="h-8 flex items-center gap-1.5 px-3 rounded-full bg-brand-700 text-white hover:bg-brand-800 transition-colors text-xs font-medium"
+                  title="Baixar .docx"
                 >
-                  <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M10.75 2.75a.75.75 0 00-1.5 0v8.614L6.295 8.235a.75.75 0 10-1.09 1.03l4.25 4.5a.75.75 0 001.09 0l4.25-4.5a.75.75 0 00-1.09-1.03l-2.955 3.129V2.75z" />
+                    <path d="M3.5 12.75a.75.75 0 00-1.5 0v2.5A2.75 2.75 0 004.75 18h10.5A2.75 2.75 0 0018 15.25v-2.5a.75.75 0 00-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5z" />
                   </svg>
-                  <span className="hidden sm:inline">Finalizar</span>
+                  Baixar
                 </button>
               ) : (
                 <button
                   type="button"
-                  onClick={handleGenerateDocx}
-                  className="h-10 flex items-center gap-2 px-4 rounded-full bg-brand-700 text-white hover:bg-brand-800 transition-colors shadow-sm shrink-0 text-sm font-medium"
-                  title="Baixar .docx"
+                  onClick={() => handleStatusChange('finalizado')}
+                  className="h-8 flex items-center gap-1.5 px-3 rounded-full bg-green-600 text-white hover:bg-green-700 transition-colors text-xs font-medium"
                 >
-                  <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M10.75 2.75a.75.75 0 00-1.5 0v8.614L6.295 8.235a.75.75 0 10-1.09 1.03l4.25 4.5a.75.75 0 001.09 0l4.25-4.5a.75.75 0 00-1.09-1.03l-2.955 3.129V2.75z" />
-                    <path d="M3.5 12.75a.75.75 0 00-1.5 0v2.5A2.75 2.75 0 004.75 18h10.5A2.75 2.75 0 0018 15.25v-2.5a.75.75 0 00-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5z" />
+                  <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
                   </svg>
-                  <span className="hidden sm:inline">Baixar</span>
+                  Finalizar
                 </button>
               )}
             </div>
