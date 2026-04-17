@@ -1,10 +1,27 @@
-import type { Block, BlockData, TextBlockData, InfoBoxData } from '@/types'
+import { useState } from 'react'
+import type {
+  Block,
+  BlockData,
+  TextBlockData,
+  InfoBoxData,
+  IdentificationData,
+  ScoreTableData,
+  ChartData,
+  ReferencesData,
+  ClosingPageData,
+  Customer,
+} from '@/types'
 import { BLOCK_TYPE_LABELS } from '@/types'
 import { BLOCK_TYPE_COLORS, getBlockTypeIcon } from '@/lib/block-constants'
 import type { BlockMeta } from '@/lib/utils'
 import TextBlock from '@/components/blocks/TextBlock'
 import InfoBoxBlock from '@/components/blocks/InfoBoxBlock'
-import OutlineRow from '@/components/editor/OutlineRow'
+import IdentificationBlock from '@/components/blocks/IdentificationBlock'
+import ScoreTableBlock from '@/components/blocks/ScoreTableBlock'
+import ChartBlock from '@/components/blocks/ChartBlock'
+import ReferencesBlock from '@/components/blocks/ReferencesBlock'
+import ClosingPageBlock from '@/components/blocks/ClosingPageBlock'
+import BlockErrorBoundary from '@/components/ui/BlockErrorBoundary'
 
 interface InlineBlockProps {
   block: Block
@@ -14,61 +31,116 @@ interface InlineBlockProps {
   onRemove?: (id: string) => void
   onChange: (id: string, data: BlockData) => void
   onReviewBlock?: (id: string) => void
+  customers?: Customer[]
+  onCustomerSelected?: (customerId: string) => void
 }
 
-const INLINE_TYPES = new Set(['text', 'info-box'])
+function renderBody(
+  block: Block,
+  onChange: (id: string, data: BlockData) => void,
+  customers?: Customer[],
+  onCustomerSelected?: (customerId: string) => void,
+) {
+  const handleChange = (data: BlockData) => onChange(block.id, data)
+
+  switch (block.type) {
+    case 'text':
+      return <TextBlock data={block.data as TextBlockData} onChange={handleChange} />
+    case 'info-box':
+      return <InfoBoxBlock data={block.data as InfoBoxData} onChange={handleChange} />
+    case 'identification':
+      return (
+        <IdentificationBlock
+          data={block.data as IdentificationData}
+          onChange={handleChange}
+          customers={customers}
+          onCustomerSelected={onCustomerSelected}
+        />
+      )
+    case 'score-table':
+      return <ScoreTableBlock data={block.data as ScoreTableData} onChange={handleChange} />
+    case 'chart':
+      return <ChartBlock data={block.data as ChartData} onChange={handleChange} />
+    case 'references':
+      return <ReferencesBlock data={block.data as ReferencesData} onChange={handleChange} />
+    case 'closing-page':
+      return <ClosingPageBlock data={block.data as ClosingPageData} onChange={handleChange} />
+    case 'section':
+      return null
+  }
+}
 
 export default function InlineBlock({
   block,
-  meta,
+  meta: _meta,
   onEdit,
   onDuplicate,
   onRemove,
   onChange,
   onReviewBlock,
+  customers,
+  onCustomerSelected,
 }: InlineBlockProps) {
-  if (!INLINE_TYPES.has(block.type)) {
-    return (
-      <OutlineRow
-        block={block}
-        meta={meta}
-        depth={0}
-        onEdit={onEdit}
-        onDuplicate={onDuplicate}
-        onRemove={onRemove}
-        onChange={onChange}
-        onReviewBlock={onReviewBlock}
-        dragDisabled
-      />
-    )
-  }
+  const [collapsed, setCollapsed] = useState(false)
+
+  if (block.type === 'section') return null
+
+  const showReview = block.type === 'text' && !!onReviewBlock
 
   return (
-    <div className="group relative bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+    <div className={`group relative bg-white rounded-xl border border-gray-200 shadow-sm ${collapsed ? '' : 'overflow-hidden'}`}>
       {/* Toolbar header */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-gray-100 bg-gray-50/50">
-        <div className="flex items-center gap-2">
+      <div className={`flex items-center justify-between px-3 py-2 bg-gray-50/50 ${collapsed ? '' : 'border-b border-gray-100'}`}>
+        <div className="flex items-center gap-2 min-w-0">
+          <button
+            type="button"
+            onClick={() => setCollapsed((v) => !v)}
+            className="p-0.5 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-200 transition-colors"
+            title={collapsed ? 'Expandir bloco' : 'Recolher bloco'}
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              className={`transition-transform duration-200 ${collapsed ? '-rotate-90' : ''}`}
+            >
+              <path
+                fillRule="evenodd"
+                d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </button>
           <div className={`p-1 rounded-md ${BLOCK_TYPE_COLORS[block.type]}`}>
             {getBlockTypeIcon(block.type, 12)}
           </div>
-          <span className="text-xs font-medium text-gray-500">
+          <span className="text-xs font-medium text-gray-500 truncate">
             {BLOCK_TYPE_LABELS[block.type]}
           </span>
           {block.generatedByAi && (
             <span
-              className="inline-flex items-center px-1.5 py-0.5 bg-brand-50 text-brand-600 text-[10px] font-medium rounded"
+              className="inline-flex items-center px-1.5 py-0.5 bg-brand-50 text-brand-600 text-[10px] font-medium rounded shrink-0"
               title="Gerado pelo Assistente"
             >
               ✦
             </span>
           )}
+          {block.skippedByAi && (
+            <span
+              className="inline-flex items-center px-1.5 py-0.5 bg-amber-50 text-amber-600 text-[10px] font-medium rounded shrink-0"
+              title="Dados insuficientes"
+            >
+              ⚠
+            </span>
+          )}
         </div>
 
-        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-          {block.type === 'text' && onReviewBlock && (
+        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+          {showReview && (
             <button
               type="button"
-              onClick={() => onReviewBlock(block.id)}
+              onClick={() => onReviewBlock!(block.id)}
               className="p-1.5 rounded-md hover:bg-brand-50 text-brand-600 transition-colors"
               title="Revisar com Assistente"
             >
@@ -141,13 +213,13 @@ export default function InlineBlock({
       </div>
 
       {/* Content */}
-      <div className="p-4">
-        {block.type === 'text' ? (
-          <TextBlock data={block.data as TextBlockData} onChange={(data) => onChange(block.id, data)} />
-        ) : (
-          <InfoBoxBlock data={block.data as InfoBoxData} onChange={(data) => onChange(block.id, data)} />
-        )}
-      </div>
+      {!collapsed && (
+        <div className="p-4">
+          <BlockErrorBoundary blockType={block.type}>
+            {renderBody(block, onChange, customers, onCustomerSelected)}
+          </BlockErrorBoundary>
+        </div>
+      )}
     </div>
   )
 }

@@ -31,7 +31,7 @@ export default function AiQuotaAlert({ alertLevel, alertMessage, overage }: AiQu
         <p>{alertMessage}</p>
         {isOverage && overage != null && overage > 0 && (
           <p className="text-xs mt-1 opacity-75">
-            {overage} laudos excedentes este mês
+            {overage} relatórios excedentes este mês
           </p>
         )}
       </div>

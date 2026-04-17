@@ -13,10 +13,16 @@ const STATUS_CONFIG = {
 
 export default function SaveStatusIndicator({ status, showLabel = true }: SaveStatusIndicatorProps) {
   const config = STATUS_CONFIG[status]
+  const pingColor = status === 'saved' ? 'bg-green-400' : status === 'unsaved' ? 'bg-orange-400' : null
 
   return (
     <div className="flex items-center gap-1.5 text-xs shrink-0">
-      <span className={`w-2 h-2 rounded-full ${config.dot}`} title={config.label} />
+      <span className="relative inline-flex w-2 h-2" title={config.label}>
+        {pingColor && (
+          <span className={`absolute inline-flex w-full h-full rounded-full opacity-75 animate-ping ${pingColor}`} />
+        )}
+        <span className={`relative inline-flex w-2 h-2 rounded-full ${config.dot}`} />
+      </span>
       {showLabel && (
         <span className="text-gray-500 hidden sm:inline">{config.label}</span>
       )}

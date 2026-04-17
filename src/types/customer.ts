@@ -48,7 +48,7 @@ export const CUSTOMER_EVENT_TYPE_LABELS: Record<CustomerEventType, string> = {
   consulta: 'Consulta',
   retorno: 'Retorno',
   avaliacao: 'Avaliação',
-  laudo: 'Laudo',
+  laudo: 'Relatório',
   observacao: 'Observação',
 }
 

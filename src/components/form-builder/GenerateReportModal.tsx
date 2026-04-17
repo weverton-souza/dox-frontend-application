@@ -234,7 +234,7 @@ export default function GenerateReportModal({
   const motivationalMessage = useRotatingMessage(percentage)
 
   return (
-    <Modal isOpen={isOpen} onClose={state === 'generating' ? () => {} : handleClose} title="Redigir Laudo com Assistente" size="md">
+    <Modal isOpen={isOpen} onClose={state === 'generating' ? () => {} : handleClose} title="Redigir Relatório com Assistente" size="md">
       <div className="p-4 space-y-4">
         {showNoTemplate ? (
           <div className="text-center py-4">
@@ -313,7 +313,7 @@ export default function GenerateReportModal({
               <Button onClick={handleGenerate}>
                 <span className="flex items-center gap-2">
                   <AiSparkleIcon size={16} />
-                  Redigir Laudo
+                  Redigir Relatório
                 </span>
               </Button>
             </div>
@@ -324,7 +324,7 @@ export default function GenerateReportModal({
             <div className="text-center">
               <div className="inline-flex items-center gap-2 mb-1">
                 <AiSparkleIcon size={16} />
-                <span className="text-[15px] font-semibold text-gray-900">Assistente redigindo seu laudo</span>
+                <span className="text-[15px] font-semibold text-gray-900">Assistente redigindo seu relatório</span>
               </div>
               <p className="text-[13px] text-gray-500 font-medium">
                 {currentIndex} de {totalSections} seções
@@ -432,7 +432,7 @@ export default function GenerateReportModal({
 
             {failedCount === 0 && skippedCount === 0 ? (
               <>
-                <p className="text-sm font-medium text-gray-800 mb-1">Laudo redigido com sucesso!</p>
+                <p className="text-sm font-medium text-gray-800 mb-1">Relatório redigido com sucesso!</p>
                 <p className="text-xs text-gray-500 mb-4">
                   {completedCount} seções preenchidas. Revise o conteúdo antes de finalizar.
                 </p>
@@ -440,7 +440,7 @@ export default function GenerateReportModal({
             ) : (
               <>
                 <p className="text-sm font-medium text-gray-800 mb-1">
-                  {failedCount > 0 ? 'Laudo parcialmente redigido' : 'Laudo redigido'}
+                  {failedCount > 0 ? 'Relatório parcialmente redigido' : 'Relatório redigido'}
                 </p>
                 <p className="text-xs text-gray-500 mb-2">
                   {completedCount} de {totalSections} seções redigidas.
@@ -466,7 +466,7 @@ export default function GenerateReportModal({
                 <line x1="9" y1="9" x2="15" y2="15" />
               </svg>
             </div>
-            <p className="text-sm text-gray-700 font-medium mb-1">Erro ao redigir laudo</p>
+            <p className="text-sm text-gray-700 font-medium mb-1">Erro ao redigir relatório</p>
             <p className="text-xs text-gray-500 mb-4">{errorMessage}</p>
             <div className="flex justify-center gap-2">
               <Button variant="ghost" onClick={handleClose}>Fechar</Button>
