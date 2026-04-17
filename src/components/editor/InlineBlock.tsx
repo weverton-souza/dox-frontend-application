@@ -81,7 +81,7 @@ export default function InlineBlock({
   customers,
   onCustomerSelected,
 }: InlineBlockProps) {
-  const [collapsed, setCollapsed] = useState(false)
+  const [collapsed, setCollapsed] = useState(true)
 
   if (block.type === 'section') return null
 
@@ -90,8 +90,8 @@ export default function InlineBlock({
   return (
     <div className={`group relative bg-white rounded-xl border border-gray-200 shadow-sm ${collapsed ? '' : 'overflow-hidden'}`}>
       {/* Toolbar header */}
-      <div className={`flex items-center justify-between px-3 py-2 bg-gray-50/50 ${collapsed ? '' : 'border-b border-gray-100'}`}>
-        <div className="flex items-center gap-2 min-w-0">
+      <div className={`flex items-center justify-between px-4 py-3 bg-gray-50/50 ${collapsed ? '' : 'border-b border-gray-100'}`}>
+        <div className="flex items-center gap-2.5 min-w-0">
           <button
             type="button"
             onClick={() => setCollapsed((v) => !v)}
@@ -99,8 +99,8 @@ export default function InlineBlock({
             title={collapsed ? 'Expandir bloco' : 'Recolher bloco'}
           >
             <svg
-              width="14"
-              height="14"
+              width="18"
+              height="18"
               viewBox="0 0 20 20"
               fill="currentColor"
               className={`transition-transform duration-200 ${collapsed ? '-rotate-90' : ''}`}
@@ -112,10 +112,10 @@ export default function InlineBlock({
               />
             </svg>
           </button>
-          <div className={`p-1 rounded-md ${BLOCK_TYPE_COLORS[block.type]}`}>
-            {getBlockTypeIcon(block.type, 12)}
+          <div className={`p-1.5 rounded-md ${BLOCK_TYPE_COLORS[block.type]}`}>
+            {getBlockTypeIcon(block.type, 18)}
           </div>
-          <span className="text-xs font-medium text-gray-500 truncate">
+          <span className="text-sm font-medium text-gray-700 truncate">
             {BLOCK_TYPE_LABELS[block.type]}
           </span>
           {block.generatedByAi && (
