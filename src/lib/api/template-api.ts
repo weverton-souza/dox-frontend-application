@@ -13,6 +13,16 @@ export async function createReportTemplate(template: Partial<ReportTemplate>): P
   return data
 }
 
+export async function getReportTemplateById(id: string): Promise<ReportTemplate | null> {
+  const templates = await getReportTemplates()
+  return templates.find(t => t.id === id) ?? null
+}
+
+export async function updateReportTemplate(template: ReportTemplate): Promise<ReportTemplate> {
+  const { data } = await api.put<ReportTemplate>(`/templates/reports/${template.id}`, template)
+  return data
+}
+
 export async function deleteReportTemplate(id: string): Promise<void> {
   await api.delete(`/templates/reports/${id}`)
 }
