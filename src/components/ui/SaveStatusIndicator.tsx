@@ -6,27 +6,22 @@ interface SaveStatusIndicatorProps {
 }
 
 const STATUS_CONFIG = {
-  saved: { color: 'bg-green-500', label: 'Salvo' },
-  saving: { color: 'bg-yellow-500', label: 'Salvando...' },
-  unsaved: { color: 'bg-orange-500', label: 'Não salvo' },
+  saved: { dot: 'bg-green-500', label: 'Salvo' },
+  saving: { dot: 'bg-yellow-500 animate-pulse', label: 'Salvando...' },
+  unsaved: { dot: 'bg-orange-500', label: 'Não salvo' },
 }
 
 export default function SaveStatusIndicator({ status, showLabel = true }: SaveStatusIndicatorProps) {
   const config = STATUS_CONFIG[status]
+  const pingColor = status === 'saved' ? 'bg-green-400' : status === 'unsaved' ? 'bg-orange-400' : null
 
   return (
     <div className="flex items-center gap-1.5 text-xs shrink-0">
-      <span className="relative flex h-2.5 w-2.5" title={config.label}>
-        {status === 'saved' && (
-          <span className="absolute inset-0 rounded-full bg-green-400 animate-ping opacity-40" />
+      <span className="relative inline-flex w-2 h-2" title={config.label}>
+        {pingColor && (
+          <span className={`absolute inline-flex w-full h-full rounded-full opacity-75 animate-ping ${pingColor}`} />
         )}
-        {status === 'saving' && (
-          <span className="absolute inset-0 rounded-full bg-yellow-400 animate-ping opacity-40" />
-        )}
-        {status === 'unsaved' && (
-          <span className="absolute inset-0 rounded-full bg-orange-400 animate-ping opacity-40" />
-        )}
-        <span className={`relative inline-flex h-2.5 w-2.5 rounded-full ${config.color}`} />
+        <span className={`relative inline-flex w-2 h-2 rounded-full ${config.dot}`} />
       </span>
       {showLabel && (
         <span className="text-gray-500 hidden sm:inline">{config.label}</span>

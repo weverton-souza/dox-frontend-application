@@ -54,7 +54,7 @@ export default function AiUsageDashboard({ isOpen, onClose }: AiUsageDashboardPr
                 {summary.tierName || 'Plano Assistente'}
               </span>
               <span className="text-sm text-gray-500">
-                {summary.used} de {summary.limit} laudos
+                {summary.used} de {summary.limit} relatórios
               </span>
             </div>
             <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
@@ -65,7 +65,7 @@ export default function AiUsageDashboard({ isOpen, onClose }: AiUsageDashboardPr
             </div>
             {summary.overage > 0 && (
               <p className="text-xs text-amber-600 mt-2">
-                {summary.overage} laudos excedentes (R${(summary.overageCostCents / 100).toFixed(2)} estimados)
+                {summary.overage} relatórios excedentes (R${(summary.overageCostCents / 100).toFixed(2)} estimados)
               </p>
             )}
           </div>

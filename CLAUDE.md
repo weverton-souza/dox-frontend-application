@@ -34,6 +34,9 @@
 - Templates de gráfico pré-configurados (10 padrões): WAIS-III Subtestes, WAIS-III Índices, RAVLT Curva, FDT, BDI-II, BAI, SRS-2, ToL-BR, Perfil Cognitivo, TMT
 - Seleção de template ao criar gráfico via BlockSelector (flow em 2 steps)
 - Salvar gráfico como template customizado com nome, instrumento e categoria
+- Dois modos de edição via tabs no header: **Documento** (sumário + editor focado na seção ativa) e **Estrutura** (OutlineTree hierárquico com DnD)
+- Modo Documento: `ReportSummary` à esquerda (navegação pura) + `SectionEditor` à direita (só blocos diretos da seção ativa); blocos-raiz (Identificação, Encerramento) aparecem como itens do sumário
+- Preview do `.docx` acionado pelo botão "Pré-visualizar" no header, abrindo em `PreviewModal` redimensionável (não divide mais a tela)
 - Rich text WYSIWYG (Plate.js) com bold, itálico, sublinhado, riscado, listas (bullet/numerada), alinhamento (L/C/R/J) nos blocos de texto
 - Conteúdo armazenado em Slate JSON (array de nós), com backward compat para HTML legado (auto-conversão no load)
 - Itens rotulados (key-value) nos blocos de texto

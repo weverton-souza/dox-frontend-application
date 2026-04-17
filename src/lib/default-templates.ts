@@ -53,7 +53,7 @@ function closingPageBlock(id: string, order: number, parentId: string | null = n
 
 const TEMPLATE_ADULTO: ReportTemplate = {
   id: '00000000-0000-0000-0000-000000000001',
-  name: 'Laudo Padrão Adulto',
+  name: 'Relatório Padrão Adulto',
   description: 'Estrutura completa para avaliação de adultos',
   isDefault: true,
   isLocked: true,
@@ -85,8 +85,8 @@ const TEMPLATE_ADULTO: ReportTemplate = {
 
 const TEMPLATE_BREVE: ReportTemplate = {
   id: '00000000-0000-0000-0000-000000000002',
-  name: 'Laudo Breve',
-  description: 'Estrutura resumida para laudos mais curtos',
+  name: 'Relatório Breve',
+  description: 'Estrutura resumida para relatórios mais curtos',
   isDefault: true,
   isLocked: true,
   isMaster: true,

@@ -853,7 +853,7 @@ export default function ChartBlock({ data, onChange }: ChartBlockProps) {
         <PlateEditor
           content={isSlateContent(data.description) ? data.description : EMPTY_SLATE_CONTENT}
           onChange={(value: SlateContent) => onChange({ ...data, description: value })}
-          placeholder="Texto descritivo ou interpretativo que aparecerá abaixo do gráfico no laudo"
+          placeholder="Texto descritivo ou interpretativo que aparecerá abaixo do gráfico no relatório"
         />
       </div>
 

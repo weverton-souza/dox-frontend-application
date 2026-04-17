@@ -19,10 +19,10 @@ export default function TemplateLinkModal({
   onSelect,
 }: TemplateLinkModalProps) {
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Vincular Template de Laudo" size="lg">
+    <Modal isOpen={isOpen} onClose={onClose} title="Vincular Template de Relatório" size="lg">
       <div className="p-4 space-y-4">
         <p className="text-sm text-gray-500">
-          Selecione o template de laudo que será preenchido automaticamente pela IA com base nas respostas deste formulário.
+          Selecione o template de relatório que será preenchido automaticamente pela IA com base nas respostas deste formulário.
         </p>
 
         {/* Desvincular */}
@@ -41,7 +41,7 @@ export default function TemplateLinkModal({
             <div>
               <p className="font-medium text-gray-900">Desvincular template</p>
               <p className="text-xs text-gray-500 mt-0.5">
-                Remover a associação com template de laudo
+                Remover a associação com template de relatório
               </p>
             </div>
           </button>

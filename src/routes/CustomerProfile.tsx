@@ -62,7 +62,7 @@ const EVENT_TYPE_OPTIONS: { value: CustomerEventType; label: string }[] = [
   { value: 'consulta', label: 'Consulta' },
   { value: 'retorno', label: 'Retorno' },
   { value: 'avaliacao', label: 'Avaliação' },
-  { value: 'laudo', label: 'Laudo' },
+  { value: 'laudo', label: 'Relatório' },
   { value: 'observacao', label: 'Observação' },
 ]
 

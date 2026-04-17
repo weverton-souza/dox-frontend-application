@@ -18,7 +18,6 @@ import {
   ISectionOptions,
   ImageRun,
   PageBreak,
-  UnderlineType,
 } from 'docx'
 import { saveAs } from 'file-saver'
 import type { Block } from '@/types'
@@ -296,12 +295,12 @@ function renderIdentification(data: IdentificationData): (Paragraph | Table)[] {
   elements.push(createKeyValueTable(customerRows))
 
   // Data e local
-  elements.push(createSectionHeader('DADOS DO LAUDO'))
-  const laudoRows = [
+  elements.push(createSectionHeader('DADOS DO RELATÓRIO'))
+  const reportRows = [
     ['Data', formatDate(data.date)],
     ['Local', data.location],
   ].filter(([, val]) => val)
-  elements.push(createKeyValueTable(laudoRows))
+  elements.push(createKeyValueTable(reportRows))
 
   elements.push(
     new Paragraph({
@@ -314,7 +313,7 @@ function renderIdentification(data: IdentificationData): (Paragraph | Table)[] {
 
 /**
  * Parse HTML content (from TipTap editor) into docx Paragraphs.
- * Falls back to plain-text splitting for backward compatibility with old laudos.
+ * Falls back to plain-text splitting for backward compatibility with old reports.
  */
 function parseHtmlToDocxParagraphs(html: string): Paragraph[] {
   // Fallback: if content has no HTML tags, treat as plain text (backward compat)
@@ -506,9 +505,13 @@ function renderSection(data: SectionData, depth: number): Paragraph[] {
   const elements: Paragraph[] = []
   if (data.title) {
     if (depth === 0) {
-      elements.push(createSectionHeader(data.title.toUpperCase()))
+      elements.push(createSectionHeader(data.title))
+    } else if (depth === 1) {
+      elements.push(createSubsectionHeader(data.title))
+    } else if (depth === 2) {
+      elements.push(createTertiarySectionHeader(data.title))
     } else {
-      elements.push(createSubsectionHeader(data.title.toUpperCase()))
+      elements.push(createDeepSectionHeader(data.title, depth))
     }
   }
   return elements
@@ -706,7 +709,7 @@ function renderSkippedWarning(block: Block): (Paragraph | Table)[] {
   const content = (block.data as { content?: TextBlockData['content'] }).content
 
   if (title) {
-    elements.push(createSectionHeader(title.toUpperCase()))
+    elements.push(createSectionHeader(title))
   }
 
   const hasContent = content && (typeof content === 'string' ? content.trim() : true)
@@ -1306,7 +1309,7 @@ async function renderClosingPage(data: ClosingPageData, report: Report, prof: im
   const idBlock = report.blocks.find((b) => b.type === 'identification')
   const idData = idBlock?.data as IdentificationData | undefined
 
-  // Backward compatibility: old laudos may have showSignatureLines instead of individual toggles
+  // Backward compatibility: old reports may have showSignatureLines instead of individual toggles
   const showPatient = data.showPatientSignature ?? data.showSignatureLines ?? true
   const showMother = data.showMotherSignature ?? false
   const showFather = data.showFatherSignature ?? false
@@ -1326,7 +1329,7 @@ async function renderClosingPage(data: ClosingPageData, report: Report, prof: im
         },
         children: [
           new TextRun({
-            text: data.title.toUpperCase(),
+            text: data.title,
             bold: true,
             size: 24,
             font: 'Calibri',
@@ -1545,18 +1548,18 @@ function createDataCaption(text: string): Paragraph {
 function createSectionHeader(text: string): Paragraph {
   return new Paragraph({
     keepNext: true,
-    spacing: { before: 300, after: 150 },
+    spacing: { before: 480, after: 180 },
     border: {
       top: NO_BORDER,
       left: NO_BORDER,
       right: NO_BORDER,
-      bottom: { color: MEDIUM_BLUE, space: 4, style: BorderStyle.SINGLE, size: 6 },
+      bottom: { color: MEDIUM_BLUE, space: 6, style: BorderStyle.SINGLE, size: 12 },
     },
     children: [
       new TextRun({
         text,
         bold: true,
-        size: 24,
+        size: 28,
         font: 'Calibri',
         color: DARK_BLUE,
       }),
@@ -1567,7 +1570,7 @@ function createSectionHeader(text: string): Paragraph {
 function createSubsectionHeader(text: string): Paragraph {
   return new Paragraph({
     keepNext: true,
-    spacing: { before: 240, after: 120 },
+    spacing: { before: 320, after: 120 },
     children: [
       new TextRun({
         text,
@@ -1575,7 +1578,41 @@ function createSubsectionHeader(text: string): Paragraph {
         size: 22,
         font: 'Calibri',
         color: DARK_BLUE,
-        underline: { type: UnderlineType.SINGLE, color: MEDIUM_BLUE },
+      }),
+    ],
+  })
+}
+
+function createTertiarySectionHeader(text: string): Paragraph {
+  return new Paragraph({
+    keepNext: true,
+    spacing: { before: 240, after: 100 },
+    children: [
+      new TextRun({
+        text,
+        bold: true,
+        italics: true,
+        size: 20,
+        font: 'Calibri',
+        color: DARK_BLUE,
+      }),
+    ],
+  })
+}
+
+function createDeepSectionHeader(text: string, depth: number): Paragraph {
+  const indent = Math.min((depth - 3) * 360, 1080)
+  return new Paragraph({
+    keepNext: true,
+    spacing: { before: 200, after: 80 },
+    indent: indent > 0 ? { left: indent } : undefined,
+    children: [
+      new TextRun({
+        text,
+        italics: true,
+        size: 20,
+        font: 'Calibri',
+        color: DARK_BLUE,
       }),
     ],
   })
@@ -1787,8 +1824,8 @@ export async function downloadDocx(report: Report): Promise<void> {
   const blob = await generateDocx(report)
 
   const fileName = report.customerName
-    ? `Laudo - ${report.customerName}.docx`
-    : `Laudo - ${new Date().toISOString().split('T')[0]}.docx`
+    ? `Relatório - ${report.customerName}.docx`
+    : `Relatório - ${new Date().toISOString().split('T')[0]}.docx`
 
   saveAs(blob, fileName)
 }

@@ -30,7 +30,7 @@ export default function FieldMappingEditor({ fields, mappings, template, onChang
     return (
       <div className="rounded-xl border border-dashed border-gray-300 p-6 text-center">
         <p className="text-sm text-gray-500">
-          Vincule um template de laudo para configurar o mapeamento dos campos.
+          Vincule um template de relatório para configurar o mapeamento dos campos.
         </p>
       </div>
     )
@@ -73,7 +73,7 @@ export default function FieldMappingEditor({ fields, mappings, template, onChang
   return (
     <div className="space-y-3">
       <p className="text-sm text-gray-500">
-        Mapeie cada pergunta para a seção do laudo onde a IA deve inserir a resposta.
+        Mapeie cada pergunta para a seção do relatório onde a IA deve inserir a resposta.
       </p>
 
       <div className="space-y-4">
@@ -116,7 +116,7 @@ export default function FieldMappingEditor({ fields, mappings, template, onChang
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs text-gray-500 mb-1">Seção do laudo</label>
+                        <label className="block text-xs text-gray-500 mb-1">Seção do relatório</label>
                         <select
                           value={mapping?.targetSection ?? ''}
                           onChange={(e) => updateMapping(field.id, { targetSection: e.target.value })}

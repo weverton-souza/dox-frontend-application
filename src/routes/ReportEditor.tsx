@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import type { Block, BlockType, BlockData, Report, ReportStatus, ReportVersion, Customer, ScoreTableTemplate, ChartTemplate } from '@/types'
 import { createScoreTableFromTemplate, createChartFromTemplate, isSlateContent, slateContentToPlainText, REPORT_STATUS_LABELS, REPORT_STATUS_COLORS } from '@/types'
@@ -8,15 +8,16 @@ import { getCustomers } from '@/lib/api/customer-api'
 import { createReportTemplate, getReportTemplates, getScoreTableTemplates, getChartTemplates } from '@/lib/api/template-api'
 import { getFormById, getFormResponseById } from '@/lib/api/form-api'
 import { useError } from '@/contexts/ErrorContext'
-import { createBlock, computeBlockMetas } from '@/lib/utils'
+import { createBlock, computeBlockMetas, getDescendantIds } from '@/lib/utils'
+import { isNumberingActive, applyNumbering, removeNumbering, maybeRenumber } from '@/lib/section-numbering'
 import { useVersioning } from '@/lib/hooks/use-versioning'
 import { useAutoSave } from '@/lib/hooks/use-auto-save'
-import { useClickOutside } from '@/lib/hooks/use-click-outside'
-import OutlineTree from '@/components/editor/OutlineTree'
+import ReportSummary from '@/components/editor/ReportSummary'
+import SectionEditor from '@/components/editor/SectionEditor'
+import PreviewModal from '@/components/editor/PreviewModal'
 import BlockSelector from '@/components/editor/BlockSelector'
 import BlockEditModal from '@/components/editor/BlockEditModal'
 import VersionHistoryModal from '@/components/editor/VersionHistoryModal'
-import DocxPreviewPanel from '@/components/editor/DocxPreviewPanel'
 import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
 import Input from '@/components/ui/Input'
@@ -78,21 +79,18 @@ export default function ReportEditor() {
   })
   const updateTemplateModal = (patch: Partial<TemplateModalState>) => setTemplateModal(prev => ({ ...prev, ...patch }))
 
-  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set())
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null)
   const [pendingNewBlock, setPendingNewBlock] = useState<{ block: Block; afterBlockId: string | null } | null>(null)
   const [customers, setCustomers] = useState<Customer[]>([])
   const [showVersionHistory, setShowVersionHistory] = useState(false)
-  const [showFinalizeConfirm, setShowFinalizeConfirm] = useState(false)
-  const [finalizeInput, setFinalizeInput] = useState('')
-  const [showDocxPreview, setShowDocxPreview] = useState(false)
+  const [showPreviewModal, setShowPreviewModal] = useState(false)
+  const [activeItemId, setActiveItemId] = useState<string | null>(null)
   const [previewRefreshKey, setPreviewRefreshKey] = useState(0)
   const [formProvenanceLabel, setFormProvenanceLabel] = useState<string | null>(null)
   const [formProvenanceId, setFormProvenanceId] = useState<string | null>(null)
   const [scoreTableTemplates, setScoreTableTemplates] = useState<ScoreTableTemplate[]>([])
   const [chartTemplatesState, setChartTemplatesState] = useState<ChartTemplate[]>([])
   const [templateName, setTemplateName] = useState<string | null>(null)
-  const sectionSelectorRef = useRef<HTMLDivElement>(null)
 
   const saveReportFn = useCallback((data: Report) => updateReport(data), [])
   const { saveStatus, scheduleSave, forceSave } = useAutoSave<Report>(saveReportFn)
@@ -180,9 +178,99 @@ export default function ReportEditor() {
 
   const handleBlocksChange = useCallback(
     (blocks: Block[]) => {
-      handleUpdateReport({ blocks })
+      handleUpdateReport({ blocks: maybeRenumber(blocks) })
     },
     [handleUpdateReport]
+  )
+
+  const numberingActive = useMemo(
+    () => (report ? isNumberingActive(report.blocks) : false),
+    [report]
+  )
+
+  const handleToggleNumbering = useCallback(() => {
+    if (!report) return
+    const newBlocks = numberingActive ? removeNumbering(report.blocks) : applyNumbering(report.blocks)
+    handleUpdateReport({ blocks: newBlocks })
+  }, [report, numberingActive, handleUpdateReport])
+
+  const handleDuplicateBlock = useCallback(
+    (blockId: string) => {
+      if (!report) return
+      const block = report.blocks.find((b) => b.id === blockId)
+      if (!block) return
+      const sorted = [...report.blocks].sort((a, b) => a.order - b.order)
+      const idx = sorted.findIndex((b) => b.id === blockId)
+      if (idx === -1) return
+      const newBlock: Block = {
+        ...block,
+        id: crypto.randomUUID(),
+        data: JSON.parse(JSON.stringify(block.data)),
+      }
+      sorted.splice(idx + 1, 0, newBlock)
+      handleBlocksChange(sorted.map((b, i) => ({ ...b, order: i })))
+    },
+    [report, handleBlocksChange]
+  )
+
+  const handleRemoveBlock = useCallback(
+    (blockId: string) => {
+      if (!report) return
+      const filtered = report.blocks.filter((b) => b.id !== blockId)
+      handleBlocksChange(filtered.map((b, i) => ({ ...b, order: i })))
+    },
+    [report, handleBlocksChange]
+  )
+
+  const handleDeleteSectionCascade = useCallback(
+    (sectionId: string) => {
+      if (!report) return
+      const descendants = getDescendantIds(report.blocks, sectionId)
+      const idsToRemove = new Set([sectionId, ...descendants])
+      const filtered = report.blocks.filter((b) => !idsToRemove.has(b.id))
+      handleBlocksChange(filtered.map((b, i) => ({ ...b, order: i })))
+      if (activeItemId && idsToRemove.has(activeItemId)) {
+        setActiveItemId(null)
+      }
+    },
+    [report, handleBlocksChange, activeItemId]
+  )
+
+  const handleMoveBlocksToSection = useCallback(
+    (blockIds: string[], destSectionId: string | null) => {
+      if (!report || blockIds.length === 0) return
+      const movingIds = new Set(blockIds)
+
+      const movingBlocks = report.blocks
+        .filter((b) => movingIds.has(b.id))
+        .map((b) => ({ ...b, parentId: destSectionId }))
+      const remaining = report.blocks.filter((b) => !movingIds.has(b.id))
+      const result = [...remaining, ...movingBlocks]
+      handleBlocksChange(result.map((b, i) => ({ ...b, order: i })))
+    },
+    [report, handleBlocksChange]
+  )
+
+  const handleDeleteSectionMove = useCallback(
+    (sectionId: string, targetSectionId: string) => {
+      if (!report) return
+      const descendants = new Set(getDescendantIds(report.blocks, sectionId))
+      const childBlocks = report.blocks
+        .filter((b) => descendants.has(b.id) && b.parentId === sectionId)
+        .map((b) => ({ ...b, parentId: targetSectionId }))
+      const keptDescendants = report.blocks.filter(
+        (b) => descendants.has(b.id) && b.parentId !== sectionId
+      )
+      const remaining = report.blocks.filter(
+        (b) => b.id !== sectionId && !descendants.has(b.id)
+      )
+      const result = [...remaining, ...childBlocks, ...keptDescendants]
+      handleBlocksChange(result.map((b, i) => ({ ...b, order: i })))
+      if (activeItemId === sectionId) {
+        setActiveItemId(targetSectionId)
+      }
+    },
+    [report, handleBlocksChange, activeItemId]
   )
 
   const handleBlockDataChange = useCallback(
@@ -254,9 +342,9 @@ export default function ReportEditor() {
       }
 
       updateBlockSelector({ insertAfterBlockId: null, insertParentId: null })
-      handleUpdateReport({ blocks: newBlocks })
+      handleBlocksChange(newBlocks)
     },
-    [report, handleUpdateReport, blockSelector.insertAfterBlockId, blockSelector.insertParentId, scoreTableTemplates, chartTemplatesState]
+    [report, handleBlocksChange, blockSelector.insertAfterBlockId, blockSelector.insertParentId, scoreTableTemplates, chartTemplatesState]
   )
 
   const handleRequestAddBlock = useCallback(
@@ -280,19 +368,10 @@ export default function ReportEditor() {
       sorted.push(newBlock)
     }
     const newBlocks = sorted.map((b, i) => ({ ...b, order: i }))
-    handleUpdateReport({ blocks: newBlocks })
+    handleBlocksChange(newBlocks)
     updateBlockSelector({ showSectionSelector: false })
-  }, [report, handleUpdateReport])
-
-  const handleAddClosingPage = useCallback(() => {
-    if (!report) return
-
-    const sorted = [...report.blocks].sort((a, b) => a.order - b.order)
-    const newBlock = createBlock('closing-page', 0)
-    const newBlocks = [...sorted, newBlock].map((b, i) => ({ ...b, order: i }))
-    handleUpdateReport({ blocks: newBlocks })
-    updateBlockSelector({ showSectionSelector: false })
-  }, [report, handleUpdateReport])
+    setActiveItemId(newBlock.id)
+  }, [report, handleBlocksChange])
 
   const handleSaveTemplate = useCallback(async () => {
     if (!report || !templateModal.templateName.trim()) return
@@ -335,12 +414,8 @@ export default function ReportEditor() {
   const handleStatusChange = useCallback(
     (newStatus: ReportStatus) => {
       if (newStatus === 'finalizado') {
-        if (report?.blocks.some(b => b.generatedByAi || b.skippedByAi)) {
-          setPendingStatusChange(newStatus)
-          updateAiModals({ showFinalizationModal: true })
-          return
-        }
-        setShowFinalizeConfirm(true)
+        setPendingStatusChange(newStatus)
+        updateAiModals({ showFinalizationModal: true })
         return
       }
       if (report) createStatusChangeSnapshot(report.status)
@@ -349,36 +424,14 @@ export default function ReportEditor() {
     [report, handleUpdateReport, createStatusChangeSnapshot]
   )
 
-  const handleConfirmFinalize = useCallback(async () => {
-    if (!report) return
-    createStatusChangeSnapshot(report.status)
-    try {
-      let current = report
-      if (current.status === 'rascunho') {
-        current = await updateReport({ ...current, status: 'em_revisao' })
-      }
-      const saved = await updateReport({ ...current, status: 'finalizado' })
-      setReport(saved)
-      setShowFinalizeConfirm(false)
-      setFinalizeInput('')
-    } catch (err) {
-      showError(err)
-    }
-  }, [report, createStatusChangeSnapshot, showError])
-
-  const handleConfirmFinalization = useCallback(async () => {
+  const handleConfirmFinalization = useCallback(() => {
     if (report && pendingStatusChange) {
       createStatusChangeSnapshot(report.status)
-      try {
-        const saved = await updateReport({ ...report, status: pendingStatusChange })
-        setReport(saved)
-      } catch (err) {
-        showError(err)
-      }
+      handleUpdateReport({ status: pendingStatusChange })
     }
     updateAiModals({ showFinalizationModal: false })
     setPendingStatusChange(null)
-  }, [report, pendingStatusChange, createStatusChangeSnapshot, showError])
+  }, [report, pendingStatusChange, handleUpdateReport, createStatusChangeSnapshot])
 
   const handleGenerateFullReport = useCallback(() => {
     if (!report || !id) return
@@ -527,20 +580,30 @@ export default function ReportEditor() {
     setShowVersionHistory(true)
   }, [refreshVersions])
 
-  // Section collapse/expand (with cascade for subsections)
-  const toggleSectionCollapse = useCallback((sectionBlockId: string, subsectionIds?: string[]) => {
-    setCollapsedSections((prev) => {
-      const next = new Set(prev)
-      if (next.has(sectionBlockId)) {
-        next.delete(sectionBlockId)
-      } else {
-        next.add(sectionBlockId)
-        // Cascade: colapsar todas as subseções junto
-        subsectionIds?.forEach(id => next.add(id))
-      }
-      return next
-    })
-  }, [])
+  // Summary items in order — roots of the summary (sections + identification + closing-page)
+  const summaryItemIds = useMemo(() => {
+    if (!report) return [] as string[]
+    const collect: string[] = []
+    const roots = report.blocks
+      .filter((b) => (b.parentId ?? null) === null && (b.type === 'section' || b.type === 'identification' || b.type === 'closing-page'))
+      .sort((a, b) => a.order - b.order)
+    function walk(id: string) {
+      collect.push(id)
+      const children = report!.blocks
+        .filter((b) => b.parentId === id && b.type === 'section')
+        .sort((a, b) => a.order - b.order)
+      for (const c of children) walk(c.id)
+    }
+    for (const r of roots) walk(r.id)
+    return collect
+  }, [report])
+
+  // Initialize active item when report loads
+  useEffect(() => {
+    if (!report) return
+    if (activeItemId && summaryItemIds.includes(activeItemId)) return
+    setActiveItemId(summaryItemIds[0] ?? null)
+  }, [report, activeItemId, summaryItemIds])
 
   // Sorted blocks + metas (memoized)
   const sortedBlocks = useMemo(() => {
@@ -549,33 +612,6 @@ export default function ReportEditor() {
   }, [report])
 
   const blockMetas = useMemo(() => computeBlockMetas(sortedBlocks), [sortedBlocks])
-
-  // Collect all section IDs for collapse/expand all
-  const allSectionIds = useMemo(() => {
-    const ids: string[] = []
-    for (const block of sortedBlocks) {
-      const meta = blockMetas[block.id]
-      if (meta?.isSection) ids.push(block.id)
-    }
-    return ids
-  }, [sortedBlocks, blockMetas])
-
-  // Default: start with all sections collapsed
-  const initialCollapseRef = useRef(false)
-  useEffect(() => {
-    if (!initialCollapseRef.current && allSectionIds.length > 0) {
-      initialCollapseRef.current = true
-      setCollapsedSections(new Set(allSectionIds))
-    }
-  }, [allSectionIds])
-
-  const collapseAll = useCallback(() => {
-    setCollapsedSections(new Set(allSectionIds))
-  }, [allSectionIds])
-
-  const expandAll = useCallback(() => {
-    setCollapsedSections(new Set())
-  }, [])
 
   // Compute target section name for BlockSelector context
   const insertTargetSection = useMemo(() => {
@@ -634,16 +670,6 @@ export default function ReportEditor() {
     scheduleSave(updated)
     setPreviewRefreshKey((k) => k + 1)
   }, [aiModals.reviewingBlockId, report, scheduleSave])
-
-  // Check if closing-page already exists (only allow one)
-  const hasClosingPage = useMemo(() => {
-    if (!report) return false
-    return report.blocks.some((b) => b.type === 'closing-page')
-  }, [report])
-
-  // Close section selector on outside click
-  const closeSectionSelector = useCallback(() => updateBlockSelector({ showSectionSelector: false }), [])
-  useClickOutside(sectionSelectorRef, closeSectionSelector, blockSelector.showSectionSelector)
 
   if (!report) {
     return (
@@ -784,9 +810,7 @@ export default function ReportEditor() {
       </div>
 
       {/* Main content area */}
-      <div
-        className={`flex-1 flex w-full px-2 sm:px-4 mt-4 ${showDocxPreview ? '3xl:gap-6' : 'max-w-5xl mx-auto'}`}
-      >
+      <div className="flex-1 flex gap-4 lg:gap-8 w-full px-4 sm:px-6 lg:px-8">
         {/* Floating toolbar — left column */}
         <div className="hidden lg:flex shrink-0 w-12 pt-12">
           <div className="sticky top-28 h-fit z-30">
@@ -802,14 +826,16 @@ export default function ReportEditor() {
               }}
               onOpenVersionHistory={handleOpenVersionHistory}
               onSaveAsTemplate={() => updateTemplateModal({ showSaveTemplate: true })}
-              onTogglePreview={() => setShowDocxPreview((v) => !v)}
-              showPreview={showDocxPreview}
+              onTogglePreview={() => setShowPreviewModal(true)}
+              showPreview={showPreviewModal}
+              onToggleNumbering={handleToggleNumbering}
+              numberingActive={numberingActive}
             />
           </div>
         </div>
 
-        {/* Left: blocks — hidden below 3xl when preview is active (toggle mode) */}
-        <div className={`min-w-0 flex flex-col ${showDocxPreview ? 'hidden 3xl:flex 3xl:w-2/5 3xl:shrink-0' : 'flex-1 max-w-3xl mx-auto'}`}>
+        {/* Left: blocks */}
+        <div className="min-w-0 flex flex-col flex-1">
           {/* Form provenance banner */}
           {formProvenanceLabel && (
             <div className="pt-3">
@@ -879,124 +905,49 @@ export default function ReportEditor() {
             </div>
             <div className="flex items-center gap-2">
               <span className="text-xs text-gray-400">{report.blocks.length} blocos</span>
-              <div className="flex items-center gap-0.5">
-                <button
-                  type="button"
-                  onClick={collapseAll}
-                  className="p-1.5 rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
-                  title="Recolher todas as seções"
-                >
-                  <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M5.23 15.79a.75.75 0 001.06-.02L10 11.832l3.71 3.938a.75.75 0 101.08-1.04l-4.25-4.5a.75.75 0 00-1.08 0l-4.25 4.5a.75.75 0 00.02 1.06z" clipRule="evenodd" />
-                    <path fillRule="evenodd" d="M5.23 9.79a.75.75 0 001.06-.02L10 5.832l3.71 3.938a.75.75 0 101.08-1.04l-4.25-4.5a.75.75 0 00-1.08 0l-4.25 4.5a.75.75 0 00.02 1.06z" clipRule="evenodd" />
-                  </svg>
-                </button>
-                <button
-                  type="button"
-                  onClick={expandAll}
-                  className="p-1.5 rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
-                  title="Expandir todas as seções"
-                >
-                  <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M14.77 4.21a.75.75 0 01-.02 1.06L10 9.168 6.29 5.23a.75.75 0 00-1.08 1.04l4.25 4.5a.75.75 0 001.08 0l4.25-4.5a.75.75 0 00-.02-1.06z" clipRule="evenodd" />
-                    <path fillRule="evenodd" d="M14.77 10.21a.75.75 0 01-.02 1.06L10 15.168l-3.71-3.938a.75.75 0 00-1.08 1.04l4.25 4.5a.75.75 0 001.08 0l4.25-4.5a.75.75 0 00-.02-1.06z" clipRule="evenodd" />
-                  </svg>
-                </button>
-              </div>
             </div>
           </div>
 
-          {/* Outline Tree */}
+          {/* Document view */}
           <main className="flex-1 pb-6">
-            <OutlineTree
-              blocks={report.blocks}
-              onBlocksChange={handleBlocksChange}
-              collapsedSections={collapsedSections}
-              onToggleSectionCollapse={toggleSectionCollapse}
-              onRequestAddBlock={handleRequestAddBlock}
-              onEditBlock={setEditingBlockId}
-              onReviewBlock={ai.isAvailable && report.status !== 'finalizado' ? (id: string) => updateAiModals({ reviewingBlockId: id }) : undefined}
-              insertAfterBlockId={blockSelector.insertAfterBlockId}
-              locked={report.isStructureLocked}
-            />
-
-            {!report.isStructureLocked && <div className="mt-6 flex justify-center">
-              <div className="relative w-full max-w-md" ref={sectionSelectorRef}>
-                <Button
-                  variant="ghost"
-                  size="lg"
-                  onClick={() => updateBlockSelector({ showSectionSelector: !blockSelector.showSectionSelector })}
-                  className="border-2 border-dashed border-gray-300 hover:border-brand-400 hover:text-brand-700 w-full"
-                >
-                  + Adicionar Seção
-                </Button>
-
-                {blockSelector.showSectionSelector && (
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-                    <button
-                      type="button"
-                      onClick={handleAddTextSection}
-                      className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 text-left"
-                    >
-                      <span className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                          <polyline points="14 2 14 8 20 8" />
-                          <line x1="16" y1="13" x2="8" y2="13" />
-                          <line x1="16" y1="17" x2="8" y2="17" />
-                        </svg>
-                      </span>
-                      <div>
-                        <p className="font-medium">Nova Seção</p>
-                        <p className="text-xs text-gray-400">Seção de texto com título</p>
-                      </div>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleAddClosingPage}
-                      disabled={hasClosingPage}
-                      className={`w-full flex items-center gap-3 px-4 py-3 text-sm text-left ${
-                        hasClosingPage
-                          ? 'text-gray-300 cursor-not-allowed'
-                          : 'text-gray-700 hover:bg-gray-50'
-                      }`}
-                    >
-                      <span className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                        hasClosingPage ? 'bg-gray-50 text-gray-300' : 'bg-gray-100 text-gray-600'
-                      }`}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                          <polyline points="14 2 14 8 20 8" />
-                          <path d="M9 15l2 2 4-4" />
-                        </svg>
-                      </span>
-                      <div>
-                        <p className="font-medium">Termo de Entrega</p>
-                        <p className="text-xs text-gray-400">
-                          {hasClosingPage ? 'Já adicionado' : 'Página de encerramento e assinaturas'}
-                        </p>
-                      </div>
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>}
+            <div className="flex gap-8 lg:gap-12">
+              <ReportSummary
+                blocks={report.blocks}
+                activeItemId={activeItemId}
+                onSelect={setActiveItemId}
+                onRequestAddSection={handleAddTextSection}
+                locked={report.isStructureLocked}
+              />
+              <SectionEditor
+                blocks={report.blocks}
+                activeItemId={activeItemId}
+                blockMetas={blockMetas}
+                onEditBlock={setEditingBlockId}
+                onDuplicateBlock={handleDuplicateBlock}
+                onRemoveBlock={handleRemoveBlock}
+                onChangeBlock={handleBlockDataChange}
+                onRequestAddBlock={handleRequestAddBlock}
+                onReviewBlock={ai.isAvailable && report.status !== 'finalizado' ? (id: string) => updateAiModals({ reviewingBlockId: id }) : undefined}
+                onDeleteSectionCascade={handleDeleteSectionCascade}
+                onDeleteSectionMove={handleDeleteSectionMove}
+                onMoveBlocksToSection={handleMoveBlocksToSection}
+                customers={customers}
+                onCustomerSelected={handleCustomerSelected}
+                locked={report.isStructureLocked}
+              />
+            </div>
           </main>
         </div>
 
-        {/* Right: preview panel — full width toggle below 3xl, side-by-side on 3xl+ */}
-        {showDocxPreview && (
-          <div className="hidden lg:block flex-1 min-w-0 max-w-3xl mx-auto 3xl:max-w-none 3xl:mx-0 sticky top-16 h-[calc(100vh-4rem)] py-4">
-            <div className="h-full overflow-hidden">
-              <DocxPreviewPanel
-                report={report}
-                refreshKey={previewRefreshKey}
-              />
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* Preview Modal */}
+      <PreviewModal
+        isOpen={showPreviewModal}
+        onClose={() => setShowPreviewModal(false)}
+        report={report}
+        refreshKey={previewRefreshKey}
+      />
 
       {/* Block Edit Modal */}
       <BlockEditModal
@@ -1024,7 +975,7 @@ export default function ReportEditor() {
               newBlocks = [...sorted, finalBlock].map((b, i) => ({ ...b, order: i }))
             }
 
-            handleUpdateReport({ blocks: newBlocks })
+            handleBlocksChange(newBlocks)
             setPreviewRefreshKey((k) => k + 1)
             setPendingNewBlock(null)
           } else {
@@ -1130,7 +1081,7 @@ export default function ReportEditor() {
         />
       )}
 
-      {/* AI Finalization Modal */}
+      {/* Finalization Modal */}
       <AiFinalizationModal
         isOpen={aiModals.showFinalizationModal}
         onClose={() => {
@@ -1141,57 +1092,8 @@ export default function ReportEditor() {
         used={ai.usageSummary?.used ?? 0}
         limit={ai.usageSummary?.limit ?? 0}
         warningCount={warningCount}
+        hasAi={report.blocks.some(b => b.generatedByAi || b.skippedByAi)}
       />
-
-      {/* Finalize confirmation modal */}
-      <Modal
-        isOpen={showFinalizeConfirm}
-        onClose={() => { setShowFinalizeConfirm(false); setFinalizeInput('') }}
-        title="Finalizar Relatório"
-        size="sm"
-      >
-        <div className="p-5 space-y-4">
-          <div className="flex items-start gap-3 bg-amber-50 rounded-lg p-3">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" className="text-amber-500 shrink-0 mt-0.5">
-              <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.168 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
-            </svg>
-            <div>
-              <p className="text-sm font-medium text-amber-800">Ação irreversível</p>
-              <p className="text-xs text-amber-700 mt-1">
-                Após finalizar, o relatório não poderá mais ser editado. Certifique-se de que todas as informações estão corretas.
-              </p>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm text-gray-600 mb-1.5">
-              Digite <span className="font-semibold text-gray-900">finalizar</span> para confirmar
-            </label>
-            <input
-              type="text"
-              value={finalizeInput}
-              onChange={(e) => setFinalizeInput(e.target.value)}
-              placeholder="finalizar"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              autoFocus
-            />
-          </div>
-
-          <div className="flex justify-end gap-2">
-            <Button variant="ghost" onClick={() => { setShowFinalizeConfirm(false); setFinalizeInput('') }}>
-              Cancelar
-            </Button>
-            <button
-              type="button"
-              disabled={finalizeInput.toLowerCase() !== 'finalizar'}
-              onClick={handleConfirmFinalize}
-              className="px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              Finalizar
-            </button>
-          </div>
-        </div>
-      </Modal>
 
       {/* Version feedback modal */}
       <Modal isOpen={!!versionFeedback} onClose={() => setVersionFeedback(null)} title="" size="sm">

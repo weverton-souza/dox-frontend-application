@@ -19,7 +19,7 @@ export default function AiUsageBadge({ used, limit, onClick }: AiUsageBadgeProps
     <button
       onClick={onClick}
       className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors hover:opacity-80 ${colorClasses}`}
-      title={`${used} de ${limit} laudos do Assistente utilizados este mês`}
+      title={`${used} de ${limit} relatórios do Assistente utilizados este mês`}
     >
       <AiSparkleIcon size={12} />
       <span>{used}/{limit}</span>

@@ -25,7 +25,7 @@ export default function AiLoadingOverlay({ progress, onCancel, sectionNames }: A
           <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-brand-50 mb-3">
             <AiSparkleIcon size={20} />
           </div>
-          <h3 className="text-lg font-semibold text-gray-900">Redigindo seu laudo</h3>
+          <h3 className="text-lg font-semibold text-gray-900">Redigindo seu relatório</h3>
           <p className="text-[13px] text-gray-400 mt-1">
             {displayIndex} de {displayTotal} seções
           </p>

@@ -83,10 +83,10 @@ export function buildPrompt(request: ReportGenerationRequest): string {
     .map(b => getBlockTitle(b))
     .join(', ')
 
-  return `Você é um assistente especializado em relatórios de avaliação (laudos).
-Sua tarefa é preencher os blocos de texto de um laudo com base nas respostas de um formulário de anamnese.
+  return `Você é um assistente especializado em relatórios de avaliação.
+Sua tarefa é preencher os blocos de texto de um relatório com base nas respostas de um formulário de anamnese.
 
-## Estrutura do Template de Laudo
+## Estrutura do Template de Relatório
 
 ${templateStructure}
 
@@ -98,7 +98,7 @@ ${answersText}
 
 ${variablesText ? `## Variáveis Resolvidas
 
-As seguintes variáveis de template (formato {{chave}}) já foram substituídas automaticamente no laudo.
+As seguintes variáveis de template (formato {{chave}}) já foram substituídas automaticamente no relatório.
 Use os valores abaixo como contexto ao redigir as seções:
 
 ${variablesText}

@@ -1,5 +1,7 @@
+import { useState, useEffect } from 'react'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
+import Input from '@/components/ui/Input'
 
 interface AiFinalizationModalProps {
   isOpen: boolean
@@ -8,7 +10,10 @@ interface AiFinalizationModalProps {
   used: number
   limit: number
   warningCount?: number
+  hasAi?: boolean
 }
+
+const CONFIRM_WORD = 'finalizar'
 
 export default function AiFinalizationModal({
   isOpen,
@@ -17,28 +22,44 @@ export default function AiFinalizationModal({
   used,
   limit,
   warningCount = 0,
+  hasAi = false,
 }: AiFinalizationModalProps) {
+  const [confirmation, setConfirmation] = useState('')
+
+  useEffect(() => {
+    if (!isOpen) setConfirmation('')
+  }, [isOpen])
+
+  const canConfirm = confirmation.trim().toLowerCase() === CONFIRM_WORD
+
+  const handleConfirm = () => {
+    if (!canConfirm) return
+    onConfirm()
+  }
+
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Finalizar laudo"
+      title="Finalizar relatório"
       size="sm"
       footer={
         <div className="flex justify-end gap-3">
           <Button variant="ghost" onClick={onClose}>
             Cancelar
           </Button>
-          <Button variant="primary" onClick={onConfirm}>
-            Sim, finalizar
+          <Button variant="primary" onClick={handleConfirm} disabled={!canConfirm}>
+            Finalizar
           </Button>
         </div>
       }
     >
       <div className="space-y-3">
-        <p className="text-sm text-gray-700">
-          Este laudo contém seções geradas pelo Assistente.
-        </p>
+        {hasAi && (
+          <p className="text-sm text-gray-700">
+            Este relatório contém seções geradas pelo Assistente.
+          </p>
+        )}
         {warningCount > 0 && (
           <div className="flex items-start gap-2 px-3 py-2.5 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
             <svg className="w-4 h-4 shrink-0 mt-0.5 text-amber-500" viewBox="0 0 20 20" fill="currentColor">
@@ -52,14 +73,22 @@ export default function AiFinalizationModal({
         <div className="text-sm text-gray-600 space-y-1.5">
           <p>Ao finalizar:</p>
           <ul className="list-disc list-inside space-y-1 text-gray-500">
-            <li>Será contabilizado na sua franquia mensal ({used}/{limit} usados)</li>
+            {hasAi && <li>Será contabilizado na sua franquia mensal ({used}/{limit} usados)</li>}
             <li>Não poderá mais ser editado</li>
-            <li>Estará disponível para exportação .docx</li>
+            <li>Estará disponível para download em .docx</li>
           </ul>
         </div>
-        <p className="text-sm font-medium text-gray-800">
-          Você revisou todo o conteúdo gerado?
-        </p>
+        <div className="pt-1">
+          <p className="text-sm font-medium text-gray-800 mb-2">
+            Para confirmar, digite <span className="font-semibold text-brand-700">{CONFIRM_WORD}</span> abaixo:
+          </p>
+          <Input
+            value={confirmation}
+            onChange={(e) => setConfirmation(e.target.value)}
+            placeholder={CONFIRM_WORD}
+            autoFocus
+          />
+        </div>
       </div>
     </Modal>
   )
