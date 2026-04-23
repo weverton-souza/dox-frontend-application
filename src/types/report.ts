@@ -226,10 +226,6 @@ export function isContainerBlock(type: BlockType): boolean {
   return CONTAINER_TYPES.includes(type)
 }
 
-export function isLockedBlock(type: BlockType): boolean {
-  return type === 'identification' || type === 'closing-page'
-}
-
 // ========== Report Theme ==========
 
 export interface ReportTheme {
