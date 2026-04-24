@@ -1,12 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useClickOutside } from '@/lib/hooks/use-click-outside'
-
-export const COLOR_PRESETS = [
-  '#55EFC4', '#81ECEC', '#74B9FF', '#A29BFE', '#DFE6E9',
-  '#00B894', '#00CEC9', '#0984E3', '#6C5CE7', '#B2BEC3',
-  '#FFEAA7', '#FAB1A0', '#FF7675', '#FD79A8', '#636E72',
-  '#FDCB6E', '#E17055', '#D63031', '#E84393', '#2D3436',
-]
+import { useActivePalette } from '@/lib/hooks/use-active-palette'
 
 export function hexToHsl(hex: string): [number, number, number] {
   const r = parseInt(hex.slice(1, 3), 16) / 255
@@ -48,9 +42,13 @@ export function hslToHex(h: number, s: number, l: number): string {
 interface ColorPickerProps {
   value: string
   onChange: (color: string) => void
+  /** Paleta opcional de swatches. Se omitida, usa a paleta ativa (tema atual). */
+  palette?: readonly string[]
 }
 
-export default function ColorPicker({ value, onChange }: ColorPickerProps) {
+export default function ColorPicker({ value, onChange, palette }: ColorPickerProps) {
+  const activePalette = useActivePalette()
+  const swatches = palette ?? activePalette.colors
   const [isOpen, setIsOpen] = useState(false)
   const [baseHsl, setBaseHsl] = useState<[number, number, number] | null>(null)
   const [hexInput, setHexInput] = useState('')
@@ -125,7 +123,7 @@ export default function ColorPicker({ value, onChange }: ColorPickerProps) {
             Escolha uma cor
           </div>
           <div className="grid grid-cols-5 gap-1.5 mb-3">
-            {COLOR_PRESETS.map((color) => (
+            {swatches.map((color) => (
               <button
                 key={color}
                 type="button"

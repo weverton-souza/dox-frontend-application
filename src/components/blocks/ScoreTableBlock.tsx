@@ -26,7 +26,8 @@ import Modal from '@/components/ui/Modal'
 import { CloseIcon, PlusIcon, AlignIcon } from '@/components/icons'
 import { SortableRow, SortableTh } from '@/components/blocks/SortableTableItems'
 import SaveScoreTableTemplateModal from '@/components/blocks/SaveScoreTableTemplateModal'
-import { COLOR_PRESETS, hexToHsl, hslToHex } from '@/components/ui/ColorPicker'
+import { hexToHsl, hslToHex } from '@/components/ui/ColorPicker'
+import { useActivePalette } from '@/lib/hooks/use-active-palette'
 
 const FORMULA_HINTS: Record<string, { syntax: string; desc: string }> = {
   'SOMA': { syntax: 'SOMA(A1:A4)', desc: 'Soma valores (aceita ranges e células)' },
@@ -97,6 +98,7 @@ interface ScoreTableBlockProps {
 }
 
 export default function ScoreTableBlock({ data, onChange }: ScoreTableBlockProps) {
+  const activePalette = useActivePalette()
   const [editingColumnId, setEditingColumnId] = useState<string | null>(null)
   const [editingCellId, setEditingCellId] = useState<string | null>(null) // "rowId:colId"
   const [showSaveTemplate, setShowSaveTemplate] = useState(false)
@@ -852,7 +854,7 @@ export default function ScoreTableBlock({ data, onChange }: ScoreTableBlockProps
                 Escolha uma cor
               </div>
               <div className="grid grid-cols-5 gap-1.5 mb-3">
-                {COLOR_PRESETS.map((color) => (
+                {activePalette.colors.map((color) => (
                   <button
                     key={color}
                     type="button"
