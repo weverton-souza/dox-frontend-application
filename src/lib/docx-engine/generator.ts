@@ -57,17 +57,25 @@ function getContactPrefix(type: ContactType): string {
 import { getImageDimensions } from './shared/image-utils'
 import { computeCellResult } from './table/formula-engine'
 import {
-  DARK_BLUE,
-  MEDIUM_BLUE,
-  LIGHT_BLUE,
   WHITE,
   LIGHT_GRAY,
-  BORDER_GRAY,
   PAGE_CONTENT_WIDTH,
   PAGE_MARGIN,
   THIN_BORDER,
   NO_BORDER,
 } from './shared/constants'
+import type { ThemePalette, PaletteChrome } from '@/types'
+import { CLASSICO_PALETTE, getPalette, getPreferredPaletteId, morphHex } from '@/lib/theme'
+
+let _activePalette: ThemePalette = CLASSICO_PALETTE
+
+function chrome(key: keyof PaletteChrome): string {
+  return _activePalette.chrome[key].replace('#', '')
+}
+
+function morph(hex: string): string {
+  return morphHex(hex, _activePalette)
+}
 
 // ========== Header / Footer ==========
 
@@ -82,7 +90,7 @@ async function createDocHeader(prof: import('@/types').Professional): Promise<He
         bold: true,
         size: 18,
         font: 'Calibri',
-        color: DARK_BLUE,
+        color: chrome('primary'),
       }),
     ],
   })
@@ -95,7 +103,7 @@ async function createDocHeader(prof: import('@/types').Professional): Promise<He
         text: `${prof.specialization || ''} — CRP ${prof.crp || ''}`,
         size: 16,
         font: 'Calibri',
-        color: MEDIUM_BLUE,
+        color: chrome('secondary'),
       }),
     ],
   })
@@ -597,7 +605,7 @@ function renderScoreTable(data: ScoreTableData): (Paragraph | Table)[] {
       new TableCell({
         width: { size: balancedWidths[idx], type: WidthType.DXA },
         margins: cellMargins,
-        shading: { fill: DARK_BLUE, type: ShadingType.CLEAR, color: 'auto' },
+        shading: { fill: chrome('primary'), type: ShadingType.CLEAR, color: 'auto' },
         borders: {
           top: THIN_BORDER,
           bottom: THIN_BORDER,
@@ -629,7 +637,7 @@ function renderScoreTable(data: ScoreTableData): (Paragraph | Table)[] {
     const defaultBgColor = index % 2 === 0 ? WHITE : LIGHT_GRAY
     const cells = data.columns.map((col, idx) => {
       const result = computeCellResult(data, row.id, col.id)
-      const dotColor = result.bgColor ? result.bgColor.replace('#', '') : null
+      const dotColor = result.bgColor ? morph(result.bgColor).replace('#', '') : null
       return new TableCell({
         width: { size: balancedWidths[idx], type: WidthType.DXA },
         margins: cellMargins,
@@ -768,9 +776,9 @@ function renderSkippedWarning(block: Block): (Paragraph | Table)[] {
 function renderInfoBox(data: InfoBoxData, amber = false): (Paragraph | Table)[] {
   if (!data.label && !data.content) return []
 
-  const fillColor = amber ? 'FFF8E1' : LIGHT_BLUE
-  const borderColor = amber ? 'F59E0B' : MEDIUM_BLUE
-  const labelColor = amber ? '92400E' : DARK_BLUE
+  const fillColor = amber ? 'FFF8E1' : chrome('surface')
+  const borderColor = amber ? 'F59E0B' : chrome('secondary')
+  const labelColor = amber ? '92400E' : chrome('primary')
 
   const elements: (Paragraph | Table)[] = []
 
@@ -1105,7 +1113,21 @@ function chartCanvasToImageBytes(canvas: HTMLCanvasElement): Uint8Array | null {
   return bytes
 }
 
-async function renderChart(data: ChartData): Promise<(Paragraph | Table)[]> {
+function morphChartColors(data: ChartData): ChartData {
+  return {
+    ...data,
+    series: data.series.map((s) => ({ ...s, color: morph(s.color) })),
+    referenceLines: data.referenceLines.map((l) => ({ ...l, color: morph(l.color) })),
+    referenceRegions: data.referenceRegions.map((r) => ({
+      ...r,
+      color: morph(r.color),
+      borderColor: morph(r.borderColor),
+    })),
+  }
+}
+
+async function renderChart(rawData: ChartData): Promise<(Paragraph | Table)[]> {
+  const data = morphChartColors(rawData)
   const elements: (Paragraph | Table)[] = []
 
   if (data.title) {
@@ -1320,7 +1342,7 @@ function renderCover(data: CoverData, report: Report, prof: import('@/types').Pr
           bold: true,
           size: 48,
           font: 'Calibri',
-          color: DARK_BLUE,
+          color: chrome('primary'),
           characterSpacing: 40,
         }),
       ],
@@ -1355,7 +1377,7 @@ function renderCover(data: CoverData, report: Report, prof: import('@/types').Pr
     new Paragraph({
       spacing: { before: 0, after: 120 },
       border: {
-        bottom: { color: BORDER_GRAY, space: 6, style: BorderStyle.SINGLE, size: 4 },
+        bottom: { color: chrome('border'), space: 6, style: BorderStyle.SINGLE, size: 4 },
       },
       children: [],
     })
@@ -1416,7 +1438,7 @@ async function renderClosingPage(data: ClosingPageData, report: Report, prof: im
           top: NO_BORDER,
           left: NO_BORDER,
           right: NO_BORDER,
-          bottom: { color: MEDIUM_BLUE, space: 4, style: BorderStyle.SINGLE, size: 6 },
+          bottom: { color: chrome('secondary'), space: 4, style: BorderStyle.SINGLE, size: 6 },
         },
         children: [
           new TextRun({
@@ -1424,7 +1446,7 @@ async function renderClosingPage(data: ClosingPageData, report: Report, prof: im
             bold: true,
             size: 24,
             font: 'Calibri',
-            color: DARK_BLUE,
+            color: chrome('primary'),
           }),
         ],
       })
@@ -1477,7 +1499,7 @@ async function renderClosingPage(data: ClosingPageData, report: Report, prof: im
     name: prof.name || '____________________',
     subtitle: `CRP ${prof.crp || '__________'}`,
     isBold: true,
-    subtitleColor: MEDIUM_BLUE,
+    subtitleColor: chrome('secondary'),
   })
 
   if (showPatient) {
@@ -1541,7 +1563,7 @@ async function renderClosingPage(data: ClosingPageData, report: Report, prof: im
               bold: sig.isBold ?? false,
               size: 22,
               font: 'Calibri',
-              color: sig.isBold ? DARK_BLUE : '333333',
+              color: sig.isBold ? chrome('primary') : '333333',
             }),
           ],
         }),
@@ -1621,7 +1643,7 @@ function createDataCaption(text: string): Paragraph {
       top: NO_BORDER,
       left: NO_BORDER,
       right: NO_BORDER,
-      bottom: { color: MEDIUM_BLUE, space: 2, style: BorderStyle.SINGLE, size: 2 },
+      bottom: { color: chrome('secondary'), space: 2, style: BorderStyle.SINGLE, size: 2 },
     },
     children: [
       new TextRun({
@@ -1630,7 +1652,7 @@ function createDataCaption(text: string): Paragraph {
         italics: true,
         size: 20,
         font: 'Calibri',
-        color: MEDIUM_BLUE,
+        color: chrome('secondary'),
       }),
     ],
   })
@@ -1644,7 +1666,7 @@ function createSectionHeader(text: string): Paragraph {
       top: NO_BORDER,
       left: NO_BORDER,
       right: NO_BORDER,
-      bottom: { color: MEDIUM_BLUE, space: 6, style: BorderStyle.SINGLE, size: 12 },
+      bottom: { color: chrome('secondary'), space: 6, style: BorderStyle.SINGLE, size: 12 },
     },
     children: [
       new TextRun({
@@ -1652,7 +1674,7 @@ function createSectionHeader(text: string): Paragraph {
         bold: true,
         size: 28,
         font: 'Calibri',
-        color: DARK_BLUE,
+        color: chrome('primary'),
       }),
     ],
   })
@@ -1668,7 +1690,7 @@ function createSubsectionHeader(text: string): Paragraph {
         bold: true,
         size: 22,
         font: 'Calibri',
-        color: DARK_BLUE,
+        color: chrome('primary'),
       }),
     ],
   })
@@ -1685,7 +1707,7 @@ function createTertiarySectionHeader(text: string): Paragraph {
         italics: true,
         size: 20,
         font: 'Calibri',
-        color: DARK_BLUE,
+        color: chrome('primary'),
       }),
     ],
   })
@@ -1703,7 +1725,7 @@ function createDeepSectionHeader(text: string, depth: number): Paragraph {
         italics: true,
         size: 20,
         font: 'Calibri',
-        color: DARK_BLUE,
+        color: chrome('primary'),
       }),
     ],
   })
@@ -1734,7 +1756,7 @@ function createKeyValueTable(rows: string[][]): Table {
                     bold: true,
                     size: 20,
                     font: 'Calibri',
-                    color: DARK_BLUE,
+                    color: chrome('primary'),
                   }),
                 ],
               }),
@@ -1783,7 +1805,22 @@ function createKeyValueTable(rows: string[][]): Table {
 
 // ========== Main generator ==========
 
-export async function generateDocx(report: Report): Promise<Blob> {
+export interface GenerateDocxOptions {
+  themeId?: string
+}
+
+export async function generateDocx(report: Report, options: GenerateDocxOptions = {}): Promise<Blob> {
+  const themeId = options.themeId ?? getPreferredPaletteId()
+  _activePalette = getPalette(themeId)
+
+  try {
+    return await buildDocxBlob(report)
+  } finally {
+    _activePalette = CLASSICO_PALETTE
+  }
+}
+
+async function buildDocxBlob(report: Report): Promise<Blob> {
   const prof = await getProfessional()
   const sortedBlocks = flattenTree(buildBlockTree(report.blocks))
 
@@ -1914,8 +1951,8 @@ export async function generateDocx(report: Report): Promise<Blob> {
   return Packer.toBlob(doc)
 }
 
-export async function downloadDocx(report: Report): Promise<void> {
-  const blob = await generateDocx(report)
+export async function downloadDocx(report: Report, options: GenerateDocxOptions = {}): Promise<void> {
+  const blob = await generateDocx(report, options)
 
   const fileName = report.customerName
     ? `Relatório - ${report.customerName}.docx`
