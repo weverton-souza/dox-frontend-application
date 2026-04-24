@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import type {
   ChartData,
   ChartSeries,
@@ -19,6 +19,8 @@ import ColorPicker from '@/components/ui/ColorPicker'
 import { Chart as ChartJS } from 'chart.js'
 import SaveChartTemplateModal from '@/components/blocks/SaveChartTemplateModal'
 import '@/lib/docx-engine/chart/setup'
+import { useActivePalette } from '@/lib/hooks/use-active-palette'
+import { morphHex } from '@/lib/theme'
 
 interface ChartBlockProps {
   data: ChartData
@@ -49,6 +51,7 @@ interface GroupBound {
 export default function ChartBlock({ data, onChange }: ChartBlockProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const chartRef = useRef<ChartJS | null>(null)
+  const activePalette = useActivePalette()
 
   // Save as template state
   const [showSaveTemplate, setShowSaveTemplate] = useState(false)
@@ -64,8 +67,21 @@ export default function ChartBlock({ data, onChange }: ChartBlockProps) {
   const displayMode = data.displayMode ?? 'grouped'
   const isSeparated = displayMode === 'separated' && data.chartType !== 'line' && data.series.length > 1
 
+  // Cores morfadas pelo tema ativo — preserva posição no grid 5×4 semantico
+  const morphedData = useMemo<ChartData>(() => ({
+    ...data,
+    series: data.series.map((s) => ({ ...s, color: morphHex(s.color, activePalette) })),
+    referenceLines: data.referenceLines.map((l) => ({ ...l, color: morphHex(l.color, activePalette) })),
+    referenceRegions: data.referenceRegions.map((r) => ({
+      ...r,
+      color: morphHex(r.color, activePalette),
+      borderColor: morphHex(r.borderColor, activePalette),
+    })),
+  }), [data, activePalette])
+
   // Render chart
   useEffect(() => {
+    const data = morphedData
     if (!canvasRef.current) return
     if (data.categories.length === 0 || data.series.length === 0) {
       if (chartRef.current) {
@@ -362,7 +378,7 @@ export default function ChartBlock({ data, onChange }: ChartBlockProps) {
         chartRef.current = null
       }
     }
-  }, [data, showRegionLegend, isSeparated])
+  }, [morphedData, showRegionLegend, isSeparated])
 
   // --- Series management ---
   const addSeries = useCallback(() => {
