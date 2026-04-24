@@ -16,6 +16,7 @@ import ReportSummary from '@/components/editor/ReportSummary'
 import SectionEditor from '@/components/editor/SectionEditor'
 import PreviewModal from '@/components/editor/PreviewModal'
 import BlockSelector from '@/components/editor/BlockSelector'
+import AddRootBlockModal from '@/components/editor/AddRootBlockModal'
 import BlockEditModal from '@/components/editor/BlockEditModal'
 import VersionHistoryModal from '@/components/editor/VersionHistoryModal'
 import Button from '@/components/ui/Button'
@@ -354,24 +355,67 @@ export default function ReportEditor() {
     []
   )
 
-  const handleAddTextSection = useCallback(() => {
+  const [showAddRootModal, setShowAddRootModal] = useState(false)
+
+  const missingSpecials = useMemo<Array<'cover' | 'identification' | 'closing-page'>>(() => {
+    if (!report) return []
+    const types = new Set(report.blocks.map((b) => b.type))
+    const missing: Array<'cover' | 'identification' | 'closing-page'> = []
+    if (!types.has('cover')) missing.push('cover')
+    if (!types.has('identification')) missing.push('identification')
+    if (!types.has('closing-page')) missing.push('closing-page')
+    return missing
+  }, [report])
+
+  /**
+   * Insere um bloco-raiz no lugar correto da ordem:
+   * - cover: topo (ordem 0)
+   * - identification: depois da cover (se existir)
+   * - closing-page: sempre no final
+   * - section: antes do closing-page (se existir)
+   */
+  const insertRootBlock = useCallback((type: BlockType) => {
     if (!report) return
 
     const sorted = [...report.blocks].sort((a, b) => a.order - b.order)
-    const newBlock = createBlock('section', 0, undefined, null)
+    const newBlock = createBlock(type, 0, undefined, null)
 
-    // Insert before closing-page so it always stays last
-    const closingIdx = sorted.findIndex((b) => b.type === 'closing-page')
-    if (closingIdx !== -1) {
-      sorted.splice(closingIdx, 0, newBlock)
+    let inserted: Block[]
+    if (type === 'cover') {
+      inserted = [newBlock, ...sorted]
+    } else if (type === 'identification') {
+      const coverIdx = sorted.findIndex((b) => b.type === 'cover')
+      const insertAt = coverIdx !== -1 ? coverIdx + 1 : 0
+      inserted = [...sorted]
+      inserted.splice(insertAt, 0, newBlock)
+    } else if (type === 'closing-page') {
+      inserted = [...sorted, newBlock]
     } else {
-      sorted.push(newBlock)
+      const closingIdx = sorted.findIndex((b) => b.type === 'closing-page')
+      inserted = [...sorted]
+      if (closingIdx !== -1) {
+        inserted.splice(closingIdx, 0, newBlock)
+      } else {
+        inserted.push(newBlock)
+      }
     }
-    const newBlocks = sorted.map((b, i) => ({ ...b, order: i }))
+
+    const newBlocks = inserted.map((b, i) => ({ ...b, order: i }))
     handleBlocksChange(newBlocks)
     updateBlockSelector({ showSectionSelector: false })
     setActiveItemId(newBlock.id)
   }, [report, handleBlocksChange])
+
+  const handleAddTextSection = useCallback(() => {
+    if (!report) return
+
+    if (missingSpecials.length > 0) {
+      setShowAddRootModal(true)
+      return
+    }
+
+    insertRootBlock('section')
+  }, [report, missingSpecials.length, insertRootBlock])
 
   const handleSaveTemplate = useCallback(async () => {
     if (!report || !templateModal.templateName.trim()) return
@@ -999,6 +1043,14 @@ export default function ReportEditor() {
         }}
         onSelect={handleAddBlock}
         contextLabel={insertTargetSection}
+      />
+
+      {/* Add Root Block Modal */}
+      <AddRootBlockModal
+        isOpen={showAddRootModal}
+        onClose={() => setShowAddRootModal(false)}
+        availableSpecials={missingSpecials}
+        onSelect={insertRootBlock}
       />
 
       {/* Save Template Modal */}
