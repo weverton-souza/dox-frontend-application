@@ -31,6 +31,7 @@ import {
   ChartData,
   ReferencesData,
   ClosingPageData,
+  CoverData,
   SlateContent,
   SlateNode,
   isSlateContent,
@@ -61,6 +62,7 @@ import {
   LIGHT_BLUE,
   WHITE,
   LIGHT_GRAY,
+  BORDER_GRAY,
   PAGE_CONTENT_WIDTH,
   PAGE_MARGIN,
   THIN_BORDER,
@@ -1300,6 +1302,95 @@ function renderReferences(data: ReferencesData): Paragraph[] {
   return elements
 }
 
+// ========== Cover ==========
+
+function renderCover(data: CoverData, report: Report, prof: import('@/types').Professional): Paragraph[] {
+  const elements: Paragraph[] = []
+
+  elements.push(new Paragraph({ spacing: { before: 3200 }, children: [] }))
+
+  const titleText = (data.customTitle?.trim() || 'RELATÓRIO PSICOLÓGICO').toUpperCase()
+  elements.push(
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 360 },
+      children: [
+        new TextRun({
+          text: titleText,
+          bold: true,
+          size: 48,
+          font: 'Calibri',
+          color: DARK_BLUE,
+          characterSpacing: 40,
+        }),
+      ],
+    })
+  )
+
+  const idData = report.blocks?.find((b) => b.type === 'identification')?.data as IdentificationData | undefined
+  const customerName = report.customerName || idData?.customer?.name
+  const subtitleText = data.customSubtitle?.trim() || customerName
+
+  if (subtitleText) {
+    elements.push(
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 200 },
+        children: [
+          new TextRun({
+            text: subtitleText,
+            italics: true,
+            size: 28,
+            font: 'Calibri',
+            color: '4A4A4A',
+          }),
+        ],
+      })
+    )
+  }
+
+  elements.push(new Paragraph({ spacing: { before: 4800 }, children: [] }))
+
+  elements.push(
+    new Paragraph({
+      spacing: { before: 0, after: 120 },
+      border: {
+        bottom: { color: BORDER_GRAY, space: 6, style: BorderStyle.SINGLE, size: 4 },
+      },
+      children: [],
+    })
+  )
+
+  const metaLines: string[] = []
+  if (prof.name) metaLines.push(prof.name)
+  if (prof.specialization && prof.crp) {
+    metaLines.push(`${prof.specialization} · CRP ${prof.crp}`)
+  }
+  if (idData?.location) metaLines.push(idData.location)
+  if (idData?.date) metaLines.push(formatDate(idData.date))
+
+  for (const line of metaLines) {
+    elements.push(
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 40 },
+        children: [
+          new TextRun({
+            text: line,
+            size: 20,
+            font: 'Calibri',
+            color: '707070',
+          }),
+        ],
+      })
+    )
+  }
+
+  elements.push(new Paragraph({ children: [new PageBreak()] }))
+
+  return elements
+}
+
 // ========== Closing Page ==========
 
 async function renderClosingPage(data: ClosingPageData, report: Report, prof: import('@/types').Professional): Promise<(Paragraph | Table)[]> {
@@ -1744,6 +1835,9 @@ export async function generateDocx(report: Report): Promise<Blob> {
         break
       case 'closing-page':
         sectionChildren.push(...await renderClosingPage(block.data as ClosingPageData, report, prof))
+        break
+      case 'cover':
+        sectionChildren.push(...renderCover(block.data as CoverData, report, prof))
         break
     }
 

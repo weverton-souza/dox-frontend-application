@@ -26,7 +26,7 @@ function buildSummaryItems(blocks: Block[], collapsed: Set<string>): SummaryItem
     const children = getDirectChildren(blocks, parentId)
     const visibleChildren = children.filter((b) =>
       b.type === 'section' ||
-      (parentId === null && (b.type === 'identification' || b.type === 'closing-page'))
+      (parentId === null && (b.type === 'identification' || b.type === 'closing-page' || b.type === 'cover'))
     )
     visibleChildren.forEach((block, idx) => {
       const sectionChildren = block.type === 'section'
@@ -97,7 +97,7 @@ export default function ReportSummary({
               const isTreeNode =
                 item.block.type === 'section' ||
                 (item.depth === 0 &&
-                  (item.block.type === 'identification' || item.block.type === 'closing-page'))
+                  (item.block.type === 'identification' || item.block.type === 'closing-page' || item.block.type === 'cover'))
               const indentPx = 12 + item.depth * 16
               const parentTrunkX = 12 + Math.max(0, item.depth - 1) * 16
 

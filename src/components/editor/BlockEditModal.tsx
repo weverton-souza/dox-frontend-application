@@ -10,6 +10,7 @@ import type {
   ChartData,
   ReferencesData,
   ClosingPageData,
+  CoverData,
   Customer,
   AiGenerationResponse,
 } from '@/types'
@@ -28,6 +29,7 @@ import InfoBoxBlock from '@/components/blocks/InfoBoxBlock'
 import ChartBlock from '@/components/blocks/ChartBlock'
 import ReferencesBlock from '@/components/blocks/ReferencesBlock'
 import ClosingPageBlock from '@/components/blocks/ClosingPageBlock'
+import CoverBlock from '@/components/blocks/CoverBlock'
 import BlockErrorBoundary from '@/components/ui/BlockErrorBoundary'
 
 interface BlockEditModalProps {
@@ -52,6 +54,7 @@ const MODAL_SIZES: Record<BlockType, 'sm' | 'md' | 'lg' | 'xl' | '2xl'> = {
   chart: '2xl',
   references: 'xl',
   'closing-page': 'lg',
+  cover: 'md',
 }
 
 function getModalTitle(block: Block): string {
@@ -83,6 +86,10 @@ function getModalTitle(block: Block): string {
     case 'closing-page': {
       const d = block.data as ClosingPageData
       return d.title || typeLabel
+    }
+    case 'cover': {
+      const d = block.data as CoverData
+      return d.customTitle || typeLabel
     }
     default:
       return typeLabel
@@ -217,6 +224,13 @@ export default function BlockEditModal({
         return (
           <ClosingPageBlock
             data={localData as ClosingPageData}
+            onChange={handleLocalChange}
+          />
+        )
+      case 'cover':
+        return (
+          <CoverBlock
+            data={localData as CoverData}
             onChange={handleLocalChange}
           />
         )
