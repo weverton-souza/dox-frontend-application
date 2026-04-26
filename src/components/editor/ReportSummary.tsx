@@ -263,22 +263,6 @@ export default function ReportSummary({
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
-  // Custom collision detection: só candidatos que são irmãos da section ativa (mesmo parentId)
-  const collisionDetection = useCallback(
-    (args: Parameters<typeof closestCenter>[0]) => {
-      const activeId = String(args.active.id)
-      const activeBlock = blocks.find((b) => b.id === activeId)
-      if (!activeBlock) return closestCenter(args)
-
-      const filteredContainers = args.droppableContainers.filter((c) => {
-        const block = blocks.find((b) => b.id === String(c.id))
-        return block?.type === 'section' && block.parentId === activeBlock.parentId
-      })
-      return closestCenter({ ...args, droppableContainers: filteredContainers })
-    },
-    [blocks]
-  )
-
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       if (!onBlocksChange) return
@@ -351,7 +335,7 @@ export default function ReportSummary({
         {items.length === 0 ? (
           <p className="px-3 py-4 text-sm text-gray-400 italic">Sem seções.</p>
         ) : (
-          <DndContext sensors={sensors} collisionDetection={collisionDetection} onDragEnd={handleDragEnd}>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={allSectionIds} strategy={verticalListSortingStrategy}>
               <ul className="space-y-1">
                 {items.map((item) => {
