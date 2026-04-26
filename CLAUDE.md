@@ -36,9 +36,19 @@
 - Templates de gráfico pré-configurados (10 padrões): WAIS-III Subtestes, WAIS-III Índices, RAVLT Curva, FDT, BDI-II, BAI, SRS-2, ToL-BR, Perfil Cognitivo, TMT
 - Seleção de template ao criar gráfico via BlockSelector (flow em 2 steps)
 - Salvar gráfico como template customizado com nome, instrumento e categoria
-- Dois modos de edição via tabs no header: **Documento** (sumário + editor focado na seção ativa) e **Estrutura** (OutlineTree hierárquico com DnD)
-- Modo Documento: `ReportSummary` à esquerda (navegação pura) + `SectionEditor` à direita (só blocos diretos da seção ativa); blocos-raiz (Identificação, Encerramento) aparecem como itens do sumário
-- Preview do `.docx` acionado pelo botão "Pré-visualizar" no header, abrindo em `PreviewModal` redimensionável (não divide mais a tela)
+- Editor layout único (modo Documento): `ReportSummary` à esquerda com árvore mestre (bolinhas, L-curves, trunks, colapsar seções) + `SectionEditor` à direita renderizando apenas blocos da seção ativa
+- Identificação e Encerramento participam da árvore no root como itens do sumário
+- Blocos editáveis inline (`InlineBlock`) para todos os 7 tipos — iniciam colapsados ao trocar de seção, expansíveis via chevron; botão "Expandir em modal" abre o `BlockEditModal` tradicional em tela cheia
+- Mover blocos entre seções via `MoveBlocksModal` (checkbox por bloco + árvore de destino com opção "Raiz do documento")
+- Excluir seção via `SectionDeleteModal` (opção de mover filhos ou excluir tudo)
+- Título de seção editável inline no header do `SectionEditor`
+- Numeração ABNT automática (toggle na toolbar lateral via `section-numbering.ts`): 1, 2.1, 2.2, 3.1.1... sem ponto, renumera em add/remove/reorder
+- Header Figma-style do editor: sticky, backdrop blur, center = template · cliente · status pill; direita = Assistente (secondary) + Finalizar (verde) ou Baixar (azul)
+- Finalizar pede digitar "finalizar" no `AiFinalizationModal` para confirmar; uma vez finalizado, não há UI de reabrir
+- Preview do `.docx` acionado pelo ícone na toolbar lateral, abrindo em `PreviewModal` redimensionável
+- Hierarquia tipográfica gradativa no `.docx`: 28pt bold (primária) → 22pt bold (secundária) → 20pt bold itálico (terciária) → 20pt itálico com indent (quaternária+)
+- Títulos no `.docx` respeitam o case digitado (não força uppercase)
+- Terminologia unificada na UI: sempre "relatório" (nunca "laudo")
 - Rich text WYSIWYG (Plate.js) com bold, itálico, sublinhado, riscado, listas (bullet/numerada), alinhamento (L/C/R/J) nos blocos de texto
 - Conteúdo armazenado em Slate JSON (array de nós), com backward compat para HTML legado (auto-conversão no load)
 - Itens rotulados (key-value) nos blocos de texto
