@@ -18,7 +18,7 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable'
 import type { Block, BlockData, SectionData } from '@/types'
-import { isContainerBlock, isLockedBlock } from '@/types'
+import { isContainerBlock } from '@/types'
 import { buildBlockTree, getDescendantIds, computeBlockMetas } from '@/lib/utils'
 import type { TreeNode } from '@/lib/utils'
 import { PlusIcon } from '@/components/icons'
@@ -242,7 +242,7 @@ export default function OutlineTree({
 
       const activeStr = active.id as string
       const activeBlock = blocks.find(b => b.id === activeStr)
-      if (!activeBlock || locked || isLockedBlock(activeBlock.type)) return
+      if (!activeBlock || locked) return
 
       // Fallback when no valid over target (over is null or self)
       const finalOffsetX = event.delta?.x ?? offsetXRef.current
@@ -486,7 +486,6 @@ export default function OutlineTree({
   function renderNode(node: TreeNode, siblingIndex: number, _siblingCount: number) {
     const { block, children, depth } = node
     const isContainer = isContainerBlock(block.type)
-    const isLocked = locked || isLockedBlock(block.type)
     const isCollapsed = collapsedSections.has(block.id)
     const hasChildren = children.length > 0
     const meta = blockMetas[block.id]
@@ -508,7 +507,7 @@ export default function OutlineTree({
               >
                 <Chevron collapsed={isCollapsed} />
               </button>
-            ) : isContainer && !isLocked ? (
+            ) : isContainer && !locked ? (
               <button
                 type="button"
                 onClick={() => {
@@ -535,13 +534,13 @@ export default function OutlineTree({
               depth={depth}
               siblingIndex={siblingIndex}
               onEdit={onEditBlock}
-              onRequestAdd={isContainer && !isLocked ? onRequestAddBlock : undefined}
+              onRequestAdd={isContainer && !locked ? onRequestAddBlock : undefined}
               onReviewBlock={onReviewBlock}
               childCount={children.length}
               onDuplicate={locked ? undefined : duplicateBlock}
               onRemove={locked ? undefined : handleRemoveRequest}
               onChange={updateBlockData}
-              dragDisabled={isLocked}
+              dragDisabled={locked}
             />
           </div>
 
@@ -577,7 +576,7 @@ export default function OutlineTree({
         )}
 
         {/* Insertion point for empty containers */}
-        {isContainer && !hasChildren && !isLocked && (
+        {isContainer && !hasChildren && !locked && (
           <InsertionPoint
             afterBlockId={block.id}
             parentId={block.id}

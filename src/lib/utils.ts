@@ -17,6 +17,7 @@ import {
   createEmptyChartData,
   createEmptyReferencesData,
   createEmptyClosingPageData,
+  createEmptyCoverData,
   createEmptySectionData,
 } from '@/types'
 import type { Professional } from '@/types'
@@ -108,6 +109,9 @@ export function createBlock(type: BlockType, order: number, professional?: Profe
       break
     case 'closing-page':
       data = createEmptyClosingPageData()
+      break
+    case 'cover':
+      data = createEmptyCoverData()
       break
   }
 

@@ -8,6 +8,7 @@ import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import Select from '@/components/ui/Select'
+import ThemeSelector from '@/components/ui/ThemeSelector'
 import { CloseIcon } from '@/components/icons'
 
 interface ProfessionalModalProps {
@@ -209,6 +210,11 @@ export default function ProfessionalModal({ isOpen, onClose }: ProfessionalModal
               Adicionar contato
             </button>
           </div>
+        </div>
+
+        {/* Theme Selector */}
+        <div className="pt-3 border-t border-gray-100">
+          <ThemeSelector />
         </div>
 
         {/* Footer Buttons */}

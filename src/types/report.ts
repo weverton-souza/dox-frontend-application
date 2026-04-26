@@ -177,6 +177,13 @@ export interface ReferencesData {
   hangingIndent?: boolean
 }
 
+// ========== Cover ==========
+
+export interface CoverData {
+  customTitle: string
+  customSubtitle: string
+}
+
 // ========== Closing Page ==========
 
 export interface ClosingPageData {
@@ -195,7 +202,7 @@ export interface ClosingPageData {
 
 // ========== Block ==========
 
-export type BlockType = 'identification' | 'section' | 'text' | 'score-table' | 'info-box' | 'chart' | 'references' | 'closing-page'
+export type BlockType = 'identification' | 'section' | 'text' | 'score-table' | 'info-box' | 'chart' | 'references' | 'closing-page' | 'cover'
 
 export interface SectionData {
   title: string
@@ -204,7 +211,7 @@ export interface SectionData {
   color?: string
 }
 
-export type BlockData = IdentificationData | SectionData | TextBlockData | ScoreTableData | InfoBoxData | ChartData | ReferencesData | ClosingPageData
+export type BlockData = IdentificationData | SectionData | TextBlockData | ScoreTableData | InfoBoxData | ChartData | ReferencesData | ClosingPageData | CoverData
 
 export interface Block {
   id: string
@@ -224,10 +231,6 @@ const CONTAINER_TYPES: BlockType[] = ['identification', 'section', 'closing-page
 
 export function isContainerBlock(type: BlockType): boolean {
   return CONTAINER_TYPES.includes(type)
-}
-
-export function isLockedBlock(type: BlockType): boolean {
-  return type === 'identification' || type === 'closing-page'
 }
 
 // ========== Report Theme ==========
@@ -411,6 +414,13 @@ export function createEmptyClosingPageData(): ClosingPageData {
     showFatherSignature: false,
     showGuardianSignature: false,
     footerNote: '',
+  }
+}
+
+export function createEmptyCoverData(): CoverData {
+  return {
+    customTitle: '',
+    customSubtitle: '',
   }
 }
 

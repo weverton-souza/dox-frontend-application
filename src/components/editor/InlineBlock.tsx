@@ -9,6 +9,7 @@ import type {
   ChartData,
   ReferencesData,
   ClosingPageData,
+  CoverData,
   Customer,
 } from '@/types'
 import { BLOCK_TYPE_LABELS } from '@/types'
@@ -21,6 +22,7 @@ import ScoreTableBlock from '@/components/blocks/ScoreTableBlock'
 import ChartBlock from '@/components/blocks/ChartBlock'
 import ReferencesBlock from '@/components/blocks/ReferencesBlock'
 import ClosingPageBlock from '@/components/blocks/ClosingPageBlock'
+import CoverBlock from '@/components/blocks/CoverBlock'
 import BlockErrorBoundary from '@/components/ui/BlockErrorBoundary'
 
 interface InlineBlockProps {
@@ -65,6 +67,8 @@ function renderBody(
       return <ReferencesBlock data={block.data as ReferencesData} onChange={handleChange} />
     case 'closing-page':
       return <ClosingPageBlock data={block.data as ClosingPageData} onChange={handleChange} />
+    case 'cover':
+      return <CoverBlock data={block.data as CoverData} onChange={handleChange} />
     case 'section':
       return null
   }

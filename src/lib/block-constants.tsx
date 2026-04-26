@@ -1,5 +1,5 @@
 import React from 'react'
-import { BlockType, SectionData, ScoreTableData, ChartData, InfoBoxData, ReferencesData, ClosingPageData } from '@/types'
+import { BlockType, SectionData, ScoreTableData, ChartData, InfoBoxData, ReferencesData, ClosingPageData, CoverData } from '@/types'
 
 // ========== Labels & Descriptions ==========
 
@@ -12,6 +12,7 @@ export const BLOCK_TYPE_LABELS: Record<BlockType, string> = {
   'chart': 'Gráfico',
   'references': 'Referências',
   'closing-page': 'Termo de Entrega',
+  'cover': 'Capa',
 }
 
 export const BLOCK_TYPE_DESCRIPTIONS: Record<BlockType, string> = {
@@ -23,6 +24,7 @@ export const BLOCK_TYPE_DESCRIPTIONS: Record<BlockType, string> = {
   'chart': 'Gráfico de barras ou linha para visualização de escores',
   'references': 'Referências bibliográficas com formatação ABNT',
   'closing-page': 'Termo de entrega e ciência com assinaturas',
+  'cover': 'Página de capa do relatório (primeira página do .docx)',
 }
 
 // ========== Colors ==========
@@ -36,6 +38,7 @@ export const BLOCK_TYPE_COLORS: Record<BlockType, string> = {
   chart: 'bg-rose-50 text-rose-600',
   references: 'bg-slate-50 text-slate-500',
   'closing-page': 'bg-gray-100 text-gray-500',
+  cover: 'bg-slate-100 text-slate-500',
 }
 
 // Border color for sections varies by depth — this is the default/fallback
@@ -48,6 +51,7 @@ export const BLOCK_TYPE_BORDER_COLORS: Record<BlockType, string> = {
   chart: 'border-l-rose-400',
   references: 'border-l-slate-300',
   'closing-page': 'border-l-gray-400',
+  cover: 'border-l-slate-400',
 }
 
 // Section border color by depth in the tree (same hue, decreasing intensity)
@@ -77,6 +81,7 @@ export function getBlockTitle(block: { type: string; data: unknown }): string {
     case 'references': return (block.data as ReferencesData).title || BLOCK_TYPE_LABELS.references
     case 'closing-page': return (block.data as ClosingPageData).title || BLOCK_TYPE_LABELS['closing-page']
     case 'identification': return BLOCK_TYPE_LABELS.identification
+    case 'cover': return (block.data as CoverData).customTitle || BLOCK_TYPE_LABELS.cover
     default: return block.type
   }
 }
@@ -144,6 +149,12 @@ export function getBlockTypeIcon(type: BlockType, size: number = 24): React.Reac
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
         <polyline points="14 2 14 8 20 8" />
         <path d="M9 15l2 2 4-4" />
+      </>)
+    case 'cover':
+      return blockIcon(size, <>
+        <rect x="4" y="3" width="16" height="18" rx="1" />
+        <line x1="8" y1="8" x2="16" y2="8" />
+        <line x1="9" y1="12" x2="15" y2="12" />
       </>)
   }
 }

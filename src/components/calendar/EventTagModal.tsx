@@ -3,7 +3,8 @@ import type { EventTag } from '@/types'
 import Modal from '@/components/ui/Modal'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
-import ColorPicker, { COLOR_PRESETS } from '@/components/ui/ColorPicker'
+import ColorPicker from '@/components/ui/ColorPicker'
+import { useActivePalette } from '@/lib/hooks/use-active-palette'
 
 interface EventTagModalProps {
   isOpen: boolean
@@ -14,15 +15,16 @@ interface EventTagModalProps {
   existingColors: string[]
 }
 
-function getNextAvailableColor(existingColors: string[]): string {
+function getNextAvailableColor(palette: readonly string[], existingColors: string[]): string {
   const usedSet = new Set(existingColors.map((c) => c.toUpperCase()))
-  for (const preset of COLOR_PRESETS) {
+  for (const preset of palette) {
     if (!usedSet.has(preset.toUpperCase())) return preset
   }
-  return COLOR_PRESETS[0]
+  return palette[0]
 }
 
 export default function EventTagModal({ isOpen, onClose, onSave, onDelete, tag, existingColors }: EventTagModalProps) {
+  const activePalette = useActivePalette()
   const [name, setName] = useState('')
   const [color, setColor] = useState('')
   const [saving, setSaving] = useState(false)
@@ -35,10 +37,10 @@ export default function EventTagModal({ isOpen, onClose, onSave, onDelete, tag, 
         setColor(tag.color)
       } else {
         setName('')
-        setColor(getNextAvailableColor(existingColors))
+        setColor(getNextAvailableColor(activePalette.colors, existingColors))
       }
     }
-  }, [isOpen, tag, existingColors])
+  }, [isOpen, tag, existingColors, activePalette.colors])
 
   const handleSave = async () => {
     if (!name.trim() || !color.trim()) return
