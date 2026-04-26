@@ -19,7 +19,9 @@
 
 ### Relatórios (Reports)
 - Editor de blocos com drag-and-drop (dnd-kit) e auto-save via API
-- 8 tipos de bloco: identification, section, text, score-table, info-box, chart, references, closing-page
+- 9 tipos de bloco: identification, section, text, score-table, info-box, chart, references, closing-page, cover
+- Bloco de Capa (`cover`) como bloco-raiz singleton opcional — título editorial centralizado + subtítulo (default: nome do cliente) + metadados do profissional no pé. Primeira página do `.docx`
+- Blocos-raiz singletons (cover, identification, closing-page) podem ser removidos e re-adicionados livremente via modal `AddRootBlockModal` que aparece ao clicar "+ Adicionar Seção" no sumário
 - Hierarquia explícita com `parentId` — blocos section podem conter outros blocos (multinível)
 - DnD com projeção de profundidade: arrastar horizontal muda nível (esquerda=subir, direita=descer)
 - Blocos não-section impedidos de ir para raiz (apenas sections no depth 0)
@@ -103,6 +105,19 @@
 - Modal para nome, CRP, especialização, logo (base64)
 - Itens de contato configuráveis (Instagram, LinkedIn, Facebook, website, telefone, email)
 - Dados usados no header do .docx e no bloco de identificação
+- Seletor de tema/paleta (`ThemeSelector`) com 4 cards: Clássico, Terroso, Grave, Suave
+
+### Sistema de Temas (Paletas)
+- 4 paletas visuais definidas em `src/lib/theme/palettes.ts`: `classico` (Flat UI 2 baseline), `terroso` (outono warm dessaturado), `grave` (inverno profundo saturado), `suave` (verão cool muted)
+- Cada `ThemePalette` tem: `colors` (20 hex no grid 5×4 semântico) + `chrome` (primary, secondary, surface, border, headerText para o .docx)
+- Grid 5×4 semântico: colunas = matizes (verde, teal, azul, roxo, gray / amarelo, laranja, vermelho, pink, dark), linhas = valor (L1/L2 frios, L3/L4 quentes)
+- Preferência global em localStorage via `src/lib/theme/preference.ts` (chave `dox-preferred-palette`) + evento custom `dox-palette-changed` para reatividade na mesma aba
+- Hook reativo `useActivePalette()` em `src/lib/hooks/` — `useSyncExternalStore` escutando storage + evento custom
+- `ColorPicker` aceita prop opcional `palette?: readonly string[]`; se omitida, usa `useActivePalette()` — swatches mudam quando usuária troca tema
+- Morph automático de cores entre paletas via `morphHex(hex, targetPalette)` em `src/lib/theme/palette-morph.ts` — acha o slot da cor em alguma paleta conhecida e retorna o hex equivalente no tema ativo. Cores custom (off-grid) ficam literais. Preserva alpha (`#RRGGBBAA`)
+- Aplicado no `.docx` generator (`generateDocx(report, { themeId? })`) — chrome vem de `_activePalette.chrome`, cores de gráfico (séries, regiões, linhas de ref) e dots da tabela passam por morph
+- Aplicado no `ChartBlock` ao vivo — `useMemo` gera `morphedData` que alimenta o Chart.js; re-renderiza quando tema muda
+- `EventTagModal` usa paleta ativa para default color de novas tags; tags existentes mantêm a cor salva (canonical)
 
 ### Design System
 - Tokens centralizados em `src/styles/design-tokens.css` com CSS custom properties
@@ -172,10 +187,11 @@ src/
   lib/api/                 → API services (api-client, auth-service, error-handler, *-api.ts)
   lib/block-constants.tsx  → labels, cores, ícones e getBlockTitle()
   lib/report-utils.ts      → criação de relatórios (createEmptyReport, createReportFromCustomer)
-  lib/hooks/               → custom hooks reutilizáveis (useAutoSave, useConfirmDelete, usePagination, useClickOutside)
+  lib/theme/               → sistema de paletas (palettes, registry, preference, palette-morph)
+  lib/hooks/               → custom hooks reutilizáveis (useAutoSave, useConfirmDelete, usePagination, useClickOutside, useActivePalette)
   components/blocks/       → um componente por tipo de bloco
-  components/editor/       → componentes do editor (BlockList, BlockSelector, OutlineTree)
-  components/ui/           → componentes reutilizáveis (Button, Input, Modal, Select)
+  components/editor/       → componentes do editor (BlockList, BlockSelector, OutlineTree, AddRootBlockModal)
+  components/ui/           → componentes reutilizáveis (Button, Input, Modal, Select, ColorPicker, ThemeSelector)
   components/layout/       → AppLayout, Sidebar, GlobalTopBar, PageHeader
   components/form-builder/ → componentes do construtor de formulários
   components/form-fill/    → componentes de preenchimento de formulários
@@ -215,7 +231,7 @@ src/
 - Cinzas quentes Apple: `gray-*` via `--color-gray-*` (ex: gray-100 = `#F5F5F7`)
 - Aliases semânticos: `surface`, `surface-card`, `surface-hover`
 - Sombras customizadas: `shadow-xs`, `shadow-card`, `shadow-dropdown`, `shadow-modal`
-- Cores do docx: DARK_BLUE `#163A5F`, MEDIUM_BLUE `#1E5F8C`, LIGHT_BLUE `#D6E8F5`
+- Cores do docx: lidas do tema ativo via `_activePalette.chrome` (primary, secondary, surface, border, headerText). Constantes DARK_BLUE/MEDIUM_BLUE/LIGHT_BLUE em `docx-engine/shared/constants.ts` servem apenas de fallback histórico do Clássico (não são importadas pelo generator)
 - Cores de status: success `#34C759`, warning `#FF9500`, danger `#FF3B30`
 - Font stack: Inter → -apple-system → Segoe UI → system-ui
 
