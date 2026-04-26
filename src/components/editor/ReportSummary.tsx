@@ -242,6 +242,7 @@ export default function ReportSummary({
   onBlocksChange,
   locked = false,
 }: ReportSummaryProps) {
+  console.log('[DnD] ReportSummary render — versao com collision filter v3')
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
 
   const toggleCollapse = useCallback((id: string) => {
