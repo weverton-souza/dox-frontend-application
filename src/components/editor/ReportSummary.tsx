@@ -255,13 +255,29 @@ export default function ReportSummary({
 
   const items = useMemo(() => buildSummaryItems(blocks, collapsed), [blocks, collapsed])
 
-  // IDs de root sections (únicos draggables)
-  const rootSectionIds = useMemo(
-    () => items.filter((i) => i.depth === 0 && i.block.type === 'section').map((i) => i.block.id),
+  // IDs de TODAS as sections (root + sub) — draggables
+  const allSectionIds = useMemo(
+    () => items.filter((i) => i.block.type === 'section').map((i) => i.block.id),
     [items]
   )
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
+
+  // Custom collision detection: só candidatos que são irmãos da section ativa (mesmo parentId)
+  const collisionDetection = useCallback(
+    (args: Parameters<typeof closestCenter>[0]) => {
+      const activeId = String(args.active.id)
+      const activeBlock = blocks.find((b) => b.id === activeId)
+      if (!activeBlock) return closestCenter(args)
+
+      const filteredContainers = args.droppableContainers.filter((c) => {
+        const block = blocks.find((b) => b.id === String(c.id))
+        return block?.type === 'section' && block.parentId === activeBlock.parentId
+      })
+      return closestCenter({ ...args, droppableContainers: filteredContainers })
+    },
+    [blocks]
+  )
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
@@ -272,47 +288,53 @@ export default function ReportSummary({
       const activeId = String(active.id)
       const overId = String(over.id)
 
-      // Coleta root sections atuais ordenadas
-      const rootSections = blocks
-        .filter((b) => b.type === 'section' && b.parentId === null)
+      const activeBlock = blocks.find((b) => b.id === activeId)
+      const overBlock = blocks.find((b) => b.id === overId)
+      if (!activeBlock || !overBlock) return
+      if (activeBlock.type !== 'section' || overBlock.type !== 'section') return
+      // Regra de negócio: só reordena entre irmãos do mesmo pai
+      if (activeBlock.parentId !== overBlock.parentId) return
+
+      const parentId = activeBlock.parentId
+      const siblings = blocks
+        .filter((b) => b.type === 'section' && b.parentId === parentId)
         .sort((a, b) => a.order - b.order)
 
-      const oldIdx = rootSections.findIndex((s) => s.id === activeId)
-      const newIdx = rootSections.findIndex((s) => s.id === overId)
+      const oldIdx = siblings.findIndex((s) => s.id === activeId)
+      const newIdx = siblings.findIndex((s) => s.id === overId)
       if (oldIdx < 0 || newIdx < 0 || oldIdx === newIdx) return
 
-      const reorderedSections = arrayMove(rootSections, oldIdx, newIdx)
+      const reorderedSiblings = arrayMove(siblings, oldIdx, newIdx)
 
-      // Reconstrói lista de blocks: especiais nas posições naturais + sections com seus descendentes na nova ordem
       const sortedBlocks = [...blocks].sort((a, b) => a.order - b.order)
-      const sectionIdSet = new Set(rootSections.map((s) => s.id))
-      const sectionDescendantIds = new Set<string>()
-      rootSections.forEach((s) => {
-        getDescendantIds(blocks, s.id).forEach((id) => sectionDescendantIds.add(id))
+      const siblingIdSet = new Set(siblings.map((s) => s.id))
+      const siblingDescendantIds = new Set<string>()
+      siblings.forEach((s) => {
+        getDescendantIds(blocks, s.id).forEach((id) => siblingDescendantIds.add(id))
       })
 
-      // Especiais (cover, identification, closing-page) e quaisquer outros não-section preservam ordem original
-      const nonSectionBlocks = sortedBlocks.filter(
-        (b) => !sectionIdSet.has(b.id) && !sectionDescendantIds.has(b.id)
-      )
-
-      // Para cada section reordenada, monta seu subtree (section + descendentes)
-      const sectionGroups = reorderedSections.map((section) => {
-        const descendants = sortedBlocks.filter((b) => sectionDescendantIds.has(b.id) && isDescendantOf(blocks, b, section.id))
-        return [section, ...descendants]
+      // Cada irmão reordenado vira um grupo (irmão + descendentes na ordem original)
+      const reorderedGroup = reorderedSiblings.flatMap((sibling) => {
+        const descendants = sortedBlocks.filter((b) => isDescendantOf(blocks, b, sibling.id))
+        return [sibling, ...descendants]
       })
 
-      // Insere os grupos de sections no lugar correto (após identification/cover, antes de closing-page)
-      const closingIdx = nonSectionBlocks.findIndex((b) => b.type === 'closing-page')
-      const insertAt = closingIdx === -1 ? nonSectionBlocks.length : closingIdx
+      // Reconstrói: anda pela lista original, na primeira ocorrência de qualquer irmão/descendente,
+      // insere o grupo reordenado inteiro; pula demais ocorrências
+      let firstSiblingSeen = false
+      const newBlocks: Block[] = []
+      for (const b of sortedBlocks) {
+        if (siblingIdSet.has(b.id) || siblingDescendantIds.has(b.id)) {
+          if (!firstSiblingSeen) {
+            firstSiblingSeen = true
+            newBlocks.push(...reorderedGroup)
+          }
+          continue
+        }
+        newBlocks.push(b)
+      }
 
-      const newBlocks: Block[] = [
-        ...nonSectionBlocks.slice(0, insertAt),
-        ...sectionGroups.flat(),
-        ...nonSectionBlocks.slice(insertAt),
-      ].map((b, i) => ({ ...b, order: i }))
-
-      onBlocksChange(newBlocks)
+      onBlocksChange(newBlocks.map((b, i) => ({ ...b, order: i })))
     },
     [blocks, onBlocksChange]
   )
@@ -329,8 +351,8 @@ export default function ReportSummary({
         {items.length === 0 ? (
           <p className="px-3 py-4 text-sm text-gray-400 italic">Sem seções.</p>
         ) : (
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <SortableContext items={rootSectionIds} strategy={verticalListSortingStrategy}>
+          <DndContext sensors={sensors} collisionDetection={collisionDetection} onDragEnd={handleDragEnd}>
+            <SortableContext items={allSectionIds} strategy={verticalListSortingStrategy}>
               <ul className="space-y-1">
                 {items.map((item) => {
                   const isActive = item.block.id === activeItemId
@@ -342,8 +364,7 @@ export default function ReportSummary({
                   const parentTrunkX = 12 + Math.max(0, item.depth - 1) * 16
                   const isCollapsed = collapsed.has(item.block.id)
 
-                  const isDraggable =
-                    isReorderable && item.depth === 0 && item.block.type === 'section'
+                  const isDraggable = isReorderable && item.block.type === 'section'
 
                   if (isDraggable) {
                     return (
