@@ -265,19 +265,38 @@ export default function ReportSummary({
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
-      if (!onBlocksChange) return
+      console.log('[DnD] handleDragEnd fired', { activeId: event.active.id, overId: event.over?.id })
+      if (!onBlocksChange) {
+        console.log('[DnD] EXIT: no onBlocksChange')
+        return
+      }
       const { active, over } = event
-      if (!over || active.id === over.id) return
+      if (!over || active.id === over.id) {
+        console.log('[DnD] EXIT: no over or same id', { over: over?.id, active: active.id })
+        return
+      }
 
       const activeId = String(active.id)
       const overId = String(over.id)
 
       const activeBlock = blocks.find((b) => b.id === activeId)
       const overBlock = blocks.find((b) => b.id === overId)
-      if (!activeBlock || !overBlock) return
-      if (activeBlock.type !== 'section' || overBlock.type !== 'section') return
-      // Regra de negócio: só reordena entre irmãos do mesmo pai
-      if (activeBlock.parentId !== overBlock.parentId) return
+      console.log('[DnD] blocks found', {
+        active: activeBlock && { id: activeBlock.id, type: activeBlock.type, parentId: activeBlock.parentId },
+        over: overBlock && { id: overBlock.id, type: overBlock.type, parentId: overBlock.parentId },
+      })
+      if (!activeBlock || !overBlock) {
+        console.log('[DnD] EXIT: blocks not found')
+        return
+      }
+      if (activeBlock.type !== 'section' || overBlock.type !== 'section') {
+        console.log('[DnD] EXIT: not both sections', { activeType: activeBlock.type, overType: overBlock.type })
+        return
+      }
+      if (activeBlock.parentId !== overBlock.parentId) {
+        console.log('[DnD] EXIT: different parents', { activeParent: activeBlock.parentId, overParent: overBlock.parentId })
+        return
+      }
 
       const parentId = activeBlock.parentId
       const siblings = blocks
@@ -286,7 +305,11 @@ export default function ReportSummary({
 
       const oldIdx = siblings.findIndex((s) => s.id === activeId)
       const newIdx = siblings.findIndex((s) => s.id === overId)
-      if (oldIdx < 0 || newIdx < 0 || oldIdx === newIdx) return
+      console.log('[DnD] siblings indices', { siblingsCount: siblings.length, oldIdx, newIdx })
+      if (oldIdx < 0 || newIdx < 0 || oldIdx === newIdx) {
+        console.log('[DnD] EXIT: invalid indices')
+        return
+      }
 
       const reorderedSiblings = arrayMove(siblings, oldIdx, newIdx)
 
@@ -297,14 +320,11 @@ export default function ReportSummary({
         getDescendantIds(blocks, s.id).forEach((id) => siblingDescendantIds.add(id))
       })
 
-      // Cada irmão reordenado vira um grupo (irmão + descendentes na ordem original)
       const reorderedGroup = reorderedSiblings.flatMap((sibling) => {
         const descendants = sortedBlocks.filter((b) => isDescendantOf(blocks, b, sibling.id))
         return [sibling, ...descendants]
       })
 
-      // Reconstrói: anda pela lista original, na primeira ocorrência de qualquer irmão/descendente,
-      // insere o grupo reordenado inteiro; pula demais ocorrências
       let firstSiblingSeen = false
       const newBlocks: Block[] = []
       for (const b of sortedBlocks) {
@@ -318,6 +338,10 @@ export default function ReportSummary({
         newBlocks.push(b)
       }
 
+      console.log('[DnD] CALLING onBlocksChange', {
+        oldOrder: sortedBlocks.map((b) => ({ id: b.id, type: b.type, order: b.order })),
+        newOrder: newBlocks.map((b, i) => ({ id: b.id, type: b.type, order: i })),
+      })
       onBlocksChange(newBlocks.map((b, i) => ({ ...b, order: i })))
     },
     [blocks, onBlocksChange]
