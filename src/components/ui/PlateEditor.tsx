@@ -166,7 +166,7 @@ function EditorToolbar({
       {/* Alinhamento */}
       <ToolbarButton
         active={align === 'left'}
-        onClick={() => editor.tf.textAlign.setNodes({ align: 'left' })}
+        onClick={() => editor.tf.textAlign.setNodes('left')}
         title="Alinhar à esquerda"
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -176,7 +176,7 @@ function EditorToolbar({
       </ToolbarButton>
       <ToolbarButton
         active={align === 'center'}
-        onClick={() => editor.tf.textAlign.setNodes({ align: 'center' })}
+        onClick={() => editor.tf.textAlign.setNodes('center')}
         title="Centralizar"
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -186,7 +186,7 @@ function EditorToolbar({
       </ToolbarButton>
       <ToolbarButton
         active={align === 'right'}
-        onClick={() => editor.tf.textAlign.setNodes({ align: 'right' })}
+        onClick={() => editor.tf.textAlign.setNodes('right')}
         title="Alinhar à direita"
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -196,7 +196,7 @@ function EditorToolbar({
       </ToolbarButton>
       <ToolbarButton
         active={align === 'justify'}
-        onClick={() => editor.tf.textAlign.setNodes({ align: 'justify' })}
+        onClick={() => editor.tf.textAlign.setNodes('justify')}
         title="Justificar"
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
