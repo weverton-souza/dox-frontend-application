@@ -214,21 +214,21 @@ function SortableSection(props: SortableSectionProps) {
       type="button"
       {...attributes}
       {...listeners}
-      className="absolute opacity-0 group-hover/item:opacity-100 transition-opacity p-0.5 rounded text-gray-300 hover:text-gray-600 cursor-grab active:cursor-grabbing z-20"
-      style={{ left: '-2px', top: '7px' }}
+      className="absolute p-1 rounded text-gray-400 hover:text-brand-600 hover:bg-gray-100 cursor-grab active:cursor-grabbing z-30"
+      style={{ right: '4px', top: '4px' }}
       aria-label="Reordenar seção"
       title="Arrastar para reordenar"
     >
-      <svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor">
-        <circle cx="2.5" cy="2.5" r="1" /><circle cx="7.5" cy="2.5" r="1" />
-        <circle cx="2.5" cy="7" r="1" /><circle cx="7.5" cy="7" r="1" />
-        <circle cx="2.5" cy="11.5" r="1" /><circle cx="7.5" cy="11.5" r="1" />
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+        <circle cx="4" cy="3" r="1.2" /><circle cx="10" cy="3" r="1.2" />
+        <circle cx="4" cy="7" r="1.2" /><circle cx="10" cy="7" r="1.2" />
+        <circle cx="4" cy="11" r="1.2" /><circle cx="10" cy="11" r="1.2" />
       </svg>
     </button>
   )
 
   return (
-    <li ref={setNodeRef} style={style} className="relative group/item">
+    <li ref={setNodeRef} style={style} className="relative">
       <ItemContent {...props} dragHandle={dragHandle} />
     </li>
   )
