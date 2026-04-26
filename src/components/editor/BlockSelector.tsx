@@ -29,8 +29,8 @@ interface BlockOption {
 }
 
 const blockOptions: BlockOption[] = [
-  { type: 'section', label: 'Subseção', description: 'Título de subseção dentro da seção atual', icon: SUBTITLE_ICON, colorClass: 'bg-slate-100 text-slate-500' },
   { type: 'text', label: BLOCK_TYPE_LABELS.text, description: BLOCK_TYPE_DESCRIPTIONS.text, icon: getBlockTypeIcon('text'), colorClass: BLOCK_TYPE_COLORS.text },
+  { type: 'section', label: 'Subseção', description: 'Título de subseção dentro da seção atual', icon: SUBTITLE_ICON, colorClass: 'bg-slate-100 text-slate-500' },
   { type: 'score-table', label: BLOCK_TYPE_LABELS['score-table'], description: BLOCK_TYPE_DESCRIPTIONS['score-table'], icon: getBlockTypeIcon('score-table'), colorClass: BLOCK_TYPE_COLORS['score-table'] },
   { type: 'info-box', label: BLOCK_TYPE_LABELS['info-box'], description: BLOCK_TYPE_DESCRIPTIONS['info-box'], icon: getBlockTypeIcon('info-box'), colorClass: BLOCK_TYPE_COLORS['info-box'] },
   { type: 'chart', label: BLOCK_TYPE_LABELS.chart, description: BLOCK_TYPE_DESCRIPTIONS.chart, icon: getBlockTypeIcon('chart'), colorClass: BLOCK_TYPE_COLORS.chart },
