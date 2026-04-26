@@ -960,6 +960,7 @@ export default function ReportEditor() {
                 activeItemId={activeItemId}
                 onSelect={setActiveItemId}
                 onRequestAddSection={handleAddTextSection}
+                onBlocksChange={handleBlocksChange}
                 locked={report.isStructureLocked}
               />
               <SectionEditor
