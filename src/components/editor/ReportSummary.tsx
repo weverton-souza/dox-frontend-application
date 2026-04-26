@@ -263,6 +263,31 @@ export default function ReportSummary({
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
+  // Custom collision: só irmãs (mesmo parentId) viram candidatas a drop target.
+  // Sem isso, closestCenter pode escolher o próprio pai como over quando arrasta sub-section.
+  const collisionDetection = useCallback(
+    (args: Parameters<typeof closestCenter>[0]) => {
+      const activeId = String(args.active.id)
+      const activeBlock = blocks.find((b) => b.id === activeId)
+      if (!activeBlock) return closestCenter(args)
+
+      const filteredContainers = args.droppableContainers.filter((c) => {
+        if (String(c.id) === activeId) return false
+        const block = blocks.find((b) => b.id === String(c.id))
+        return block?.type === 'section' && block.parentId === activeBlock.parentId
+      })
+      console.log('[DnD] collision filter', {
+        activeId,
+        activeParent: activeBlock.parentId,
+        totalContainers: args.droppableContainers.length,
+        filteredCount: filteredContainers.length,
+        filteredIds: filteredContainers.map((c) => String(c.id)),
+      })
+      return closestCenter({ ...args, droppableContainers: filteredContainers })
+    },
+    [blocks]
+  )
+
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       console.log('[DnD] handleDragEnd fired', { activeId: event.active.id, overId: event.over?.id })
@@ -359,7 +384,7 @@ export default function ReportSummary({
         {items.length === 0 ? (
           <p className="px-3 py-4 text-sm text-gray-400 italic">Sem seções.</p>
         ) : (
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <DndContext sensors={sensors} collisionDetection={collisionDetection} onDragEnd={handleDragEnd}>
             <SortableContext items={allSectionIds} strategy={verticalListSortingStrategy}>
               <ul className="space-y-1">
                 {items.map((item) => {
