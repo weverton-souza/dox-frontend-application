@@ -2,10 +2,14 @@ import type { Block, SectionData } from '@/types'
 import { buildBlockTree } from '@/lib/utils'
 import type { TreeNode } from '@/lib/utils'
 
-const NUMBERING_PREFIX_REGEX = /^\d+(\.\d+)*\s+/
+const NUMBERING_PREFIX_REGEX = /^\d+(\.\d+)*\.?\s+/
 
 export function stripNumberingPrefix(title: string): string {
-  return title.replace(NUMBERING_PREFIX_REGEX, '')
+  let stripped = title
+  while (NUMBERING_PREFIX_REGEX.test(stripped)) {
+    stripped = stripped.replace(NUMBERING_PREFIX_REGEX, '')
+  }
+  return stripped
 }
 
 export function hasNumberingPrefix(title: string): boolean {
