@@ -118,7 +118,12 @@ export default function ReportEditor() {
           getScoreTableTemplates(),
           getChartTemplates(),
         ])
-        setReport(loaded)
+        const sanitizedBlocks = maybeRenumber(loaded.blocks)
+        const sanitized = sanitizedBlocks === loaded.blocks ? loaded : { ...loaded, blocks: sanitizedBlocks }
+        setReport(sanitized)
+        if (sanitizedBlocks !== loaded.blocks) {
+          scheduleSave(sanitized)
+        }
         setCustomers(customersPage.content)
         setScoreTableTemplates(stTemplates)
         setChartTemplatesState(cTemplates)
@@ -250,6 +255,13 @@ export default function ReportEditor() {
       handleBlocksChange(result.map((b, i) => ({ ...b, order: i })))
     },
     [report, handleBlocksChange]
+  )
+
+  const handleReorderBlocks = useCallback(
+    (nextBlocks: Block[]) => {
+      handleBlocksChange(nextBlocks)
+    },
+    [handleBlocksChange]
   )
 
   const handleDeleteSectionMove = useCallback(
@@ -960,6 +972,7 @@ export default function ReportEditor() {
                 activeItemId={activeItemId}
                 onSelect={setActiveItemId}
                 onRequestAddSection={handleAddTextSection}
+                onReorder={handleReorderBlocks}
                 locked={report.isStructureLocked}
               />
               <SectionEditor
