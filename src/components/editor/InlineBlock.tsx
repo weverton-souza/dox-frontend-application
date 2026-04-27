@@ -35,6 +35,7 @@ interface InlineBlockProps {
   onReviewBlock?: (id: string) => void
   customers?: Customer[]
   onCustomerSelected?: (customerId: string) => void
+  readOnly?: boolean
 }
 
 function renderBody(
@@ -84,6 +85,7 @@ export default function InlineBlock({
   onReviewBlock,
   customers,
   onCustomerSelected,
+  readOnly = false,
 }: InlineBlockProps) {
   const [collapsed, setCollapsed] = useState(true)
 
@@ -219,9 +221,11 @@ export default function InlineBlock({
       {/* Content */}
       {!collapsed && (
         <div className="p-4">
-          <BlockErrorBoundary blockType={block.type}>
-            {renderBody(block, onChange, customers, onCustomerSelected)}
-          </BlockErrorBoundary>
+          <fieldset disabled={readOnly} className="contents">
+            <BlockErrorBoundary blockType={block.type}>
+              {renderBody(block, onChange, customers, onCustomerSelected)}
+            </BlockErrorBoundary>
+          </fieldset>
         </div>
       )}
     </div>

@@ -12,6 +12,7 @@ import { createBlock, computeBlockMetas, getDescendantIds } from '@/lib/utils'
 import { isNumberingActive, applyNumbering, removeNumbering, maybeRenumber } from '@/lib/section-numbering'
 import { useVersioning } from '@/lib/hooks/use-versioning'
 import { useAutoSave } from '@/lib/hooks/use-auto-save'
+import { useReportEditability } from '@/lib/hooks/use-report-editability'
 import ReportSummary from '@/components/editor/ReportSummary'
 import SectionEditor from '@/components/editor/SectionEditor'
 import PreviewModal from '@/components/editor/PreviewModal'
@@ -93,8 +94,10 @@ export default function ReportEditor() {
   const [chartTemplatesState, setChartTemplatesState] = useState<ChartTemplate[]>([])
   const [templateName, setTemplateName] = useState<string | null>(null)
 
+  const { canEdit, canUseAi, reasonText } = useReportEditability(report)
+
   const saveReportFn = useCallback((data: Report) => updateReport(data), [])
-  const { saveStatus, scheduleSave, forceSave } = useAutoSave<Report>(saveReportFn)
+  const { saveStatus, scheduleSave, forceSave } = useAutoSave<Report>(saveReportFn, 1000, canEdit)
 
   const ai = useAiGeneration()
   const [aiModals, setAiModals] = useState<AiModalsState>({
@@ -605,7 +608,7 @@ export default function ReportEditor() {
     }
   }, [ai.generationStatus, id])
 
-  const showAiButton = ai.isAvailable && report?.status !== 'finalizado'
+  const showAiButton = ai.isAvailable && canUseAi
   const fillableCount = report ? countFillableBlocks(report.blocks) : 0
   const warningCount = report?.blocks.filter(b => b.skippedByAi).length ?? 0
 
@@ -806,7 +809,9 @@ export default function ReportEditor() {
                 value={report.customerName || ''}
                 onChange={(e) => handleUpdateReport({ customerName: e.target.value })}
                 placeholder="Nome do cliente"
-                className="text-sm font-medium text-gray-700 bg-transparent border-0 focus:outline-none focus:ring-0 text-center min-w-0 max-w-xs truncate placeholder:text-gray-400"
+                readOnly={!canEdit}
+                title={canEdit ? undefined : reasonText ?? undefined}
+                className={`text-sm font-medium bg-transparent border-0 focus:outline-none focus:ring-0 text-center min-w-0 max-w-xs truncate placeholder:text-gray-400 ${canEdit ? 'text-gray-700' : 'text-gray-500 cursor-not-allowed'}`}
               />
               <span className="text-gray-300">·</span>
               <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${REPORT_STATUS_COLORS[report.status].bg} ${REPORT_STATUS_COLORS[report.status].text}`}>
@@ -892,6 +897,17 @@ export default function ReportEditor() {
 
         {/* Left: blocks */}
         <div className="min-w-0 flex flex-col flex-1">
+          {/* Read-only banner (status finalizado) */}
+          {!canEdit && reasonText && (
+            <div className="pt-3">
+              <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 text-xs text-emerald-800">
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                <span>{reasonText}</span>
+              </div>
+            </div>
+          )}
           {/* Form provenance banner */}
           {formProvenanceLabel && (
             <div className="pt-3">
@@ -973,7 +989,7 @@ export default function ReportEditor() {
                 onSelect={setActiveItemId}
                 onRequestAddSection={handleAddTextSection}
                 onReorder={handleReorderBlocks}
-                locked={report.isStructureLocked}
+                locked={report.isStructureLocked || !canEdit}
               />
               <SectionEditor
                 blocks={report.blocks}
@@ -984,13 +1000,14 @@ export default function ReportEditor() {
                 onRemoveBlock={handleRemoveBlock}
                 onChangeBlock={handleBlockDataChange}
                 onRequestAddBlock={handleRequestAddBlock}
-                onReviewBlock={ai.isAvailable && report.status !== 'finalizado' ? (id: string) => updateAiModals({ reviewingBlockId: id }) : undefined}
+                onReviewBlock={ai.isAvailable && canUseAi ? (id: string) => updateAiModals({ reviewingBlockId: id }) : undefined}
                 onDeleteSectionCascade={handleDeleteSectionCascade}
                 onDeleteSectionMove={handleDeleteSectionMove}
                 onMoveBlocksToSection={handleMoveBlocksToSection}
                 customers={customers}
                 onCustomerSelected={handleCustomerSelected}
-                locked={report.isStructureLocked}
+                locked={report.isStructureLocked || !canEdit}
+                readOnly={!canEdit}
               />
             </div>
           </main>
@@ -1041,11 +1058,12 @@ export default function ReportEditor() {
         }}
         customers={customers}
         onCustomerSelected={handleCustomerSelected}
-        aiAvailable={ai.isAvailable && report.status !== 'finalizado'}
+        aiAvailable={ai.isAvailable && canUseAi}
         onGenerateSection={(sectionType) => ai.generateSection(id!, sectionType, report.formResponseId)}
         onRegenerateSection={(sectionType, generationId) => ai.regenerateSection(id!, sectionType, generationId)}
         aiLoading={ai.isGenerating}
         reportId={id}
+        readOnly={!canEdit}
       />
 
       {/* Block Selector Modal */}

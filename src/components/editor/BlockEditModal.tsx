@@ -43,6 +43,7 @@ interface BlockEditModalProps {
   onRegenerateSection?: (sectionType: string, generationId: string) => Promise<AiGenerationResponse | null>
   aiLoading?: boolean
   reportId?: string
+  readOnly?: boolean
 }
 
 const MODAL_SIZES: Record<BlockType, 'sm' | 'md' | 'lg' | 'xl' | '2xl'> = {
@@ -99,7 +100,7 @@ function getModalTitle(block: Block): string {
 export default function BlockEditModal({
   block, onClose, onChange, customers, onCustomerSelected,
   aiAvailable = false, onGenerateSection, onRegenerateSection, aiLoading: _aiLoading = false,
-  reportId,
+  reportId, readOnly = false,
 }: BlockEditModalProps) {
   const [localData, setLocalData] = useState<BlockData | null>(null)
   const [generating, setGenerating] = useState(false)
@@ -255,11 +256,13 @@ export default function BlockEditModal({
       </div>
       <div className="flex gap-3">
         <Button variant="ghost" onClick={handleCancel}>
-          Cancelar
+          {readOnly ? 'Fechar' : 'Cancelar'}
         </Button>
-        <Button onClick={handleSave}>
-          Salvar
-        </Button>
+        {!readOnly && (
+          <Button onClick={handleSave}>
+            Salvar
+          </Button>
+        )}
       </div>
     </div>
   )
@@ -277,10 +280,12 @@ export default function BlockEditModal({
       footer={footer}
       dismissable={false}
     >
-      <BlockErrorBoundary blockType={block.type}>
-        {renderContent()}
-      </BlockErrorBoundary>
-      {isGeneratedByAi && isAiEligible && (
+      <fieldset disabled={readOnly} className="contents">
+        <BlockErrorBoundary blockType={block.type}>
+          {renderContent()}
+        </BlockErrorBoundary>
+      </fieldset>
+      {!readOnly && isGeneratedByAi && isAiEligible && (
         <AiRegenerateBar
           regenerationsLeft={regenInfo ? regenInfo.limit - regenInfo.used : 0}
           regenerationLimit={regenInfo?.limit ?? 3}

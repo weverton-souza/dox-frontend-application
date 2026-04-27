@@ -24,6 +24,7 @@ interface SectionEditorProps {
   customers?: Customer[]
   onCustomerSelected?: (customerId: string) => void
   locked?: boolean
+  readOnly?: boolean
 }
 
 export default function SectionEditor({
@@ -42,6 +43,7 @@ export default function SectionEditor({
   customers,
   onCustomerSelected,
   locked = false,
+  readOnly = false,
 }: SectionEditorProps) {
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [movingBlocks, setMovingBlocks] = useState(false)
@@ -179,6 +181,7 @@ export default function SectionEditor({
               onReviewBlock={onReviewBlock}
               customers={customers}
               onCustomerSelected={onCustomerSelected}
+              readOnly={readOnly}
             />
           ))
         )}
