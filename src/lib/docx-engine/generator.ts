@@ -37,6 +37,7 @@ import {
   isSlateContent,
 } from '@/types'
 import { Chart as ChartJS } from 'chart.js'
+import QRCode from 'qrcode'
 import './chart/setup'
 import { getProfessional } from '@/lib/api/professional-api'
 import { formatDate, buildBlockTree, flattenTree } from '@/lib/utils'
@@ -77,27 +78,130 @@ function morph(hex: string): string {
   return morphHex(hex, _activePalette)
 }
 
-// ========== Footer line / filename ==========
+// ========== Verification footer (QR Code + code + link) ==========
 
-function buildOfficialFooterLine(report: Report): Paragraph | null {
+const QR_CELL_WIDTH = 1500
+
+function getVerifyBaseUrl(): string {
+  const fromEnv = (import.meta.env.VITE_PUBLIC_VERIFY_URL as string | undefined)?.trim()
+  if (fromEnv) return fromEnv.replace(/\/+$/, '')
+  if (typeof window !== 'undefined') return window.location.origin
+  return ''
+}
+
+async function buildOfficialFooterTable(report: Report): Promise<Table | null> {
   if (!report.finalizedAt || !report.contentHash) return null
+
+  const verificationCode = report.contentHash.slice(0, 16).toUpperCase()
+  const formattedCode = verificationCode.match(/.{1,4}/g)?.join('-') ?? verificationCode
+  const verifyUrl = `${getVerifyBaseUrl()}/v/${verificationCode}`
+
+  const qrDataUrl = await QRCode.toDataURL(verifyUrl, {
+    width: 200,
+    margin: 1,
+    errorCorrectionLevel: 'M',
+    color: { dark: '#000000', light: '#FFFFFF' },
+  })
+  const qrBase64 = qrDataUrl.split(',')[1]
+  if (!qrBase64) return null
+  const qrBytes = base64ToUint8Array(qrBase64)
+
   const finalizedDate = new Date(report.finalizedAt).toLocaleDateString('pt-BR', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
   })
-  const hashShort = report.contentHash.slice(0, 12)
-  return new Paragraph({
-    alignment: AlignmentType.CENTER,
-    spacing: { before: 60, after: 0 },
-    children: [
-      new TextRun({
-        text: `Documento finalizado em ${finalizedDate} · Hash: ${hashShort}…`,
-        size: 14,
-        font: 'Calibri',
-        color: '999999',
+
+  const noBorders = {
+    top: NO_BORDER,
+    bottom: NO_BORDER,
+    left: NO_BORDER,
+    right: NO_BORDER,
+  }
+
+  return new Table({
+    rows: [
+      new TableRow({
+        children: [
+          new TableCell({
+            width: { size: QR_CELL_WIDTH, type: WidthType.DXA },
+            verticalAlign: 'center' as never,
+            borders: noBorders,
+            children: [
+              new Paragraph({
+                alignment: AlignmentType.LEFT,
+                spacing: { before: 0, after: 0 },
+                children: [
+                  new ImageRun({
+                    type: 'png',
+                    data: qrBytes,
+                    transformation: { width: 70, height: 70 },
+                  }),
+                ],
+              }),
+            ],
+          }),
+          new TableCell({
+            width: { size: PAGE_CONTENT_WIDTH - QR_CELL_WIDTH, type: WidthType.DXA },
+            verticalAlign: 'center' as never,
+            borders: noBorders,
+            children: [
+              new Paragraph({
+                spacing: { before: 0, after: 60 },
+                children: [
+                  new TextRun({
+                    text: `Documento finalizado em ${finalizedDate}`,
+                    size: 16,
+                    font: 'Calibri',
+                    color: '4A4A4A',
+                  }),
+                ],
+              }),
+              new Paragraph({
+                spacing: { after: 60 },
+                children: [
+                  new TextRun({
+                    text: 'Código: ',
+                    size: 16,
+                    font: 'Calibri',
+                    color: '999999',
+                  }),
+                  new TextRun({
+                    text: formattedCode,
+                    bold: true,
+                    size: 16,
+                    font: 'Calibri',
+                    color: '333333',
+                  }),
+                ],
+              }),
+              new Paragraph({
+                spacing: { after: 0 },
+                children: [
+                  new TextRun({
+                    text: `Verifique em ${verifyUrl}`,
+                    italics: true,
+                    size: 14,
+                    font: 'Calibri',
+                    color: 'AAAAAA',
+                  }),
+                ],
+              }),
+            ],
+          }),
+        ],
       }),
     ],
+    width: { size: PAGE_CONTENT_WIDTH, type: WidthType.DXA },
+    columnWidths: [QR_CELL_WIDTH, PAGE_CONTENT_WIDTH - QR_CELL_WIDTH],
+    borders: {
+      top: NO_BORDER,
+      bottom: NO_BORDER,
+      left: NO_BORDER,
+      right: NO_BORDER,
+      insideHorizontal: NO_BORDER,
+      insideVertical: NO_BORDER,
+    },
   })
 }
 
@@ -287,8 +391,22 @@ async function createDocFooter(prof: import('@/types').Professional, report: Rep
     })
   )
 
-  const officialLine = buildOfficialFooterLine(report)
-  if (officialLine) children.push(officialLine)
+  const officialBlock = await buildOfficialFooterTable(report)
+  if (officialBlock) {
+    children.push(
+      new Paragraph({
+        spacing: { before: 120, after: 0 },
+        border: {
+          top: { color: 'E0E0E0', space: 4, style: BorderStyle.SINGLE, size: 4 },
+          bottom: NO_BORDER,
+          left: NO_BORDER,
+          right: NO_BORDER,
+        },
+        children: [],
+      }),
+    )
+    children.push(officialBlock)
+  }
 
   return new Footer({ children })
 }
