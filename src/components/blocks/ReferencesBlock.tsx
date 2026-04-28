@@ -16,6 +16,7 @@ import Button from '@/components/ui/Button'
 interface ReferencesBlockProps {
   data: ReferencesData
   onChange: (data: ReferencesData) => void
+  readOnly?: boolean
 }
 
 // ========== Slate helpers ==========
@@ -120,7 +121,7 @@ function LibraryEntryForm({ entry, onSave, onCancel }: {
 
 // ========== Main Component ==========
 
-export default function ReferencesBlock({ data, onChange }: ReferencesBlockProps) {
+export default function ReferencesBlock({ data, onChange, readOnly = false }: ReferencesBlockProps) {
   const nodes = useMemo(() => migrateToSlateNodes(data.references), [data.references])
 
   // Library state
@@ -287,7 +288,7 @@ export default function ReferencesBlock({ data, onChange }: ReferencesBlockProps
                       content={editNode}
                       onChange={setEditNode}
                       placeholder="Referência bibliográfica..."
-          
+                      readOnly={readOnly}
                     />
                   </div>
                   <div className="flex flex-col gap-1 shrink-0">
@@ -302,9 +303,9 @@ export default function ReferencesBlock({ data, onChange }: ReferencesBlockProps
               <div key={index} className="group flex items-start gap-2 py-1.5 px-2 -mx-2 rounded-lg hover:bg-gray-50 transition-colors">
                 <span className="text-xs text-gray-400 pt-0.5 w-5 text-right shrink-0">{index + 1}.</span>
                 <p
-                  className="flex-1 text-[13px] text-gray-700 leading-relaxed cursor-text min-w-0"
-                  onDoubleClick={() => handleStartEdit(index)}
-                  title="Duplo clique para editar"
+                  className={`flex-1 text-[13px] text-gray-700 leading-relaxed min-w-0 ${readOnly ? '' : 'cursor-text'}`}
+                  onDoubleClick={readOnly ? undefined : () => handleStartEdit(index)}
+                  title={readOnly ? undefined : 'Duplo clique para editar'}
                 >
                   {text || <span className="italic text-gray-400">Referência vazia</span>}
                 </p>
@@ -344,7 +345,7 @@ export default function ReferencesBlock({ data, onChange }: ReferencesBlockProps
                 content={newNode}
                 onChange={setNewNode}
                 placeholder="Digite a referência bibliográfica..."
-    
+                readOnly={readOnly}
               />
             </div>
             <div className="flex flex-col gap-1 shrink-0">

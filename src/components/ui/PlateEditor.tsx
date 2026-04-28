@@ -16,6 +16,7 @@ interface PlateEditorProps {
   label?: string
   placeholder?: string
   variables?: VariableInfo[]
+  readOnly?: boolean
 }
 
 // ========== Default value ==========
@@ -238,6 +239,7 @@ export default function PlateEditorComponent({
   label,
   placeholder = '',
   variables,
+  readOnly = false,
 }: PlateEditorProps) {
   const initialValueRef = useRef(content as Value)
   const isExternalUpdate = useRef(false)
@@ -301,14 +303,17 @@ export default function PlateEditorComponent({
         </label>
       )}
 
-      <div className="rounded-lg border border-gray-300 overflow-hidden focus-within:border-brand-500 focus-within:ring-1 focus-within:ring-brand-500 transition-colors">
+      <div className={`rounded-lg border border-gray-300 overflow-hidden ${readOnly ? 'bg-gray-50' : 'focus-within:border-brand-500 focus-within:ring-1 focus-within:ring-brand-500 transition-colors'}`}>
         <Plate editor={editor} onChange={handleChange}>
-          <EditorToolbar
-            variables={variables}
-            onInsertVariable={handleInsertVariable}
-          />
+          {!readOnly && (
+            <EditorToolbar
+              variables={variables}
+              onInsertVariable={handleInsertVariable}
+            />
+          )}
           <PlateContent
-            className="plate-editor px-3 py-2 text-sm min-h-[80px] text-gray-900 outline-none"
+            readOnly={readOnly}
+            className={`plate-editor px-3 py-2 text-sm min-h-[80px] outline-none ${readOnly ? 'text-gray-600 cursor-not-allowed' : 'text-gray-900'}`}
             placeholder={placeholder}
           />
         </Plate>

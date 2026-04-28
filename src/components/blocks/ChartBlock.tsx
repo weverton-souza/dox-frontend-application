@@ -25,6 +25,7 @@ import { morphHex } from '@/lib/theme'
 interface ChartBlockProps {
   data: ChartData
   onChange: (data: ChartData) => void
+  readOnly?: boolean
 }
 
 const CHART_TYPE_OPTIONS = [
@@ -48,7 +49,7 @@ interface GroupBound {
   end: number
 }
 
-export default function ChartBlock({ data, onChange }: ChartBlockProps) {
+export default function ChartBlock({ data, onChange, readOnly = false }: ChartBlockProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const chartRef = useRef<ChartJS | null>(null)
   const activePalette = useActivePalette()
@@ -870,6 +871,7 @@ export default function ChartBlock({ data, onChange }: ChartBlockProps) {
           content={isSlateContent(data.description) ? data.description : EMPTY_SLATE_CONTENT}
           onChange={(value: SlateContent) => onChange({ ...data, description: value })}
           placeholder="Texto descritivo ou interpretativo que aparecerá abaixo do gráfico no relatório"
+          readOnly={readOnly}
         />
       </div>
 

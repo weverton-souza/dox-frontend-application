@@ -191,6 +191,7 @@ export default function BlockEditModal({
           <TextBlockModal
             data={localData as TextBlockData}
             onChange={handleLocalChange}
+            readOnly={readOnly}
           />
         )
       case 'score-table':
@@ -198,6 +199,7 @@ export default function BlockEditModal({
           <ScoreTableBlock
             data={localData as ScoreTableData}
             onChange={handleLocalChange}
+            readOnly={readOnly}
           />
         )
       case 'info-box':
@@ -212,6 +214,7 @@ export default function BlockEditModal({
           <ChartBlock
             data={localData as ChartData}
             onChange={handleLocalChange}
+            readOnly={readOnly}
           />
         )
       case 'references':
@@ -219,6 +222,7 @@ export default function BlockEditModal({
           <ReferencesBlock
             data={localData as ReferencesData}
             onChange={handleLocalChange}
+            readOnly={readOnly}
           />
         )
       case 'closing-page':
