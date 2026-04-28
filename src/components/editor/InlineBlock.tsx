@@ -222,7 +222,7 @@ export default function InlineBlock({
       {/* Content */}
       {!collapsed && (
         <div className="p-4">
-          <fieldset disabled={readOnly} className="contents">
+          <fieldset disabled={readOnly} className="contents [&_*:disabled]:cursor-default">
             <BlockErrorBoundary blockType={block.type}>
               {renderBody(block, onChange, customers, onCustomerSelected, readOnly)}
             </BlockErrorBoundary>

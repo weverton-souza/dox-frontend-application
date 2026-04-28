@@ -313,7 +313,7 @@ export default function PlateEditorComponent({
           )}
           <PlateContent
             readOnly={readOnly}
-            className={`plate-editor px-3 py-2 text-sm min-h-[80px] outline-none ${readOnly ? 'text-gray-600 cursor-not-allowed' : 'text-gray-900'}`}
+            className={`plate-editor px-3 py-2 text-sm min-h-[80px] outline-none ${readOnly ? 'text-gray-600' : 'text-gray-900'}`}
             placeholder={placeholder}
           />
         </Plate>

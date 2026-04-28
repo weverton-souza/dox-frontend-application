@@ -284,7 +284,7 @@ export default function BlockEditModal({
       footer={footer}
       dismissable={false}
     >
-      <fieldset disabled={readOnly} className="contents">
+      <fieldset disabled={readOnly} className="contents [&_*:disabled]:cursor-default">
         <BlockErrorBoundary blockType={block.type}>
           {renderContent()}
         </BlockErrorBoundary>
