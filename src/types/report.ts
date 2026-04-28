@@ -282,6 +282,8 @@ export interface Report {
   isStructureLocked: boolean
   blocks: Block[]
   theme?: ReportTheme
+  finalizedAt?: string
+  contentHash?: string
 }
 
 // ========== Report Versioning ==========
