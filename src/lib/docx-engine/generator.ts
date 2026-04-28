@@ -77,49 +77,7 @@ function morph(hex: string): string {
   return morphHex(hex, _activePalette)
 }
 
-// ========== Mode (draft / review / official) ==========
-
-export type DocxMode = 'draft' | 'review' | 'official'
-
-interface WatermarkConfig {
-  text: string
-  color: string
-}
-
-function inferMode(report: Report): DocxMode {
-  if (report.status === 'finalizado') return 'official'
-  if (report.status === 'em_revisao') return 'review'
-  return 'draft'
-}
-
-function watermarkConfig(mode: DocxMode): WatermarkConfig | null {
-  if (mode === 'draft') return { text: 'RASCUNHO — NÃO É O DOCUMENTO OFICIAL', color: 'D32F2F' }
-  if (mode === 'review') return { text: 'EM REVISÃO — VERSÃO PRELIMINAR', color: 'EA580C' }
-  return null
-}
-
-function buildWatermarkParagraph(config: WatermarkConfig): Paragraph {
-  return new Paragraph({
-    alignment: AlignmentType.CENTER,
-    spacing: { before: 0, after: 80 },
-    border: {
-      top: { color: config.color, space: 4, style: BorderStyle.SINGLE, size: 8 },
-      bottom: { color: config.color, space: 4, style: BorderStyle.SINGLE, size: 8 },
-      left: NO_BORDER,
-      right: NO_BORDER,
-    },
-    children: [
-      new TextRun({
-        text: config.text,
-        bold: true,
-        size: 18,
-        font: 'Calibri',
-        color: config.color,
-        characterSpacing: 30,
-      }),
-    ],
-  })
-}
+// ========== Footer line / filename ==========
 
 function buildOfficialFooterLine(report: Report): Paragraph | null {
   if (!report.finalizedAt || !report.contentHash) return null
@@ -143,7 +101,7 @@ function buildOfficialFooterLine(report: Report): Paragraph | null {
   })
 }
 
-function buildFileName(report: Report, mode: DocxMode): string {
+function buildFileName(report: Report): string {
   const slug = (report.customerName || '')
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')
@@ -151,16 +109,12 @@ function buildFileName(report: Report, mode: DocxMode): string {
     .replace(/^-+|-+$/g, '')
     .slice(0, 40) || 'relatorio'
   const ts = new Date().toISOString().slice(0, 10)
-  if (mode === 'draft') return `RASCUNHO-${slug}-${ts}.docx`
-  if (mode === 'review') return `REVISAO-${slug}-${ts}.docx`
   return `${slug}-${ts}.docx`
 }
 
 // ========== Header / Footer ==========
 
-async function createDocHeader(prof: import('@/types').Professional, mode: DocxMode): Promise<Header> {
-  const watermark = watermarkConfig(mode)
-
+async function createDocHeader(prof: import('@/types').Professional): Promise<Header> {
   const nameParagraph = new Paragraph({
     alignment: AlignmentType.RIGHT,
     spacing: { after: 20 },
@@ -189,25 +143,17 @@ async function createDocHeader(prof: import('@/types').Professional, mode: DocxM
   })
 
   const children: (Paragraph | Table)[] = []
-  if (watermark) {
-    children.push(buildWatermarkParagraph(watermark))
-  }
-
-  const fallbackChildren = (): (Paragraph | Table)[] =>
-    watermark
-      ? [buildWatermarkParagraph(watermark), nameParagraph, specParagraph]
-      : [nameParagraph, specParagraph]
 
   if (prof.logo) {
     // Decode logo
     const logoParts = prof.logo.split(',')
-    if (logoParts.length < 2) return new Header({ children: fallbackChildren() })
+    if (logoParts.length < 2) return new Header({ children: [nameParagraph, specParagraph] })
     const logoBase64 = logoParts[1]
     const logoBytes = base64ToUint8Array(logoBase64)
 
     // Get real dimensions and compute proportional size
     const dims = await getImageDimensions(prof.logo).catch(() => null)
-    if (!dims) return new Header({ children: fallbackChildren() })
+    if (!dims) return new Header({ children: [nameParagraph, specParagraph] })
     const maxHeight = 50 // px in header
     const logoHeightPx = Math.min(dims.height, maxHeight)
     const logoWidthPx = Math.round(dims.width * (logoHeightPx / dims.height))
@@ -271,7 +217,7 @@ async function createDocHeader(prof: import('@/types').Professional, mode: DocxM
   return new Header({ children })
 }
 
-async function createDocFooter(prof: import('@/types').Professional, report: Report, mode: DocxMode): Promise<Footer> {
+async function createDocFooter(prof: import('@/types').Professional, report: Report): Promise<Footer> {
   const contactItems = prof.contactItems ?? []
 
   const children: (Paragraph | Table)[] = []
@@ -341,10 +287,8 @@ async function createDocFooter(prof: import('@/types').Professional, report: Rep
     })
   )
 
-  if (mode === 'official') {
-    const officialLine = buildOfficialFooterLine(report)
-    if (officialLine) children.push(officialLine)
-  }
+  const officialLine = buildOfficialFooterLine(report)
+  if (officialLine) children.push(officialLine)
 
   return new Footer({ children })
 }
@@ -1900,22 +1844,20 @@ function createKeyValueTable(rows: string[][]): Table {
 
 export interface GenerateDocxOptions {
   themeId?: string
-  mode?: DocxMode
 }
 
 export async function generateDocx(report: Report, options: GenerateDocxOptions = {}): Promise<Blob> {
   const themeId = options.themeId ?? getPreferredPaletteId()
   _activePalette = getPalette(themeId)
-  const mode = options.mode ?? inferMode(report)
 
   try {
-    return await buildDocxBlob(report, mode)
+    return await buildDocxBlob(report)
   } finally {
     _activePalette = CLASSICO_PALETTE
   }
 }
 
-async function buildDocxBlob(report: Report, mode: DocxMode): Promise<Blob> {
+async function buildDocxBlob(report: Report): Promise<Blob> {
   const prof = await getProfessional()
   const sortedBlocks = flattenTree(buildBlockTree(report.blocks))
 
@@ -1995,10 +1937,10 @@ async function buildDocxBlob(report: Report, mode: DocxMode): Promise<Blob> {
       },
     },
     headers: {
-      default: await createDocHeader(prof, mode),
+      default: await createDocHeader(prof),
     },
     footers: {
-      default: await createDocFooter(prof, report, mode),
+      default: await createDocFooter(prof, report),
     },
     children: sectionChildren,
   }
@@ -2047,7 +1989,6 @@ async function buildDocxBlob(report: Report, mode: DocxMode): Promise<Blob> {
 }
 
 export async function downloadDocx(report: Report, options: GenerateDocxOptions = {}): Promise<void> {
-  const mode = options.mode ?? inferMode(report)
-  const blob = await generateDocx(report, { ...options, mode })
-  saveAs(blob, buildFileName(report, mode))
+  const blob = await generateDocx(report, options)
+  saveAs(blob, buildFileName(report))
 }
