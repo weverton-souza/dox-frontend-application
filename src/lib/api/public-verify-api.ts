@@ -1,17 +1,9 @@
 import axios from 'axios'
 import { API_BASE_URL } from './api-client'
 
-export interface VerifiedProfessional {
-  name: string | null
-  crp: string | null
-}
-
 export interface PublicVerifyResponse {
   valid: boolean
   verificationCode?: string
-  finalizedAt?: string
-  professional?: VerifiedProfessional
-  customerInitials?: string
   reason?: 'not_found' | 'hash_mismatch' | string
 }
 
