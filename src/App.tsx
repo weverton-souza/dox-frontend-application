@@ -13,6 +13,7 @@ import FormFill from '@/routes/FormFill'
 import FormResponseList from '@/routes/FormResponseList'
 import FormulaGuide from '@/routes/FormulaGuide'
 import PublicFormFill from '@/routes/PublicFormFill'
+import VerifyDocument from '@/routes/VerifyDocument'
 import Calendar from '@/routes/Calendar'
 import TemplateEditor from '@/routes/TemplateEditor'
 
@@ -34,6 +35,7 @@ export default function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/public/forms/:token" element={<PublicFormFill />} />
+      <Route path="/v/:code" element={<VerifyDocument />} />
       <Route element={<ProtectedRoute />}>
         <Route element={<AppLayout />}>
           <Route path="/" element={<ReportList />} />
