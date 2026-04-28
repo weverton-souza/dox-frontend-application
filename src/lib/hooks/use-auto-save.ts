@@ -4,13 +4,15 @@ export type SaveStatus = 'saved' | 'saving' | 'unsaved'
 
 export function useAutoSave<T>(
   saveFn: (data: T) => unknown | Promise<unknown>,
-  delay = 1000
+  delay = 1000,
+  enabled = true,
 ) {
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved')
 
   const scheduleSave = useCallback(
     (data: T) => {
+      if (!enabled) return
       setSaveStatus('unsaved')
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
       saveTimeoutRef.current = setTimeout(async () => {
@@ -23,11 +25,12 @@ export function useAutoSave<T>(
         }
       }, delay)
     },
-    [saveFn, delay]
+    [saveFn, delay, enabled]
   )
 
   const forceSave = useCallback(
     async (data: T) => {
+      if (!enabled) return
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
       setSaveStatus('saving')
       try {
@@ -37,7 +40,7 @@ export function useAutoSave<T>(
         setSaveStatus('unsaved')
       }
     },
-    [saveFn]
+    [saveFn, enabled]
   )
 
   useEffect(() => {
