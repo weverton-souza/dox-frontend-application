@@ -9,16 +9,16 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantStyles: Record<ButtonVariant, string> = {
-  primary: 'bg-brand-700 text-white hover:bg-brand-800',
-  secondary: 'bg-white text-brand-700 border border-brand-200 hover:bg-brand-50',
-  danger: 'bg-red-600 text-white hover:bg-red-700',
-  ghost: 'text-gray-600 hover:bg-gray-100 hover:text-gray-900',
+  primary: 'bg-brand-700 text-white hover:bg-brand-800 active:bg-brand-900',
+  secondary: 'bg-white text-gray-800 border border-gray-200 hover:border-gray-300 hover:bg-gray-50 active:bg-gray-100',
+  danger: 'bg-red-600 text-white hover:bg-red-700 active:bg-red-800',
+  ghost: 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 active:bg-gray-200',
 }
 
 const sizeStyles: Record<ButtonSize, string> = {
-  sm: 'px-3 py-1.5 text-sm',
-  md: 'px-4 py-2 text-sm',
-  lg: 'px-6 py-2.5 text-base',
+  sm: 'h-8 px-3 text-sm',
+  md: 'h-9 px-4 text-sm',
+  lg: 'h-11 px-6 text-base',
 }
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -27,11 +27,12 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       <button
         ref={ref}
         className={`
+          inline-flex items-center justify-center gap-2
           ${variantStyles[variant]}
           ${sizeStyles[size]}
-          rounded-lg font-medium transition-colors
-          focus:outline-none focus:ring-2 focus:ring-brand-500/50
-          disabled:opacity-50 disabled:cursor-not-allowed
+          rounded-md font-medium transition-colors duration-150
+          focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:ring-offset-2
+          disabled:opacity-50 disabled:pointer-events-none
           ${className}
         `.trim()}
         {...props}

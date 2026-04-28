@@ -19,7 +19,7 @@ export default function Select({ label, value, onChange, options, placeholder }:
       {label && (
         <label
           htmlFor={selectId}
-          className="block text-sm font-medium text-gray-700 mb-1"
+          className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2"
         >
           {label}
         </label>
@@ -30,10 +30,10 @@ export default function Select({ label, value, onChange, options, placeholder }:
           value={value}
           onChange={(e) => onChange(e.target.value)}
           className={`
-            w-full rounded-lg border border-gray-300 px-3 py-2 text-sm
-            appearance-none bg-white pr-8
-            focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none
-            transition-colors
+            w-full h-10 rounded-xl border border-gray-200 hover:border-gray-300 px-3.5 pr-9 text-[15px]
+            appearance-none bg-white
+            transition-colors duration-150
+            focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/15
             ${!value ? 'text-gray-400' : 'text-gray-900'}
           `.trim()}
         >
@@ -48,7 +48,7 @@ export default function Select({ label, value, onChange, options, placeholder }:
             </option>
           ))}
         </select>
-        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="16"

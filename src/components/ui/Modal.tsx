@@ -85,8 +85,8 @@ export default function Modal({ isOpen, onClose, title, children, footer, size =
     : {}
 
   const panelClassName = customSize
-    ? 'bg-white rounded-xl shadow-xl overflow-hidden flex flex-col'
-    : 'bg-white rounded-xl shadow-xl overflow-hidden flex flex-col w-full max-h-[90vh]'
+    ? 'bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col'
+    : 'bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col w-full max-h-[90vh]'
 
   // When no custom size, use Tailwind max-w classes
   const tailwindMaxW = !customSize
@@ -109,7 +109,7 @@ export default function Modal({ isOpen, onClose, title, children, footer, size =
 
   return createPortal(
     <div
-      className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-3 sm:p-4"
+      className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget && dismissable) onClose()
       }}
