@@ -24,9 +24,10 @@ const TYPE_COLORS: Record<string, string> = {
 interface TextBlockProps {
   data: TextBlockData
   onChange: (data: TextBlockData) => void
+  readOnly?: boolean
 }
 
-export default function TextBlock({ data, onChange }: TextBlockProps) {
+export default function TextBlock({ data, onChange, readOnly = false }: TextBlockProps) {
   const updateField = useCallback(
     (field: keyof TextBlockData, value: string | boolean | SlateContent) => {
       onChange({ ...data, [field]: value })
@@ -102,19 +103,22 @@ export default function TextBlock({ data, onChange }: TextBlockProps) {
         content={slateContent}
         onChange={(value) => updateField('content', value)}
         placeholder="Conteúdo da seção..."
+        readOnly={readOnly}
       />
 
-      <button
-        type="button"
-        onClick={() => setShowLibrary(true)}
-        className="flex items-center gap-1.5 text-sm text-brand-600 hover:text-brand-700 font-medium py-1 transition-colors"
-      >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-        </svg>
-        Inserir da biblioteca
-      </button>
+      {!readOnly && (
+        <button
+          type="button"
+          onClick={() => setShowLibrary(true)}
+          className="flex items-center gap-1.5 text-sm text-brand-600 hover:text-brand-700 font-medium py-1 transition-colors"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+          </svg>
+          Inserir da biblioteca
+        </button>
+      )}
 
       <Modal
         isOpen={showLibrary}

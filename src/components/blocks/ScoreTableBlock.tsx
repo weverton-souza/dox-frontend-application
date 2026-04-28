@@ -95,9 +95,10 @@ function remapAllFormulas(
 interface ScoreTableBlockProps {
   data: ScoreTableData
   onChange: (data: ScoreTableData) => void
+  readOnly?: boolean
 }
 
-export default function ScoreTableBlock({ data, onChange }: ScoreTableBlockProps) {
+export default function ScoreTableBlock({ data, onChange, readOnly = false }: ScoreTableBlockProps) {
   const activePalette = useActivePalette()
   const [editingColumnId, setEditingColumnId] = useState<string | null>(null)
   const [editingCellId, setEditingCellId] = useState<string | null>(null) // "rowId:colId"
@@ -1209,6 +1210,7 @@ export default function ScoreTableBlock({ data, onChange }: ScoreTableBlockProps
           content={isSlateContent(data.footnote) ? data.footnote : EMPTY_SLATE_CONTENT}
           onChange={(value: SlateContent) => onChange({ ...data, footnote: value })}
           placeholder="Nota de rodapé (opcional)"
+          readOnly={readOnly}
         />
       </div>
 

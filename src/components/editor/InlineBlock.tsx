@@ -43,12 +43,13 @@ function renderBody(
   onChange: (id: string, data: BlockData) => void,
   customers?: Customer[],
   onCustomerSelected?: (customerId: string) => void,
+  readOnly = false,
 ) {
   const handleChange = (data: BlockData) => onChange(block.id, data)
 
   switch (block.type) {
     case 'text':
-      return <TextBlock data={block.data as TextBlockData} onChange={handleChange} />
+      return <TextBlock data={block.data as TextBlockData} onChange={handleChange} readOnly={readOnly} />
     case 'info-box':
       return <InfoBoxBlock data={block.data as InfoBoxData} onChange={handleChange} />
     case 'identification':
@@ -61,11 +62,11 @@ function renderBody(
         />
       )
     case 'score-table':
-      return <ScoreTableBlock data={block.data as ScoreTableData} onChange={handleChange} />
+      return <ScoreTableBlock data={block.data as ScoreTableData} onChange={handleChange} readOnly={readOnly} />
     case 'chart':
-      return <ChartBlock data={block.data as ChartData} onChange={handleChange} />
+      return <ChartBlock data={block.data as ChartData} onChange={handleChange} readOnly={readOnly} />
     case 'references':
-      return <ReferencesBlock data={block.data as ReferencesData} onChange={handleChange} />
+      return <ReferencesBlock data={block.data as ReferencesData} onChange={handleChange} readOnly={readOnly} />
     case 'closing-page':
       return <ClosingPageBlock data={block.data as ClosingPageData} onChange={handleChange} />
     case 'cover':
@@ -221,9 +222,9 @@ export default function InlineBlock({
       {/* Content */}
       {!collapsed && (
         <div className="p-4">
-          <fieldset disabled={readOnly} className="contents">
+          <fieldset disabled={readOnly} className="contents [&_*:disabled]:cursor-default">
             <BlockErrorBoundary blockType={block.type}>
-              {renderBody(block, onChange, customers, onCustomerSelected)}
+              {renderBody(block, onChange, customers, onCustomerSelected, readOnly)}
             </BlockErrorBoundary>
           </fieldset>
         </div>

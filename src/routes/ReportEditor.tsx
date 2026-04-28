@@ -836,7 +836,7 @@ export default function ReportEditor() {
                 placeholder="Nome do cliente"
                 readOnly={!canEdit}
                 title={canEdit ? undefined : reasonText ?? undefined}
-                className={`text-sm font-medium bg-transparent border-0 focus:outline-none focus:ring-0 text-center min-w-0 max-w-xs truncate placeholder:text-gray-400 ${canEdit ? 'text-gray-700' : 'text-gray-500 cursor-not-allowed'}`}
+                className={`text-sm font-medium bg-transparent border-0 focus:outline-none focus:ring-0 text-center min-w-0 max-w-xs truncate placeholder:text-gray-400 ${canEdit ? 'text-gray-700' : 'text-gray-500'}`}
               />
               <span className="text-gray-300">·</span>
               <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${REPORT_STATUS_COLORS[report.status].bg} ${REPORT_STATUS_COLORS[report.status].text}`}>
