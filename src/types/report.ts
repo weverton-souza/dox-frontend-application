@@ -266,7 +266,7 @@ export const REPORT_STATUS_COLORS: Record<ReportStatus, { bg: string; text: stri
 export const REPORT_STATUS_TRANSITIONS: Record<ReportStatus, ReportStatus[]> = {
   rascunho: ['em_revisao', 'finalizado'],
   em_revisao: ['rascunho', 'finalizado'],
-  finalizado: ['em_revisao'],
+  finalizado: [],
 }
 
 export interface Report {
