@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import type { Block, BlockType, BlockData, Report, ReportStatus, ReportVersion, Customer, ScoreTableTemplate, ChartTemplate } from '@/types'
-import { createScoreTableFromTemplate, createChartFromTemplate, isSlateContent, slateContentToPlainText, REPORT_STATUS_LABELS, REPORT_STATUS_COLORS } from '@/types'
+import { createScoreTableFromTemplate, createChartFromTemplate, isSlateContent, slateContentToPlainText, REPORT_STATUS_LABELS, REPORT_STATUS_COLORS, REPORT_STATUS_TRANSITIONS } from '@/types'
 import type { TextBlockData, SectionData, InfoBoxData } from '@/types'
 import { getReport, updateReport, getExportData } from '@/lib/api/report-api'
 import { getCustomers } from '@/lib/api/customer-api'
@@ -471,16 +471,41 @@ export default function ReportEditor() {
   }, [report, forceSave])
 
   const handleStatusChange = useCallback(
-    (newStatus: ReportStatus) => {
+    async (newStatus: ReportStatus) => {
+      if (!report || !id) return
+
+      const allowed = REPORT_STATUS_TRANSITIONS[report.status]
+      if (!allowed.includes(newStatus)) {
+        showError(new Error(`Transição inválida: ${REPORT_STATUS_LABELS[report.status]} → ${REPORT_STATUS_LABELS[newStatus]}.`))
+        return
+      }
+
       if (newStatus === 'finalizado') {
+        try {
+          const fresh = await getReport(id)
+          if (fresh.status === 'finalizado') {
+            setReport(fresh)
+            showError(new Error('Este relatório foi finalizado em outra aba ou sessão.'))
+            return
+          }
+          if (!REPORT_STATUS_TRANSITIONS[fresh.status].includes('finalizado')) {
+            setReport(fresh)
+            showError(new Error(`O status atual (${REPORT_STATUS_LABELS[fresh.status]}) não permite finalização.`))
+            return
+          }
+          setReport(fresh)
+        } catch {
+          // se o refetch falhar, segue com o state local
+        }
         setPendingStatusChange(newStatus)
         updateAiModals({ showFinalizationModal: true })
         return
       }
-      if (report) createStatusChangeSnapshot(report.status)
+
+      createStatusChangeSnapshot(report.status)
       handleUpdateReport({ status: newStatus })
     },
-    [report, handleUpdateReport, createStatusChangeSnapshot]
+    [report, id, handleUpdateReport, createStatusChangeSnapshot, showError]
   )
 
   const handleConfirmFinalization = useCallback(() => {
@@ -1176,6 +1201,8 @@ export default function ReportEditor() {
         limit={ai.usageSummary?.limit ?? 0}
         warningCount={warningCount}
         hasAi={report.blocks.some(b => b.generatedByAi || b.skippedByAi)}
+        customerName={report.customerName || undefined}
+        blockCount={report.blocks.length}
       />
 
       {/* Version feedback modal */}
