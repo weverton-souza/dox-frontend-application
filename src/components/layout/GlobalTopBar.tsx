@@ -1,23 +1,23 @@
 import { useState, useRef, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { SettingsIcon } from '@/components/icons'
 import AiUsageBadge from '@/components/ai/AiUsageBadge'
 import { useAiGeneration } from '@/lib/hooks/use-ai-generation'
 
 interface GlobalTopBarProps {
-  onOpenProfessionalModal: () => void
   sidebarWidth: string
   isMobile: boolean
   onOpenMenu?: () => void
 }
 
 export default function GlobalTopBar({
-  onOpenProfessionalModal,
   sidebarWidth,
   isMobile,
   onOpenMenu,
 }: GlobalTopBarProps) {
   const { user, logout } = useAuth()
+  const navigate = useNavigate()
   const [showUserMenu, setShowUserMenu] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const ai = useAiGeneration()
@@ -75,12 +75,12 @@ export default function GlobalTopBar({
         />
       )}
 
-      {/* Configurações profissionais */}
+      {/* Configurações */}
       <button
         type="button"
-        onClick={onOpenProfessionalModal}
+        onClick={() => navigate('/settings')}
         className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
-        aria-label="Configurações profissionais"
+        aria-label="Configurações"
       >
         <SettingsIcon size={18} />
       </button>
@@ -107,11 +107,11 @@ export default function GlobalTopBar({
               type="button"
               onClick={() => {
                 setShowUserMenu(false)
-                onOpenProfessionalModal()
+                navigate('/settings')
               }}
               className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
             >
-              Configurações profissionais
+              Configurações
             </button>
             <button
               type="button"

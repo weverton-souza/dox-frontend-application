@@ -1,13 +1,10 @@
-import { useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import Sidebar from '@/components/layout/Sidebar'
 import GlobalTopBar from '@/components/layout/GlobalTopBar'
-import ProfessionalModal from '@/components/ProfessionalModal'
 import { useSidebar } from '@/lib/hooks/use-sidebar'
 
 export default function AppLayout() {
   const { isCollapsed, toggle, isMobile, isMobileOpen, openMobile, closeMobile } = useSidebar()
-  const [showProfessionalModal, setShowProfessionalModal] = useState(false)
 
   const sidebarWidth = isMobile ? '0px' : isCollapsed ? '4rem' : '15rem'
 
@@ -22,7 +19,6 @@ export default function AppLayout() {
       />
 
       <GlobalTopBar
-        onOpenProfessionalModal={() => setShowProfessionalModal(true)}
         sidebarWidth={sidebarWidth}
         isMobile={isMobile}
         onOpenMenu={openMobile}
@@ -35,11 +31,6 @@ export default function AppLayout() {
       >
         <Outlet />
       </div>
-
-      <ProfessionalModal
-        isOpen={showProfessionalModal}
-        onClose={() => setShowProfessionalModal(false)}
-      />
     </div>
   )
 }

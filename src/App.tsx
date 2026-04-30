@@ -1,4 +1,4 @@
-import { Routes, Route, Link } from 'react-router-dom'
+import { Routes, Route, Link, Navigate } from 'react-router-dom'
 import AppLayout from '@/components/layout/AppLayout'
 import ProtectedRoute from '@/components/auth/ProtectedRoute'
 import Login from '@/routes/Login'
@@ -16,6 +16,10 @@ import PublicFormFill from '@/routes/PublicFormFill'
 import VerifyDocument from '@/routes/VerifyDocument'
 import Calendar from '@/routes/Calendar'
 import TemplateEditor from '@/routes/TemplateEditor'
+import Settings from '@/routes/Settings'
+import SettingsAccount from '@/routes/SettingsAccount'
+import SettingsGeneral from '@/routes/SettingsGeneral'
+import SettingsPlaceholder from '@/components/settings/SettingsPlaceholder'
 
 function NotFound() {
   return (
@@ -50,6 +54,56 @@ export default function App() {
           <Route path="/forms/:id/responses" element={<FormResponseList />} />
           <Route path="/calendar" element={<Calendar />} />
           <Route path="/guides" element={<FormulaGuide />} />
+          <Route path="/settings" element={<Settings />}>
+            <Route index element={<Navigate to="account" replace />} />
+            <Route path="general" element={<SettingsGeneral />} />
+            <Route path="account" element={<SettingsAccount />} />
+            <Route
+              path="privacy"
+              element={
+                <SettingsPlaceholder
+                  title="Privacidade"
+                  description="LGPD, exportação e exclusão de dados."
+                />
+              }
+            />
+            <Route
+              path="billing"
+              element={
+                <SettingsPlaceholder
+                  title="Cobrança"
+                  description="Plano, métodos de pagamento, faturas e histórico."
+                />
+              }
+            />
+            <Route
+              path="usage"
+              element={
+                <SettingsPlaceholder
+                  title="Uso"
+                  description="Estatísticas de uso da plataforma."
+                />
+              }
+            />
+            <Route
+              path="notifications"
+              element={
+                <SettingsPlaceholder
+                  title="Notificações"
+                  description="Como você recebe avisos do sistema."
+                />
+              }
+            />
+            <Route
+              path="security"
+              element={
+                <SettingsPlaceholder
+                  title="Segurança"
+                  description="Sessões ativas e autenticação em dois fatores."
+                />
+              }
+            />
+          </Route>
           <Route path="*" element={<NotFound />} />
         </Route>
       </Route>
