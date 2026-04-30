@@ -140,9 +140,9 @@ export interface ModuleCatalogEntry {
 }
 
 export interface AccessibleModule {
-  module: ModuleCatalogEntry
+  id: ModuleId
+  displayName: string
   accessLevel: AccessLevel
-  status?: ModuleStatus
 }
 
 export interface BundleModule {

@@ -40,11 +40,11 @@ export function adaptSubscription(
   const activeModules: ActiveModule[] = accessibleModules
     .filter((m) => m.accessLevel !== 'BLOCKED')
     .map((m) => ({
-      id: m.module.id,
-      name: m.module.displayName,
-      status: (m.status ?? 'ACTIVE') as ModuleStatus,
-      basePriceCents: m.module.basePriceMonthlyCents,
-      finalPriceCents: m.module.basePriceMonthlyCents,
+      id: m.id,
+      name: m.displayName,
+      status: 'ACTIVE' as ModuleStatus,
+      basePriceCents: 0,
+      finalPriceCents: 0,
       priceLocked: true,
       activatedAt: apiSub.currentPeriodStart ?? new Date().toISOString(),
     }))

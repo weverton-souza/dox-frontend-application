@@ -95,7 +95,7 @@ export default function Sidebar({
   const hasModuleAccess = (moduleId?: ModuleId): boolean => {
     if (!moduleId) return true
     if (modulesLoading || modulesError || accessibleModules.length === 0) return true
-    const entry = accessibleModules.find((m) => m.module.id === moduleId)
+    const entry = accessibleModules.find((m) => m.id === moduleId)
     if (!entry) return false
     return entry.accessLevel !== 'BLOCKED'
   }
