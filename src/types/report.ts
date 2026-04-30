@@ -6,8 +6,16 @@ import type { SlateContent } from './slate'
 
 export interface Professional {
   name: string
+  socialName?: string
+  gender?: string
   crp: string
+  councilType?: string
+  councilNumber?: string
+  councilState?: string
   specialization: string
+  bio?: string
+  addressCity?: string
+  addressState?: string
   phone?: string
   instagram?: string
   email?: string

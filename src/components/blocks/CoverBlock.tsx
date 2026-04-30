@@ -26,7 +26,7 @@ export default function CoverBlock({ data, onChange }: CoverBlockProps) {
       <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
         <p className="text-xs text-gray-500 leading-relaxed">
           <strong className="text-gray-700">Dica:</strong> os dados do profissional
-          (nome, CRP, especialização) e do cliente vêm automaticamente do cadastro.
+          (nome, registro do conselho, especialização) e do cliente vêm automaticamente do cadastro.
           A capa aparece como primeira página do{' '}
           <code className="px-1 py-0.5 bg-gray-200 rounded">.docx</code>.
         </p>

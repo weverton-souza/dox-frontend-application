@@ -14,6 +14,24 @@ interface IdentificationBlockProps {
 const sectionHeaderClass =
   'text-sm font-semibold text-brand-700 uppercase tracking-wide mb-3 pb-2 border-b border-brand-100'
 
+const COUNCIL_TYPE_OPTIONS = [
+  { value: '', label: 'Selecione…' },
+  { value: 'CRP', label: 'CRP — Psicologia' },
+  { value: 'CREA', label: 'CREA — Engenharia' },
+  { value: 'OAB', label: 'OAB — Advocacia' },
+  { value: 'CRM', label: 'CRM — Medicina' },
+  { value: 'CRO', label: 'CRO — Odontologia' },
+  { value: 'CRN', label: 'CRN — Nutrição' },
+  { value: 'CFFa', label: 'CFFa — Fonoaudiologia' },
+  { value: 'CRP-PED', label: 'Psicopedagogia' },
+  { value: 'OUTRO', label: 'Outro' },
+]
+
+const UF_OPTIONS = [
+  { value: '', label: '—' },
+  ...['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'].map((uf) => ({ value: uf, label: uf })),
+]
+
 function calculateAge(birthDate: string, referenceDate: string): string {
   if (!birthDate) return ''
   const birth = new Date(birthDate + 'T00:00:00')
@@ -141,25 +159,49 @@ export default function IdentificationBlock({ data, onChange, customers, onCusto
       {/* Profissional Responsável */}
       <section>
         <h3 className={sectionHeaderClass}>Profissional Responsável</h3>
-        <div className="grid grid-cols-2 gap-4">
-          <Input
-            label="Nome"
-            value={data.professional.name}
-            onChange={(e) => updateProfessional('name', e.target.value)}
-            placeholder="Nome do profissional"
-          />
-          <Input
-            label="CRP"
-            value={data.professional.crp}
-            onChange={(e) => updateProfessional('crp', e.target.value)}
-            placeholder="CRP"
-          />
-          <div className="col-span-2">
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              label="Nome"
+              value={data.professional.name}
+              onChange={(e) => updateProfessional('name', e.target.value)}
+              placeholder="Nome do profissional"
+            />
             <Input
               label="Especialização"
               value={data.professional.specialization}
               onChange={(e) => updateProfessional('specialization', e.target.value)}
-              placeholder="Especialização"
+              placeholder="Ex: Neuropsicologia"
+            />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_120px] gap-4">
+            <Select
+              label="Conselho"
+              value={data.professional.councilType ?? (data.professional.crp ? 'CRP' : '')}
+              onChange={(value) => updateProfessional('councilType', value)}
+              options={COUNCIL_TYPE_OPTIONS}
+            />
+            <Input
+              label="Número do registro"
+              value={data.professional.councilNumber ?? data.professional.crp ?? ''}
+              onChange={(e) => {
+                const value = e.target.value
+                onChange({
+                  ...data,
+                  professional: {
+                    ...data.professional,
+                    councilNumber: value,
+                    crp: value,
+                  },
+                })
+              }}
+              placeholder="Ex: 06/12345"
+            />
+            <Select
+              label="UF"
+              value={data.professional.councilState ?? ''}
+              onChange={(value) => updateProfessional('councilState', value)}
+              options={UF_OPTIONS}
             />
           </div>
         </div>

@@ -41,6 +41,7 @@ import QRCode from 'qrcode'
 import './chart/setup'
 import { getProfessional } from '@/lib/api/professional-api'
 import { formatDate, buildBlockTree, flattenTree } from '@/lib/utils'
+import { formatCouncil, formatCouncilWithFallback } from '@/lib/professional-format'
 import { base64ToUint8Array } from './shared/social-icons'
 import type { ContactType } from '@/types'
 
@@ -238,7 +239,7 @@ async function createDocHeader(prof: import('@/types').Professional): Promise<He
     spacing: { after: 0 },
     children: [
       new TextRun({
-        text: `${prof.specialization || ''} — CRP ${prof.crp || ''}`,
+        text: `${prof.specialization || ''}${prof.specialization && formatCouncil(prof) ? ' — ' : ''}${formatCouncil(prof)}`,
         size: 16,
         font: 'Calibri',
         color: chrome('secondary'),
@@ -419,9 +420,15 @@ function renderIdentification(data: IdentificationData): (Paragraph | Table)[] {
   // Section: Profissional Responsavel
   elements.push(createSectionHeader('PROFISSIONAL RESPONSÁVEL'))
 
+  const councilLabel = data.professional.councilType || 'CRP'
+  const councilValue =
+    data.professional.councilNumber || data.professional.crp || ''
+  const councilDisplay = data.professional.councilState
+    ? `${councilValue}/${data.professional.councilState}`
+    : councilValue
   const profRows = [
     ['Nome', data.professional.name],
-    ['CRP', data.professional.crp],
+    [councilLabel, councilDisplay],
     ['Especialização', data.professional.specialization],
   ]
 
@@ -1540,8 +1547,13 @@ function renderCover(data: CoverData, report: Report, prof: import('@/types').Pr
 
   const metaLines: string[] = []
   if (prof.name) metaLines.push(prof.name)
-  if (prof.specialization && prof.crp) {
-    metaLines.push(`${prof.specialization} · CRP ${prof.crp}`)
+  const councilFormatted = formatCouncil(prof)
+  if (prof.specialization && councilFormatted) {
+    metaLines.push(`${prof.specialization} · ${councilFormatted}`)
+  } else if (prof.specialization) {
+    metaLines.push(prof.specialization)
+  } else if (councilFormatted) {
+    metaLines.push(councilFormatted)
   }
   if (idData?.location) metaLines.push(idData.location)
   if (idData?.date) metaLines.push(formatDate(idData.date))
@@ -1652,7 +1664,7 @@ async function renderClosingPage(data: ClosingPageData, report: Report, prof: im
   // Professional (always)
   signatures.push({
     name: prof.name || '____________________',
-    subtitle: `CRP ${prof.crp || '__________'}`,
+    subtitle: formatCouncilWithFallback(prof, 'CRP __________'),
     isBold: true,
     subtitleColor: chrome('secondary'),
   })
