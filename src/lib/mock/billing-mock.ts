@@ -25,7 +25,7 @@ const isoFromNow = (days: number) => {
   return d.toISOString()
 }
 
-const MOCK_PAYMENT_METHODS: PaymentMethod[] = [
+export const MOCK_PAYMENT_METHODS: PaymentMethod[] = [
   {
     id: 'pm_001',
     type: 'CREDIT_CARD',
@@ -85,7 +85,7 @@ const MOCK_ACTIVE_MODULES: ActiveModule[] = [
   },
 ]
 
-const MOCK_ACTIVE_PROMOTIONS: ActivePromotion[] = [
+export const MOCK_ACTIVE_PROMOTIONS: ActivePromotion[] = [
   {
     id: 'tp_001',
     code: 'FOUNDING100',
