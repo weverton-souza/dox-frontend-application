@@ -71,7 +71,7 @@ export function useModule(moduleId: ModuleId): ModuleAccessInfo {
   const { modules, loading, error } = useAccessibleModules()
   if (loading) return { hasAccess: true, accessLevel: 'FULL', loading: true }
   if (error || modules.length === 0) return { hasAccess: true, accessLevel: 'FULL', loading: false }
-  const entry = modules.find((m) => m.module.id === moduleId)
+  const entry = modules.find((m) => m.id === moduleId)
   if (!entry) return { hasAccess: false, accessLevel: 'BLOCKED', loading: false }
   return {
     hasAccess: entry.accessLevel !== 'BLOCKED',
