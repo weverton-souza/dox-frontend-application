@@ -111,11 +111,28 @@
 - Preview do relatório atualiza automaticamente após geração
 - Status "requer mais informações" para seções com dados insuficientes
 
-### Configurações Profissionais
-- Modal para nome, CRP, especialização, logo (base64)
-- Itens de contato configuráveis (Instagram, LinkedIn, Facebook, website, telefone, email)
-- Dados usados no header do .docx e no bloco de identificação
-- Seletor de tema/paleta (`ThemeSelector`) com 4 cards: Clássico, Terroso, Grave, Suave
+### Configurações (rota `/settings`)
+- Sidebar de Configurações com 7 abas: **Geral** (default), **Conta**, Privacidade, Cobrança, Uso, Notificações, Segurança
+- Layout em `src/routes/Settings.tsx` (wrapper com `<Outlet />`) + `src/components/settings/SettingsSidebar.tsx`
+- `SettingsPlaceholder.tsx` para abas ainda não implementadas (Em breve)
+- Avatar dropdown no `GlobalTopBar` linka para `/settings` (default redireciona para `/settings/account`)
+- Modal `ProfessionalModal` removido — conteúdo migrado para páginas de Settings
+
+### Conta (`/settings/account`)
+- Hero card com avatar gradient (`getAvatarColor` + `getInitials`), nome, email e badges "Conta ativa" + vertical formatado
+- `AccountForm.tsx` com 4 sections: Identidade pessoal, Identidade profissional, Endereço de atendimento, Sobre você
+- Identidade pessoal: Nome, Nome social, Gênero (Select: Prefiro não informar / Feminino / Masculino / Não-binário / Outro)
+- Identidade profissional: Conselho generalizado (CRP/CREA/OAB/CRM/CRO/CRN/CFFa/Psicopedagogia/Outro) + Número + UF, Especialização
+- Endereço de atendimento: Cidade + UF (aparece no rodapé do .docx)
+- Sobre você: Bio em textarea (até 500 chars com contador)
+- Helper `lib/professional-format.ts` com `formatCouncil(prof)` e `formatCouncilWithFallback` — prioriza novo formato (`councilType + councilNumber + councilState`), cai para `crp` legado
+- Tipo `Professional` ganha 8 campos opcionais: `socialName`, `gender`, `councilType`, `councilNumber`, `councilState`, `addressCity`, `addressState`, `bio`
+- `lib/docx-engine/generator.ts` atualizado em 5 lugares para usar `formatCouncil` (header docx, profRows identification, metaLines, signature subtitle)
+
+### Geral (`/settings/general`)
+- `SettingsGeneral.tsx` renderiza `ThemeSelector` + `DocumentBrandingForm`
+- `DocumentBrandingForm.tsx` (`src/components/settings/`): Logo (cabeçalho do .docx) + Contatos e Redes Sociais (rodapé do .docx)
+- `ThemeSelector` mantém os 4 cards: Clássico, Terroso, Grave, Suave
 
 ### Sistema de Temas (Paletas)
 - 4 paletas visuais definidas em `src/lib/theme/palettes.ts`: `classico` (Flat UI 2 baseline), `terroso` (outono warm dessaturado), `grave` (inverno profundo saturado), `suave` (verão cool muted)
