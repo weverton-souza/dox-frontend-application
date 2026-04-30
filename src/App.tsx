@@ -18,6 +18,7 @@ import Calendar from '@/routes/Calendar'
 import TemplateEditor from '@/routes/TemplateEditor'
 import Settings from '@/routes/Settings'
 import SettingsAccount from '@/routes/SettingsAccount'
+import SettingsBilling from '@/routes/SettingsBilling'
 import SettingsGeneral from '@/routes/SettingsGeneral'
 import SettingsPlaceholder from '@/components/settings/SettingsPlaceholder'
 
@@ -67,15 +68,7 @@ export default function App() {
                 />
               }
             />
-            <Route
-              path="billing"
-              element={
-                <SettingsPlaceholder
-                  title="Cobrança"
-                  description="Plano, métodos de pagamento, faturas e histórico."
-                />
-              }
-            />
+            <Route path="billing" element={<SettingsBilling />} />
             <Route
               path="usage"
               element={
