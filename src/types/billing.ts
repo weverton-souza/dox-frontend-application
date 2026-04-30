@@ -125,3 +125,83 @@ export interface Subscription {
   cancelEffectiveAt?: string
   createdAt: string
 }
+
+// ========== Tipos da API real (alinhados com o backend) ==========
+
+export type AccessLevel = 'FULL' | 'READ_ONLY' | 'BLOCKED'
+
+export interface ModuleCatalogEntry {
+  id: ModuleId
+  displayName: string
+  basePriceMonthlyCents: number
+  dependencies: ModuleId[]
+  gracePeriodDays: number
+  gracefulDegradation: 'READ_ONLY' | 'LIMITED' | 'BLOCKED'
+}
+
+export interface AccessibleModule {
+  module: ModuleCatalogEntry
+  accessLevel: AccessLevel
+  status?: ModuleStatus
+}
+
+export interface BundleModule {
+  id: ModuleId
+  displayName: string
+}
+
+export interface Bundle {
+  id: string
+  name: string
+  modules: BundleModule[]
+  priceMonthlyCents: number
+  priceYearlyCents: number
+  highlighted: boolean
+}
+
+export interface ApiSubscription {
+  id: string
+  status: SubscriptionStatus
+  billingCycle: 'MONTHLY' | 'QUARTERLY' | 'SEMIANNUALLY' | 'YEARLY'
+  billingType: BillingType | 'UNDEFINED'
+  valueCents: number
+  currentPeriodStart?: string
+  currentPeriodEnd?: string
+  nextDueDate?: string
+  trialEnd?: string
+  canceledAt?: string
+  cancelEffectiveAt?: string
+  cancelReason?: string
+}
+
+export interface ApiPayment {
+  id: string
+  asaasPaymentId: string
+  amountCents: number
+  status: string
+  billingType: BillingType | 'UNDEFINED'
+  dueDate: string
+  paidAt?: string
+  refundedAt?: string
+  invoiceUrl?: string
+  bankSlipUrl?: string
+  pixQrCode?: string
+  pixCopyPaste?: string
+  description?: string
+}
+
+export interface ApiNfseInvoice {
+  id: string
+  paymentId: string
+  status: string
+  pdfUrl?: string
+  xmlUrl?: string
+  issuedAt?: string
+}
+
+export interface PriceBreakdown {
+  basePriceCents: number
+  bundleDiscountCents: number
+  finalPriceCents: number
+  cycle: 'MONTHLY' | 'QUARTERLY' | 'SEMIANNUALLY' | 'YEARLY'
+}

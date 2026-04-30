@@ -8,6 +8,8 @@ import {
   BookIcon,
 } from '@/components/icons'
 import type { IconProps } from '@/components/icons'
+import type { ModuleId } from '@/types'
+import { useAccessibleModules } from '@/lib/hooks/use-modules'
 import logoDoxMark from '@/assets/logo-dox-mark.svg'
 import logoDoxText from '@/assets/logo-dox-text.svg'
 
@@ -16,6 +18,7 @@ interface NavItemConfig {
   label: string
   icon: (props: IconProps) => React.ReactNode
   matchPaths?: string[]
+  module?: ModuleId
 }
 
 const NAV_ITEMS: NavItemConfig[] = [
@@ -24,25 +27,49 @@ const NAV_ITEMS: NavItemConfig[] = [
     label: 'Relatórios',
     icon: DocumentIcon,
     matchPaths: ['/reports/'],
+    module: 'reports',
   },
   {
     to: '/customers',
     label: 'Clientes',
     icon: UsersIcon,
     matchPaths: ['/customers/'],
+    module: 'customers',
   },
   {
     to: '/forms',
     label: 'Formulários',
     icon: ClipboardListIcon,
     matchPaths: ['/forms/'],
+    module: 'forms',
   },
   {
     to: '/calendar',
     label: 'Agenda',
     icon: CalendarIcon,
+    module: 'calendar',
   },
 ]
+
+function LockBadge() {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="ml-auto shrink-0 text-gray-300"
+      aria-label="Plano não inclui"
+    >
+      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+      <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+    </svg>
+  )
+}
 
 interface SidebarProps {
   isCollapsed: boolean
@@ -63,6 +90,15 @@ export default function Sidebar({
   const navRef = useRef<HTMLElement>(null)
   const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map())
   const [slider, setSlider] = useState<{ top: number; height: number } | null>(null)
+  const { modules: accessibleModules, loading: modulesLoading, error: modulesError } = useAccessibleModules()
+
+  const hasModuleAccess = (moduleId?: ModuleId): boolean => {
+    if (!moduleId) return true
+    if (modulesLoading || modulesError || accessibleModules.length === 0) return true
+    const entry = accessibleModules.find((m) => m.module.id === moduleId)
+    if (!entry) return false
+    return entry.accessLevel !== 'BLOCKED'
+  }
 
   const isActive = (item: NavItemConfig) => {
     if (location.pathname === item.to) return true
@@ -142,6 +178,8 @@ export default function Sidebar({
         {NAV_ITEMS.map((item) => {
           const active = isActive(item)
           const Icon = item.icon
+          const allowed = hasModuleAccess(item.module)
+          const tooltip = allowed ? item.label : `${item.label} — plano não inclui`
 
           return (
             <div
@@ -149,25 +187,39 @@ export default function Sidebar({
               ref={(el) => { if (el) itemRefs.current.set(item.to, el); else itemRefs.current.delete(item.to) }}
               className="relative group"
             >
-              <NavLink
-                to={item.to}
-                end={item.to === '/'}
-                onClick={handleNavClick}
-                className={`relative z-10 flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-200 ${
-                  active
-                    ? 'text-gray-900 font-medium'
-                    : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
-                }`}
-              >
-                <Icon size={20} className="shrink-0" />
-                <span className={`text-sm whitespace-nowrap ${textFade}`}>
-                  {item.label}
-                </span>
-              </NavLink>
+              {allowed ? (
+                <NavLink
+                  to={item.to}
+                  end={item.to === '/'}
+                  onClick={handleNavClick}
+                  className={`relative z-10 flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-200 ${
+                    active
+                      ? 'text-gray-900 font-medium'
+                      : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
+                  }`}
+                >
+                  <Icon size={20} className="shrink-0" />
+                  <span className={`text-sm whitespace-nowrap ${textFade}`}>
+                    {item.label}
+                  </span>
+                </NavLink>
+              ) : (
+                <NavLink
+                  to="/settings/billing"
+                  onClick={handleNavClick}
+                  className="relative z-10 flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-200 text-gray-300 hover:bg-gray-50"
+                >
+                  <Icon size={20} className="shrink-0" />
+                  <span className={`text-sm whitespace-nowrap ${textFade}`}>
+                    {item.label}
+                  </span>
+                  {!collapsed && <LockBadge />}
+                </NavLink>
+              )}
 
               {collapsed && (
                 <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-2.5 py-1.5 bg-gray-900 text-white text-xs rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-                  {item.label}
+                  {tooltip}
                 </div>
               )}
             </div>
