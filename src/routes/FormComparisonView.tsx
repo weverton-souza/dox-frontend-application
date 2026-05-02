@@ -98,7 +98,7 @@ export default function FormComparisonView() {
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center">
           <p className="text-gray-500 text-sm">Comparação não encontrada</p>
-          <Button variant="ghost" size="sm" className="mt-3" onClick={() => navigate(-1)}>Voltar</Button>
+          <Button variant="ghost" size="sm" className="mt-3" onClick={() => navigate(`/customers/${customerId}?tab=forms`)}>Voltar</Button>
         </div>
       </div>
     )
@@ -109,7 +109,7 @@ export default function FormComparisonView() {
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-page mx-auto px-page py-5">
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => navigate(`/customers/${customerId}?tab=forms`)}
             className="text-sm text-gray-400 hover:text-brand-600 transition-colors mb-2"
           >
             ← Voltar
