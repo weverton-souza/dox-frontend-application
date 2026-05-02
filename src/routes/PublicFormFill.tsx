@@ -1,16 +1,17 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams } from 'react-router-dom'
-import type { PublicFormData, FormFieldAnswer } from '@/types'
+import type { PublicFormData, FormFieldAnswer, FormField } from '@/types'
 import { createEmptyFormFieldAnswer } from '@/types'
 import { getPublicForm, submitPublicForm } from '@/lib/api/public-form-api'
 import { parseError } from '@/lib/api/error-handler'
-import { useFormValidation } from '@/lib/hooks/use-form-validation'
+import { useFormValidation, isFieldEmpty } from '@/lib/hooks/use-form-validation'
 import { useFormDraft } from '@/lib/hooks/use-form-draft'
 import { useSortedFields } from '@/lib/hooks/use-sorted-fields'
 import FormSectionFields from '@/components/form-fill/FormSectionFields'
 
 interface DraftPayload extends Record<string, unknown> {
   answers: FormFieldAnswer[]
+  currentPage: number
 }
 
 function DraftIndicator({
@@ -47,10 +48,12 @@ export default function PublicFormFill() {
   const [answers, setAnswers] = useState<FormFieldAnswer[]>([])
   const [errorMessage, setErrorMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [currentPage, setCurrentPage] = useState(0)
+  const [pageErrors, setPageErrors] = useState<Set<string>>(new Set())
 
   const draftPayload = useMemo<DraftPayload | null>(
-    () => (formData ? { answers } : null),
-    [formData, answers],
+    () => (formData ? { answers, currentPage } : null),
+    [formData, answers, currentPage],
   )
 
   const { initialDraft, draftLoaded, status: draftStatus, lastSavedAt } =
@@ -81,6 +84,9 @@ export default function PublicFormFill() {
         (initialDraft.answers as FormFieldAnswer[]).map((a) => [a.fieldId, a]),
       )
       setAnswers(baseAnswers.map((a) => draftMap.get(a.fieldId) ?? a))
+      if (typeof initialDraft.currentPage === 'number') {
+        setCurrentPage(initialDraft.currentPage)
+      }
     } else {
       setAnswers(baseAnswers)
     }
@@ -98,7 +104,56 @@ export default function PublicFormFill() {
       return [...prev, answer]
     })
     clearFieldError(answer.fieldId)
+    setPageErrors((prev) => {
+      if (!prev.has(answer.fieldId)) return prev
+      const next = new Set(prev)
+      next.delete(answer.fieldId)
+      return next
+    })
   }, [clearFieldError])
+
+  const { sectionGroups } = useSortedFields(formData?.fields)
+
+  const pages = useMemo(() => {
+    if (sectionGroups.length === 0) return []
+    return sectionGroups.filter((g) => g.children.length > 0 || g.sectionField)
+  }, [sectionGroups])
+
+  const totalPages = pages.length
+  const isLastPage = currentPage >= totalPages - 1
+  const isFirstPage = currentPage === 0
+  const hasPagination = totalPages > 1
+  const safePage = Math.min(currentPage, Math.max(0, totalPages - 1))
+  const currentSection = pages[safePage]
+  const currentSectionGroups = currentSection ? [currentSection] : []
+
+  const validatePageFields = useCallback((fields: FormField[]): Set<string> => {
+    const errors = new Set<string>()
+    for (const field of fields) {
+      if (!field.required || field.type === 'section-header') continue
+      const answer = answers.find((a) => a.fieldId === field.id)
+      if (!answer || isFieldEmpty(field, answer)) errors.add(field.id)
+    }
+    return errors
+  }, [answers])
+
+  const handleNext = useCallback(() => {
+    if (!currentSection) return
+    const errors = validatePageFields(currentSection.children)
+    if (errors.size > 0) {
+      setPageErrors(errors)
+      return
+    }
+    setPageErrors(new Set())
+    setCurrentPage((p) => Math.min(p + 1, totalPages - 1))
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [currentSection, totalPages, validatePageFields])
+
+  const handlePrev = useCallback(() => {
+    setPageErrors(new Set())
+    setCurrentPage((p) => Math.max(p - 1, 0))
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [])
 
   const handleSubmit = useCallback(async () => {
     if (!validate() || !token || !formData || submitting) return
@@ -116,12 +171,16 @@ export default function PublicFormFill() {
     }
   }, [validate, token, formData, answers, submitting])
 
-  const { sectionGroups } = useSortedFields(formData?.fields)
-
   const getAnswer = useCallback((fieldId: string): FormFieldAnswer => {
     return answers.find((a) => a.fieldId === fieldId)
       ?? createEmptyFormFieldAnswer(fieldId)
   }, [answers])
+
+  const combinedErrors = useMemo(() => {
+    const merged = new Set(validationErrors)
+    pageErrors.forEach((id) => merged.add(id))
+    return merged
+  }, [validationErrors, pageErrors])
 
   if (pageState === 'loading') {
     return (
@@ -167,10 +226,14 @@ export default function PublicFormFill() {
     )
   }
 
+  const progressPercent = hasPagination
+    ? Math.round(((safePage + 1) / totalPages) * 100)
+    : 100
+
   return (
     <div className="min-h-screen bg-[#f0ebf8]/40">
-      <header className="bg-white/80 backdrop-blur-md border-b border-gray-200/60 sticky top-0 z-30 h-16">
-        <div className="max-w-[860px] mx-auto px-4 sm:px-6 h-full flex items-center gap-3">
+      <header className="bg-white/80 backdrop-blur-md border-b border-gray-200/60 sticky top-0 z-30">
+        <div className="max-w-[860px] mx-auto px-4 sm:px-6 h-16 flex items-center gap-3">
           <div className="flex-1 min-w-0">
             <h1 className="text-sm font-medium text-gray-700 truncate">
               {formData?.formTitle || 'Formulário'}
@@ -180,44 +243,95 @@ export default function PublicFormFill() {
             )}
           </div>
           <DraftIndicator status={draftStatus} lastSavedAt={lastSavedAt} />
+          {hasPagination && (
+            <div className="hidden sm:block text-xs text-gray-500 shrink-0">
+              Página {safePage + 1} de {totalPages}
+            </div>
+          )}
         </div>
+        {hasPagination && (
+          <div className="h-1 bg-gray-100">
+            <div
+              className="h-full bg-brand-500 transition-all duration-300"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+        )}
       </header>
 
       <main className="max-w-[860px] mx-auto px-4 sm:px-6 py-6 space-y-3">
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-          <div className="h-2 bg-brand-500" />
-          <div className="px-6 py-5">
-            <h1 className="text-2xl font-normal text-gray-900">
-              {formData?.formTitle || 'Formulário'}
-            </h1>
-            {formData?.formDescription && (
-              <p className="text-sm text-gray-500 mt-2 leading-relaxed">{formData.formDescription}</p>
-            )}
-            {formData?.customerName && (
-              <p className="text-sm text-gray-400 mt-3">
-                Paciente: <span className="text-gray-600 font-medium">{formData.customerName}</span>
-              </p>
-            )}
+        {safePage === 0 && (
+          <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+            <div className="h-2 bg-brand-500" />
+            <div className="px-6 py-5">
+              <h1 className="text-2xl font-normal text-gray-900">
+                {formData?.formTitle || 'Formulário'}
+              </h1>
+              {formData?.formDescription && (
+                <p className="text-sm text-gray-500 mt-2 leading-relaxed">{formData.formDescription}</p>
+              )}
+              {formData?.customerName && (
+                <p className="text-sm text-gray-400 mt-3">
+                  Paciente: <span className="text-gray-600 font-medium">{formData.customerName}</span>
+                </p>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         <FormSectionFields
-          sectionGroups={sectionGroups}
+          sectionGroups={currentSectionGroups}
           getAnswer={getAnswer}
           onAnswerChange={handleAnswerChange}
-          validationErrors={validationErrors}
+          validationErrors={combinedErrors}
         />
 
-        <div className="flex items-center justify-center pt-6 pb-10">
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={submitting}
-            className="px-10 py-3 rounded-full bg-brand-500 text-white text-sm font-medium hover:bg-brand-600 shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {submitting ? 'Enviando...' : 'Enviar Respostas'}
-          </button>
-        </div>
+        {hasPagination ? (
+          <div className="flex items-center justify-between gap-3 pt-6 pb-10">
+            <button
+              type="button"
+              onClick={handlePrev}
+              disabled={isFirstPage}
+              className="px-6 py-2.5 rounded-full text-sm font-medium text-gray-600 hover:bg-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            >
+              ← Anterior
+            </button>
+
+            <span className="sm:hidden text-xs text-gray-500">
+              {safePage + 1} / {totalPages}
+            </span>
+
+            {isLastPage ? (
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={submitting}
+                className="px-8 py-2.5 rounded-full bg-brand-500 text-white text-sm font-medium hover:bg-brand-600 shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {submitting ? 'Enviando...' : 'Enviar Respostas'}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleNext}
+                className="px-8 py-2.5 rounded-full bg-brand-500 text-white text-sm font-medium hover:bg-brand-600 shadow-sm hover:shadow-md transition-all"
+              >
+                Próximo →
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="flex items-center justify-center pt-6 pb-10">
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={submitting}
+              className="px-10 py-3 rounded-full bg-brand-500 text-white text-sm font-medium hover:bg-brand-600 shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {submitting ? 'Enviando...' : 'Enviar Respostas'}
+            </button>
+          </div>
+        )}
       </main>
     </div>
   )
