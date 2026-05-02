@@ -5,8 +5,8 @@ interface EmptyStateProps {
   icon: ReactNode
   title: string
   message: string
-  buttonLabel: string
-  onAction: () => void
+  buttonLabel?: string
+  onAction?: () => void
 }
 
 export default function EmptyState({ icon, title, message, buttonLabel, onAction }: EmptyStateProps) {
@@ -17,9 +17,11 @@ export default function EmptyState({ icon, title, message, buttonLabel, onAction
       </div>
       <h2 className="text-lg font-semibold text-gray-900 mb-1">{title}</h2>
       <p className="text-sm text-gray-500 mb-6">{message}</p>
-      <Button onClick={onAction} size="lg">
-        {buttonLabel}
-      </Button>
+      {buttonLabel && onAction && (
+        <Button onClick={onAction} size="lg">
+          {buttonLabel}
+        </Button>
+      )}
     </div>
   )
 }

@@ -151,6 +151,7 @@ export interface FormFieldAnswer {
 export interface FormResponse {
   id: string
   formId: string
+  formVersionId: string         // versão do form no momento da submissão
   customerId: string | null     // link opcional ao cadastro de clientes
   customerName: string          // sempre armazenado (pode não estar no cadastro)
   status: FormResponseStatus
@@ -265,20 +266,6 @@ export function createEmptyFormFieldAnswer(fieldId: string): FormFieldAnswer {
     selectedOptionIds: [],
     scaleValue: null,
     likertAnswers: {},
-  }
-}
-
-export function createEmptyFormResponse(formId: string): FormResponse {
-  return {
-    id: crypto.randomUUID(),
-    formId,
-    customerId: null,
-    customerName: '',
-    status: 'em_andamento',
-    answers: [],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    generatedReportId: null,
   }
 }
 

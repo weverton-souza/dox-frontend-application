@@ -85,9 +85,10 @@ export default function FormResponseList() {
 
   const { page: paginatedPage, setCurrentPage, pageSize, changePageSize } = usePagination(filteredResponses)
 
-  const handleNewResponse = useCallback(() => {
-    navigate(`/forms/${id}/fill`)
-  }, [id, navigate])
+  const handleOpenResponse = useCallback((resp: FormResponse) => {
+    if (!resp.customerId) return
+    navigate(`/customers/${resp.customerId}/forms/${resp.formId}/comparison?versionId=${resp.formVersionId}`)
+  }, [navigate])
 
   if (!form) {
     return (
@@ -138,17 +139,6 @@ export default function FormResponseList() {
               <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
             </svg>
           </button>
-          <button
-            type="button"
-            onClick={handleNewResponse}
-            className="h-11 w-11 flex items-center justify-center rounded-full bg-brand-700 text-white hover:bg-brand-800 transition-colors shadow-sm shrink-0"
-            title="Nova Resposta"
-          >
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="10" y1="4" x2="10" y2="16" />
-              <line x1="4" y1="10" x2="16" y2="10" />
-            </svg>
-          </button>
         </div>
       </div>
 
@@ -177,9 +167,7 @@ export default function FormResponseList() {
               </svg>
             }
             title="Nenhuma resposta ainda"
-            message="Inicie o preenchimento do formulário para um cliente"
-            buttonLabel="+ Nova Resposta"
-            onAction={handleNewResponse}
+            message="As respostas chegam quando os destinatários preenchem o link público"
           />
         ) : (
           <>
@@ -191,7 +179,7 @@ export default function FormResponseList() {
                 return (
                   <ListCard
                     key={resp.id}
-                    onClick={() => navigate(`/forms/${id}/fill?response=${resp.id}`)}
+                    onClick={resp.customerId ? () => handleOpenResponse(resp) : undefined}
                     title={resp.customerName || 'Cliente sem nome'}
                     pills={
                       <>

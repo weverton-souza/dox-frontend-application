@@ -1,7 +1,7 @@
 import type { ReactNode, MouseEvent } from 'react'
 
 interface ListCardProps {
-  onClick: () => void
+  onClick?: () => void
   avatar?: ReactNode
   title: string
   subtitle?: ReactNode
@@ -25,7 +25,9 @@ export default function ListCard({
 
   return (
     <div
-      className="group bg-white rounded-2xl border border-gray-200/80 hover:border-brand-200 hover:shadow-lg hover:shadow-brand-500/5 transition-all duration-200 cursor-pointer"
+      className={`group bg-white rounded-2xl border border-gray-200/80 hover:border-brand-200 hover:shadow-lg hover:shadow-brand-500/5 transition-all duration-200 ${
+        onClick ? 'cursor-pointer' : ''
+      }`}
       onClick={onClick}
     >
       <div className="p-4 sm:p-5 flex items-center gap-4">

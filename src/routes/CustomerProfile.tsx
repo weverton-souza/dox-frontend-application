@@ -447,7 +447,10 @@ export default function CustomerProfile() {
           <div className="space-y-3">
             {formGroups.map((group) => {
               const answeredCount = group.respondents.filter((r) => r.status === 'answered').length
-              const canCompare = answeredCount >= 2
+              const canOpen = answeredCount >= 1
+              const buttonLabel = answeredCount >= 2 ? 'Comparar respostas' : 'Ver resposta'
+              const goToView = () =>
+                navigate(`/customers/${id}/forms/${group.form.id}/comparison?versionId=${group.version.id}`)
               return (
                 <div key={`${group.form.id}:${group.version.id}`} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
                   <div className="flex items-center justify-between mb-3 gap-3">
@@ -463,43 +466,51 @@ export default function CustomerProfile() {
                       <span className="text-xs text-gray-400">
                         {group.respondents.length} respondente{group.respondents.length === 1 ? '' : 's'}
                       </span>
-                      {canCompare && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => navigate(`/customers/${id}/forms/${group.form.id}/comparison?versionId=${group.version.id}`)}
-                        >
-                          Comparar respostas
+                      {canOpen && (
+                        <Button variant="ghost" size="sm" onClick={goToView}>
+                          {buttonLabel}
                         </Button>
                       )}
                     </div>
                   </div>
                   <ul className="divide-y divide-gray-100">
-                    {group.respondents.map((r) => (
-                      <li key={r.linkId} className="py-2.5 flex items-center gap-3">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm text-gray-900 truncate">
-                            {r.respondentName || '(sem nome)'}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {formatAggregatedLabel(r)} · {r.status === 'answered' && r.submittedAt
-                              ? `respondido em ${formatDateTime(r.submittedAt)}`
-                              : `expira em ${formatDateTime(r.expiresAt)}`}
-                          </p>
-                        </div>
-                        <FormLinkStatusPill status={r.status} />
-                        {r.status === 'pending' && (
-                          <button
-                            type="button"
-                            onClick={() => handleRevokeLink(r.linkId)}
-                            className="text-xs text-gray-400 hover:text-red-600 px-2 py-1 rounded transition-colors"
-                            title="Revogar link"
-                          >
-                            Revogar
-                          </button>
-                        )}
-                      </li>
-                    ))}
+                    {group.respondents.map((r) => {
+                      const isAnswered = r.status === 'answered'
+                      return (
+                        <li
+                          key={r.linkId}
+                          onClick={isAnswered ? goToView : undefined}
+                          className={`py-2.5 flex items-center gap-3 ${
+                            isAnswered ? 'cursor-pointer hover:bg-gray-50/60 rounded-md -mx-2 px-2' : ''
+                          }`}
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-gray-900 truncate">
+                              {r.respondentName || '(sem nome)'}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {formatAggregatedLabel(r)} · {isAnswered && r.submittedAt
+                                ? `respondido em ${formatDateTime(r.submittedAt)}`
+                                : `expira em ${formatDateTime(r.expiresAt)}`}
+                            </p>
+                          </div>
+                          <FormLinkStatusPill status={r.status} />
+                          {r.status === 'pending' && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleRevokeLink(r.linkId)
+                              }}
+                              className="text-xs text-gray-400 hover:text-red-600 px-2 py-1 rounded transition-colors"
+                              title="Revogar link"
+                            >
+                              Revogar
+                            </button>
+                          )}
+                        </li>
+                      )
+                    })}
                   </ul>
                 </div>
               )
