@@ -330,6 +330,64 @@ export interface MultiSendRecipient {
   customerContactId?: string | null
 }
 
+export interface FormSummary {
+  id: string
+  title: string
+}
+
+export interface FormVersionSummary {
+  id: string
+  version: number
+  title: string
+}
+
+export interface AggregatedRespondent {
+  linkId: string
+  respondentType: RespondentType
+  respondentName: string | null
+  customerContactId: string | null
+  relationType: string | null
+  status: FormLinkStatus
+  submittedAt: string | null
+  expiresAt: string
+}
+
+export interface AggregatedFormGroup {
+  form: FormSummary
+  version: FormVersionSummary
+  sentAt: string
+  respondents: AggregatedRespondent[]
+}
+
+export interface ScoreResult {
+  formulaId: string
+  name: string
+  operation: 'sum' | 'mean' | 'min' | 'max' | 'count'
+  value: number | null
+  classification: string | null
+  contributionsCount: number
+}
+
+export interface ComparisonRespondent {
+  linkId: string
+  respondentType: RespondentType
+  respondentName: string | null
+  customerContactId: string | null
+  relationType: string | null
+  status: FormLinkStatus
+  submittedAt: string | null
+  answers: FormFieldAnswer[]
+  scoreBreakdown: ScoreResult[]
+}
+
+export interface ComparisonResult {
+  form: FormSummary
+  version: FormVersionSummary
+  fields: FormField[]
+  scoringConfig: ScoringConfig
+  respondents: ComparisonRespondent[]
+}
+
 export interface PublicFormData {
   formTitle: string
   formDescription: string | null
