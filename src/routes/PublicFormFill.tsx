@@ -57,7 +57,7 @@ export default function PublicFormFill() {
 
     setSubmitting(true)
     try {
-      await submitPublicForm(token, formData.customerName ?? '', answers)
+      await submitPublicForm(token, answers)
       setPageState('success')
     } catch (err: unknown) {
       const parsed = parseError(err)
