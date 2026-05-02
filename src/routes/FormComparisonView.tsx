@@ -3,8 +3,6 @@ import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
 import type {
   ComparisonResult,
   ComparisonRespondent,
-  FormField,
-  FormFieldAnswer,
 } from '@/types'
 import { CUSTOMER_CONTACT_RELATION_LABELS } from '@/types'
 import { getFormComparison } from '@/lib/api/customer-forms-api'
@@ -14,13 +12,9 @@ import Spinner from '@/components/ui/Spinner'
 import Button from '@/components/ui/Button'
 import { getInitials } from '@/lib/avatar-utils'
 import { colorForIndex, type RespondentColor } from '@/lib/respondent-colors'
-import ComparisonLegend from '@/components/comparison/ComparisonLegend'
 import ComparisonFormView from '@/components/comparison/ComparisonFormView'
-import ComparisonTablePreview from '@/components/comparison/ComparisonTablePreview'
 
-type ViewMode = 'form' | 'table'
-
-interface RespondentVisual {
+export interface RespondentVisual {
   respondent: ComparisonRespondent
   index: number
   color: RespondentColor
@@ -47,7 +41,6 @@ export default function FormComparisonView() {
 
   const [data, setData] = useState<ComparisonResult | null>(null)
   const [loading, setLoading] = useState(true)
-  const [viewMode, setViewMode] = useState<ViewMode>('form')
 
   useEffect(() => {
     if (!customerId || !formId || !versionId) {
@@ -129,54 +122,14 @@ export default function FormComparisonView() {
       </div>
 
       <div className="flex-1 bg-gray-50/50">
-        <div className="max-w-page mx-auto px-page py-6 space-y-5">
-          <ComparisonLegend visuals={respondentVisuals} />
-
-          <div className="inline-flex items-center bg-white rounded-xl border border-gray-200 p-1 shadow-sm">
-            <button
-              type="button"
-              onClick={() => setViewMode('form')}
-              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                viewMode === 'form' ? 'bg-brand-500 text-white' : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Formulário
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('table')}
-              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                viewMode === 'table' ? 'bg-brand-500 text-white' : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Tabela
-            </button>
-          </div>
-
-          {viewMode === 'form' && (
-            <ComparisonFormView
-              sectionGroups={sectionGroups}
-              visuals={answeredVisuals}
-            />
-          )}
-
-          {viewMode === 'table' && (
-            <ComparisonTablePreview data={data} visuals={respondentVisuals} />
-          )}
+        <div className="max-w-page mx-auto px-page py-6">
+          <ComparisonFormView
+            data={data}
+            sectionGroups={sectionGroups}
+            visuals={answeredVisuals}
+          />
         </div>
       </div>
     </div>
   )
-}
-
-export function findAnswer(answers: FormFieldAnswer[], fieldId: string): FormFieldAnswer | undefined {
-  return answers.find((a) => a.fieldId === fieldId)
-}
-
-export function getOptionValue(field: FormField, answer: FormFieldAnswer | undefined): number | null {
-  if (!answer) return null
-  const id = answer.selectedOptionIds[0]
-  if (!id) return null
-  const opt = field.options.find((o) => o.id === id)
-  return opt?.value ?? null
 }
