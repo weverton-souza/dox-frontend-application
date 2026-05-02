@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { SaveIcon, HistoryIcon, EyeIcon, TemplateIcon } from '@/components/icons'
+import { SaveIcon, HistoryIcon, EyeIcon, TemplateIcon, SendIcon } from '@/components/icons'
 
 interface ToolbarAction {
   id: string
@@ -17,6 +17,7 @@ interface EditorFloatingToolbarProps {
   showPreview: boolean
   onToggleNumbering?: () => void
   numberingActive?: boolean
+  onRequestResponses?: () => void
 }
 
 const NumberingIcon = ({ size = 16 }: { size?: number }) => (
@@ -38,6 +39,7 @@ export default function EditorFloatingToolbar({
   showPreview,
   onToggleNumbering,
   numberingActive = false,
+  onRequestResponses,
 }: EditorFloatingToolbarProps) {
   const [hoveredId, setHoveredId] = useState<string | null>(null)
 
@@ -67,6 +69,14 @@ export default function EditorFloatingToolbar({
           label: numberingActive ? 'Remover numeração' : 'Numerar seções',
           onClick: onToggleNumbering,
           active: numberingActive,
+        }]
+      : []),
+    ...(onRequestResponses
+      ? [{
+          id: 'request-responses',
+          icon: <SendIcon size={16} />,
+          label: 'Solicitar respostas',
+          onClick: onRequestResponses,
         }]
       : []),
     {

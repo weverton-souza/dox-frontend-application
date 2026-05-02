@@ -295,15 +295,39 @@ export interface FormSectionGroup {
 
 export type FormLinkStatus = 'PENDING' | 'ANSWERED' | 'EXPIRED'
 
+export type RespondentType = 'professional' | 'customer' | 'contact'
+
+export const RESPONDENT_TYPE_LABELS: Record<RespondentType, string> = {
+  professional: 'Profissional',
+  customer: 'Cliente',
+  contact: 'Contato',
+}
+
+export interface RespondentInfo {
+  type: RespondentType
+  name: string | null
+  customerContactId?: string | null
+  relationType?: string | null
+}
+
 export interface FormLink {
   id: string
   token: string
   formId: string
+  formVersionId: string
   customerId: string
+  customerContactId?: string | null
+  respondentType: RespondentType
+  respondent: RespondentInfo
   status: FormLinkStatus
   expiresAt: string
   createdAt: string
   updatedAt: string
+}
+
+export interface MultiSendRecipient {
+  respondentType: RespondentType
+  customerContactId?: string | null
 }
 
 export interface PublicFormData {

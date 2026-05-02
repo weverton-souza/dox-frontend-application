@@ -6,12 +6,14 @@ import type {
   CustomerNote,
   CustomerEvent,
   CustomerEventType,
+  FormLink,
   Report,
 } from '@/types'
 import {
   createEmptyCustomerEvent,
   CUSTOMER_EVENT_TYPE_LABELS,
   CUSTOMER_EVENT_TYPE_COLORS,
+  CUSTOMER_CONTACT_RELATION_LABELS,
 } from '@/types'
 import {
   getCustomer,
@@ -24,10 +26,12 @@ import {
   deleteCustomerEvent as apiDeleteCustomerEvent,
 } from '@/lib/api/customer-api'
 import { getReportsByCustomer } from '@/lib/api/report-api'
+import { getFormLinksByCustomer, revokeFormLink } from '@/lib/api/form-link-api'
 import { formatDateTime, calculateAge } from '@/lib/utils'
 import { useCreateReport } from '@/lib/hooks/use-create-report'
 import { useError } from '@/contexts/ErrorContext'
 import NewReportModal from '@/components/NewReportModal'
+import MultiRespondentSendModal from '@/components/form-builder/MultiRespondentSendModal'
 import Input from '@/components/ui/Input'
 import TextArea from '@/components/ui/TextArea'
 import Button from '@/components/ui/Button'
@@ -41,7 +45,7 @@ import { getAvatarColor, getInitials } from '@/lib/avatar-utils'
 
 // ========== Types ==========
 
-type ProfileSection = 'personal' | 'contact' | 'clinical' | 'contacts' | 'reports' | 'notes' | 'timeline'
+type ProfileSection = 'personal' | 'contact' | 'clinical' | 'contacts' | 'reports' | 'forms' | 'notes' | 'timeline'
 
 interface TabItem {
   key: ProfileSection
@@ -57,6 +61,7 @@ const TABS: TabItem[] = [
   { key: 'clinical', label: 'Dados Clínicos', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg> },
   { key: 'contacts', label: 'Contatos', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
   { key: 'reports', label: 'Relatórios', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> },
+  { key: 'forms', label: 'Formulários', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 9h8"/><path d="M8 13h8"/><path d="M8 17h5"/></svg> },
   { key: 'notes', label: 'Notas', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> },
   { key: 'timeline', label: 'Histórico', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> },
 ]
@@ -114,6 +119,11 @@ export default function CustomerProfile() {
   const [events, setEvents] = useState<CustomerEvent[]>([])
   const [showEventForm, setShowEventForm] = useState(false)
   const [newEvent, setNewEvent] = useState<CustomerEvent | null>(null)
+
+  // Forms
+  const [formLinks, setFormLinks] = useState<FormLink[]>([])
+  const [formsLoading, setFormsLoading] = useState(false)
+  const [showSendModal, setShowSendModal] = useState(false)
 
   // Load customer
   useEffect(() => {
@@ -231,6 +241,43 @@ export default function CustomerProfile() {
     },
     [customer, showError]
   )
+
+  // Forms handlers
+  const loadFormLinks = useCallback(async () => {
+    if (!customer) return
+    setFormsLoading(true)
+    try {
+      const links = await getFormLinksByCustomer(customer.id)
+      setFormLinks(links)
+    } catch (err) {
+      showError(err)
+    } finally {
+      setFormsLoading(false)
+    }
+  }, [customer, showError])
+
+  useEffect(() => {
+    if (activeSection === 'forms' && customer) {
+      loadFormLinks()
+    }
+  }, [activeSection, customer, loadFormLinks])
+
+  const handleRevokeLink = useCallback(
+    async (linkId: string) => {
+      try {
+        await revokeFormLink(linkId)
+        await loadFormLinks()
+      } catch (err) {
+        showError(err)
+      }
+    },
+    [loadFormLinks, showError]
+  )
+
+  const handleSendModalClose = useCallback(() => {
+    setShowSendModal(false)
+    if (activeSection === 'forms') loadFormLinks()
+  }, [activeSection, loadFormLinks])
 
   // ========== Loading / Not found ==========
 
@@ -365,6 +412,78 @@ export default function CustomerProfile() {
   function renderContactsSection() {
     if (!id) return null
     return <CustomerContactsTab customerId={id} />
+  }
+
+  function renderFormsSection() {
+    const grouped = groupLinksByForm(formLinks)
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-gray-900">Formulários</h2>
+          <Button size="sm" onClick={() => setShowSendModal(true)}>+ Enviar formulário</Button>
+        </div>
+
+        {formsLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Spinner />
+          </div>
+        ) : grouped.length === 0 ? (
+          <div className="rounded-2xl border-2 border-dashed border-gray-200 py-14 text-center">
+            <div className="mx-auto w-14 h-14 rounded-full bg-brand-50 flex items-center justify-center mb-4">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-brand-500" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="4" width="18" height="16" rx="2"/>
+                <path d="M8 9h8"/>
+                <path d="M8 13h8"/>
+                <path d="M8 17h5"/>
+              </svg>
+            </div>
+            <p className="text-sm font-medium text-gray-900">Nenhum formulário enviado</p>
+            <p className="text-xs text-gray-500 mt-1">Envie formulários para o cliente ou contatos cadastrados</p>
+            <Button variant="ghost" size="sm" className="mt-4" onClick={() => setShowSendModal(true)}>Enviar formulário</Button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {grouped.map((group) => (
+              <div key={group.key} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm font-semibold text-gray-900">
+                    Versão enviada em {formatDateTime(group.sentAt)}
+                  </p>
+                  <span className="text-xs text-gray-400">
+                    {group.links.length} respondente{group.links.length === 1 ? '' : 's'}
+                  </span>
+                </div>
+                <ul className="divide-y divide-gray-100">
+                  {group.links.map((link) => (
+                    <li key={link.id} className="py-2.5 flex items-center gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-gray-900 truncate">
+                          {link.respondent.name || '(sem nome)'}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {formatRespondentLabel(link)} · expira em {formatDateTime(link.expiresAt)}
+                        </p>
+                      </div>
+                      <FormLinkStatusPill status={link.status} />
+                      {link.status === 'PENDING' && (
+                        <button
+                          type="button"
+                          onClick={() => handleRevokeLink(link.id)}
+                          className="text-xs text-gray-400 hover:text-red-600 px-2 py-1 rounded transition-colors"
+                          title="Revogar link"
+                        >
+                          Revogar
+                        </button>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    )
   }
 
   function renderNotesSection() {
@@ -563,6 +682,7 @@ export default function CustomerProfile() {
     clinical: renderClinicalSection,
     contacts: renderContactsSection,
     reports: renderReportsSection,
+    forms: renderFormsSection,
     notes: renderNotesSection,
     timeline: renderTimelineSection,
   }
@@ -695,8 +815,67 @@ export default function CustomerProfile() {
           onSelectBlank={createBlank}
         />
       )}
+
+      {customer && showSendModal && (
+        <MultiRespondentSendModal
+          isOpen={showSendModal}
+          onClose={handleSendModalClose}
+          customer={customer}
+        />
+      )}
     </div>
   )
+}
+
+// ========== Forms helpers ==========
+
+interface FormLinkGroup {
+  key: string
+  formId: string
+  formVersionId: string
+  sentAt: string
+  links: FormLink[]
+}
+
+function groupLinksByForm(links: FormLink[]): FormLinkGroup[] {
+  const map = new Map<string, FormLinkGroup>()
+  for (const link of links) {
+    const key = `${link.formId}:${link.formVersionId}`
+    const existing = map.get(key)
+    if (existing) {
+      existing.links.push(link)
+      if (link.createdAt < existing.sentAt) existing.sentAt = link.createdAt
+    } else {
+      map.set(key, {
+        key,
+        formId: link.formId,
+        formVersionId: link.formVersionId,
+        sentAt: link.createdAt,
+        links: [link],
+      })
+    }
+  }
+  return Array.from(map.values()).sort((a, b) => b.sentAt.localeCompare(a.sentAt))
+}
+
+function formatRespondentLabel(link: FormLink): string {
+  if (link.respondent.type === 'customer') return 'Cliente'
+  if (link.respondent.type === 'professional') return 'Profissional'
+  const rt = link.respondent.relationType as keyof typeof CUSTOMER_CONTACT_RELATION_LABELS | undefined
+  if (rt && CUSTOMER_CONTACT_RELATION_LABELS[rt]) {
+    return rt === 'parent' ? 'Filiação' : CUSTOMER_CONTACT_RELATION_LABELS[rt]
+  }
+  return 'Contato'
+}
+
+function FormLinkStatusPill({ status }: { status: FormLink['status'] }) {
+  const config: Record<FormLink['status'], { label: string; className: string }> = {
+    PENDING: { label: 'Pendente', className: 'bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200/60' },
+    ANSWERED: { label: 'Respondido', className: 'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200/60' },
+    EXPIRED: { label: 'Expirado', className: 'bg-gray-100 text-gray-500 ring-1 ring-inset ring-gray-200' },
+  }
+  const c = config[status]
+  return <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${c.className}`}>{c.label}</span>
 }
 
 // ========== SectionCard helper ==========
