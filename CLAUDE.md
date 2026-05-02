@@ -289,18 +289,24 @@ chore: descrição curta em português
 - Trabalhar, commitar, push, PR, merge
 - O dev server roda no repo principal — worktrees causam descompasso entre código editado e código servido
 
-## Modificação de Código Compartilhado
+## Mudanças fora do escopo da feature alvo
 
-Antes de alterar a assinatura, comportamento, default ou retorno de qualquer função, tipo, componente ou endpoint que já existe e é usado em mais de um lugar:
+Antes de modificar regra de negócio, contrato ou comportamento de uma feature **diferente** da feature alvo da conversa atual:
 
-1. Rodar grep e listar TODOS os call sites
-2. Apresentar: o que muda, quais arquivos/comportamentos podem quebrar, e por quê
+1. Listar exatamente o que mudaria e em qual feature
+2. Explicar por que essa mudança apareceu (efeito colateral, dependência, cleanup oportunista)
 3. Pedir confirmação explícita antes de aplicar
-4. Se a mudança for invasiva, oferecer alternativa (criar função nova vs modificar in-place)
+4. Oferecer alternativa que não toque a outra feature, se possível
 
-Vale para: helpers em `lib/`, hooks em `lib/hooks/`, componentes UI compartilhados em `components/ui/`, tipos em `types/`, contratos de API consumidos pelo frontend.
+**Não precisa avisar:** mudanças dentro da feature alvo. Trabalhando em forms, mexer em FormBuilder, form-api, FormFieldRenderer é óbvio.
 
-Não vale para: variáveis locais de uma função, novos arquivos, novos componentes, código sem outros consumidores.
+**Precisa avisar:**
+- Trabalhando em forms e precisar mexer em customer-api, billing, ou qualquer outra área
+- Refatoração de helper compartilhado por várias features (`lib/`, `lib/hooks/`, `components/ui/`)
+- Mudança de tipo central em `types/index.ts` que outras features consomem
+- Cleanup oportunista em código que não tem relação com o pedido atual
+
+**Critério prático:** se a mudança aparece num diff e o usuário pode pensar "por que mexeu nisso?", devia ter sido avisado.
 
 ## Coisas para Nunca Fazer
 
