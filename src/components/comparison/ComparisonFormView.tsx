@@ -169,22 +169,14 @@ export default function ComparisonFormView({ data, sectionGroups, visuals }: Com
                         key={v.respondent.linkId}
                         className="text-left px-3 py-2.5 font-medium text-xs uppercase tracking-wide min-w-[140px]"
                       >
-                        <div className="flex items-center gap-1.5">
-                          <span
-                            className="shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-semibold text-white"
-                            style={{ backgroundColor: v.color.primary }}
-                          >
-                            {v.initials}
-                          </span>
-                          <span
-                            className="normal-case truncate"
-                            style={{ color: v.color.primary }}
-                            title={v.respondent.respondentName ?? ''}
-                          >
-                            {v.respondent.respondentName?.split(' ')[0] ?? '—'}
-                            <span className="text-gray-400 font-normal ml-1">({v.label})</span>
-                          </span>
-                        </div>
+                        <span
+                          className="normal-case truncate"
+                          style={{ color: v.color.primary }}
+                          title={v.respondent.respondentName ?? ''}
+                        >
+                          {v.respondent.respondentName?.split(' ')[0] ?? '—'}
+                          <span className="text-gray-400 font-normal ml-1">({v.label})</span>
+                        </span>
                       </th>
                     ))}
                   </tr>
@@ -218,30 +210,16 @@ export default function ComparisonFormView({ data, sectionGroups, visuals }: Com
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gray-50/60 border-b border-gray-100">
-                  <th className="text-left px-4 py-2.5 font-medium text-xs text-gray-500 uppercase tracking-wide w-[44%] min-w-[220px]">
-                    Pontuação
-                  </th>
-                  {visuals.map((v) => (
-                    <th key={v.respondent.linkId} className="text-left px-3 py-2.5 font-medium text-xs uppercase tracking-wide min-w-[140px]">
-                      <span style={{ color: v.color.primary }}>
-                        {v.respondent.respondentName?.split(' ')[0] ?? '—'}
-                      </span>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
               <tbody>
                 {scoreFormulas.map((firstScore, idx) => (
                   <tr key={firstScore.formulaId} className="border-b border-gray-50 last:border-b-0">
-                    <td className="px-4 py-3 font-semibold text-gray-900 align-top">
-                      {firstScore.name}
+                    <td className="px-4 py-3 font-medium text-xs text-gray-500 uppercase tracking-wide align-top w-[44%] min-w-[220px]">
+                      {idx === 0 ? 'Pontuação' : firstScore.name}
                     </td>
                     {visuals.map((v) => (
                       <td
                         key={v.respondent.linkId}
-                        className="px-3 py-3 align-top"
+                        className="px-3 py-3 align-top min-w-[140px]"
                         style={{ backgroundColor: v.color.cellTint }}
                       >
                         <ScoreCell score={v.respondent.scoreBreakdown[idx]} color={v.color} />
