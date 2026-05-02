@@ -559,14 +559,36 @@ function renderCompactPreview(field: FormField) {
 
     case 'likert-matrix':
       return (
-        <div className="space-y-1.5">
-          <div className="flex items-center gap-2 text-xs text-gray-400">
-            <span>Escala:</span>
-            <span className="font-mono">
-              {field.likertScale.map((p) => `${p.value}=${p.label}`).join(' · ')}
-            </span>
-          </div>
-          <span className="text-xs text-gray-400">{field.likertRows.length} linhas</span>
+        <div className="overflow-x-auto -mx-1">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-gray-200">
+                <th className="text-left text-xs text-gray-400 font-normal py-1.5 px-2 w-1/3"></th>
+                {field.likertScale.map((point) => (
+                  <th key={point.value} className="text-center text-xs text-gray-500 font-normal py-1.5 px-1.5">
+                    {point.label || point.value}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {field.likertRows.slice(0, 4).map((row, idx) => (
+                <tr key={row.id} className={idx % 2 === 0 ? 'bg-gray-50/40' : ''}>
+                  <td className="text-xs text-gray-600 py-1.5 px-2">
+                    {row.label || `Pergunta ${idx + 1}`}
+                  </td>
+                  {field.likertScale.map((point) => (
+                    <td key={point.value} className="text-center py-1.5 px-1.5">
+                      <span className="inline-block w-3 h-3 rounded-full border border-gray-300" />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {field.likertRows.length > 4 && (
+            <p className="text-xs text-gray-400 mt-1 px-2">+{field.likertRows.length - 4} linhas</p>
+          )}
         </div>
       )
 
