@@ -32,6 +32,32 @@ const CATEGORY_BY_TYPE: Record<PatientContactRelationType, RelationCategory> = {
   OTHER: 'other',
 }
 
+// Mapeia valores antigos (PT/intermediários) para os novos enums (EN).
+// Backend Kotlin é strict, então isso protege dados criados em versões anteriores.
+const LEGACY_RELATION_MAP: Record<string, PatientContactRelationType> = {
+  FILIACAO: 'PARENT',
+  MAE: 'MOTHER',
+  PAI: 'FATHER',
+  RESPONSAVEL_LEGAL: 'LEGAL_GUARDIAN',
+  CONJUGE: 'SPOUSE',
+  FILHO: 'CHILD',
+  IRMAO: 'SIBLING',
+  AVO: 'GRANDPARENT',
+  TIO: 'UNCLE_AUNT',
+  PROFESSOR: 'TEACHER',
+  ESCOLA: 'SCHOOL',
+  MEDICO: 'DOCTOR',
+  TERAPEUTA: 'THERAPIST',
+  AMIGO: 'FRIEND',
+  OUTRO: 'OTHER',
+}
+
+function normalizeRelation(raw: string): PatientContactRelationType {
+  if (raw in PATIENT_CONTACT_RELATION_LABELS) return raw as PatientContactRelationType
+  if (raw in LEGACY_RELATION_MAP) return LEGACY_RELATION_MAP[raw]
+  return 'OTHER'
+}
+
 const CATEGORY_PILL_CLASS: Record<RelationCategory, string> = {
   family: 'bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200/60',
   legal: 'bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200/60',
@@ -136,9 +162,10 @@ export default function PatientContactsTab({ customerId }: PatientContactsTabPro
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
           {contacts.map((contact) => {
-            const category = CATEGORY_BY_TYPE[contact.relationType] ?? 'other'
+            const normalizedRelation = normalizeRelation(contact.relationType as unknown as string)
+            const category = CATEGORY_BY_TYPE[normalizedRelation]
             const pillClass = CATEGORY_PILL_CLASS[category]
-            const relationLabel = PATIENT_CONTACT_RELATION_LABELS[contact.relationType] ?? '—'
+            const relationLabel = PATIENT_CONTACT_RELATION_LABELS[normalizedRelation]
             const avatarColor = getAvatarColor(contact.name || '?')
             const initials = getInitials(contact.name || '?')
             return (
