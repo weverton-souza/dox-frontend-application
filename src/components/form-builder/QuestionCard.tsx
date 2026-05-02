@@ -106,13 +106,20 @@ export default function QuestionCard({
     ) {
       updated.options = [createEmptyFormFieldOption(), createEmptyFormFieldOption()]
     }
-    if (newType === 'inventory-item' && field.options.length < 2) {
-      updated.options = [
-        createEmptyInventoryOption(0),
-        createEmptyInventoryOption(1),
-        createEmptyInventoryOption(2),
-        createEmptyInventoryOption(3),
-      ]
+    if (newType === 'inventory-item') {
+      if (field.options.length < 2) {
+        updated.options = [
+          createEmptyInventoryOption(0),
+          createEmptyInventoryOption(1),
+          createEmptyInventoryOption(2),
+          createEmptyInventoryOption(3),
+        ]
+      } else {
+        updated.options = field.options.map((opt, i) => ({
+          ...opt,
+          value: opt.value ?? i,
+        }))
+      }
     }
     if (newType === 'likert-matrix') {
       if (field.likertScale.length === 0) updated.likertScale = createDefaultLikertScale()

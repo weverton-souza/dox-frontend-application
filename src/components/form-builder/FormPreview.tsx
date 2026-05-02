@@ -112,14 +112,8 @@ export default function FormPreview({ title, description, fields }: FormPreviewP
               <label key={opt.id} className="flex items-center gap-3 px-3 py-2.5 cursor-not-allowed">
                 <span className="w-[18px] h-[18px] rounded-full border-2 border-gray-300 shrink-0" />
                 <span className="text-sm text-gray-500 flex-1">{opt.label || 'Opção'}</span>
-                <span className="text-xs font-mono text-brand-600 bg-brand-50 px-2 py-0.5 rounded">
-                  {opt.value ?? 0}
-                </span>
               </label>
             ))}
-            {field.reverseScored && (
-              <p className="text-xs text-amber-600 italic mt-1">Item reverso</p>
-            )}
           </div>
         )}
 
@@ -131,10 +125,7 @@ export default function FormPreview({ title, description, fields }: FormPreviewP
                   <th className="text-left text-xs text-gray-500 font-normal py-2 px-3 w-1/3"></th>
                   {field.likertScale.map((point) => (
                     <th key={point.value} className="text-center text-xs text-gray-500 font-normal py-2 px-2">
-                      <div className="flex flex-col items-center gap-0.5">
-                        <span className="text-gray-400">{point.value}</span>
-                        <span>{point.label}</span>
-                      </div>
+                      {point.label}
                     </th>
                   ))}
                 </tr>
@@ -144,9 +135,6 @@ export default function FormPreview({ title, description, fields }: FormPreviewP
                   <tr key={row.id} className={idx % 2 === 0 ? 'bg-gray-50/40' : ''}>
                     <td className="text-sm text-gray-500 py-2.5 px-3">
                       {row.label || `Pergunta ${idx + 1}`}
-                      {row.reverseScored && (
-                        <span className="ml-2 text-xs text-amber-600">(reversa)</span>
-                      )}
                     </td>
                     {field.likertScale.map((point) => (
                       <td key={point.value} className="text-center py-2.5 px-2">

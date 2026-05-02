@@ -222,10 +222,7 @@ export default function FormFieldRenderer({ field, answer, onChange }: FormField
                 <th className="text-left text-xs text-gray-500 font-normal py-2 px-3 w-1/3"></th>
                 {field.likertScale.map((point) => (
                   <th key={point.value} className="text-center text-xs text-gray-500 font-normal py-2 px-2">
-                    <div className="flex flex-col items-center gap-0.5">
-                      <span className="text-gray-400">{point.value}</span>
-                      <span>{point.label}</span>
-                    </div>
+                    {point.label}
                   </th>
                 ))}
               </tr>

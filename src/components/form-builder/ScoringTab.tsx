@@ -52,9 +52,19 @@ export default function ScoringTab({ fields, scoringConfig, onChange }: ScoringT
 
   return (
     <div className="space-y-3">
+      {/* Helper card */}
+      <div className="bg-brand-50/50 border border-brand-100 rounded-lg p-4 text-sm text-gray-700 leading-relaxed">
+        <p className="font-medium mb-1">Como funciona</p>
+        <p className="text-xs text-gray-600">
+          Uma <strong>fórmula</strong> soma (ou faz média) das pontuações das perguntas selecionadas e produz um número.
+          As <strong>faixas</strong> traduzem esse número em uma classificação clínica (ex: 0–13 = Mínima, 14–19 = Leve).
+          Exemplo: BDI-II soma 21 perguntas e classifica em Mínima/Leve/Moderada/Grave conforme o total.
+        </p>
+      </div>
+
       {scoringConfig.formulas.length === 0 ? (
         <div className="bg-white rounded-lg border border-dashed border-gray-300 p-8 text-center">
-          <p className="text-sm text-gray-500 mb-3">Nenhuma fórmula de pontuação configurada.</p>
+          <p className="text-sm text-gray-500 mb-3">Nenhuma fórmula configurada.</p>
           <Button onClick={addFormula} variant="primary" size="sm">
             Adicionar fórmula
           </Button>
@@ -187,7 +197,12 @@ function FormulaCard({ formula, scorableFields, fieldsById, onUpdate, onRemove }
       {/* Classification ranges */}
       <div className="p-4 border-t border-gray-100 space-y-2">
         <div className="flex items-center justify-between">
-          <span className="text-xs text-gray-500">Classificação por faixa</span>
+          <div>
+            <span className="text-xs text-gray-500">Faixas de classificação</span>
+            <p className="text-xs text-gray-400 mt-0.5">
+              Traduzem o valor calculado em um rótulo. Ex: 0 a 13 → Mínima.
+            </p>
+          </div>
           <Button onClick={addClassification} variant="ghost" size="sm">
             + Faixa
           </Button>
@@ -195,32 +210,40 @@ function FormulaCard({ formula, scorableFields, fieldsById, onUpdate, onRemove }
 
         {formula.classification.length === 0 ? (
           <p className="text-xs text-gray-400 italic py-1">
-            Sem classificação. O resultado mostra apenas o valor numérico.
+            Sem faixas. O resultado mostra apenas o valor numérico.
           </p>
         ) : (
           <div className="space-y-1.5">
+            <div className="grid grid-cols-[64px_auto_64px_auto_1fr_auto] gap-2 text-[10px] uppercase tracking-wide text-gray-400 px-1">
+              <span>De</span>
+              <span></span>
+              <span>Até</span>
+              <span></span>
+              <span>Rótulo</span>
+              <span></span>
+            </div>
             {formula.classification.map((range, index) => (
-              <div key={index} className="flex items-center gap-2 group/r">
+              <div key={index} className="grid grid-cols-[64px_auto_64px_auto_1fr_auto] gap-2 items-center group/r">
                 <input
                   type="number"
                   value={range.min}
                   onChange={(e) => updateClassification(index, { min: Number(e.target.value) })}
-                  className="w-16 text-sm font-mono text-gray-700 bg-gray-50 border border-gray-200 rounded px-2 py-1 text-center focus:border-brand-500 focus:outline-none"
+                  className="text-sm font-mono text-gray-700 bg-gray-50 border border-gray-200 rounded px-2 py-1 text-center focus:border-brand-500 focus:outline-none"
                 />
                 <span className="text-xs text-gray-400">a</span>
                 <input
                   type="number"
                   value={range.max}
                   onChange={(e) => updateClassification(index, { max: Number(e.target.value) })}
-                  className="w-16 text-sm font-mono text-gray-700 bg-gray-50 border border-gray-200 rounded px-2 py-1 text-center focus:border-brand-500 focus:outline-none"
+                  className="text-sm font-mono text-gray-700 bg-gray-50 border border-gray-200 rounded px-2 py-1 text-center focus:border-brand-500 focus:outline-none"
                 />
                 <span className="text-xs text-gray-400">→</span>
                 <input
                   type="text"
                   value={range.label}
                   onChange={(e) => updateClassification(index, { label: e.target.value })}
-                  placeholder="ex: Mínima, Leve, Moderada, Severa"
-                  className="flex-1 text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded px-2 py-1 focus:border-brand-500 focus:outline-none placeholder:text-gray-400"
+                  placeholder="ex: Mínima"
+                  className="text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded px-2 py-1 focus:border-brand-500 focus:outline-none placeholder:text-gray-400"
                 />
                 <button
                   type="button"
