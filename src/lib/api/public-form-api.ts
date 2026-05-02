@@ -35,16 +35,9 @@ export interface PublicFormDraft {
 }
 
 export async function getPublicFormDraft(token: string): Promise<PublicFormDraft | null> {
-  try {
-    const { data } = await publicApi.get<PublicFormDraft>(`/public/forms/${token}/draft`)
-    return data
-  } catch (err: unknown) {
-    if (err && typeof err === 'object' && 'response' in err) {
-      const status = (err as { response?: { status?: number } }).response?.status
-      if (status === 404) return null
-    }
-    throw err
-  }
+  const response = await publicApi.get<PublicFormDraft | ''>(`/public/forms/${token}/draft`)
+  if (response.status === 204 || !response.data) return null
+  return response.data as PublicFormDraft
 }
 
 export async function savePublicFormDraft(
