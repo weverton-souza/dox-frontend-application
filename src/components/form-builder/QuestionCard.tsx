@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import type { FormField, FormFieldType, LikertScalePoint, LikertRow } from '@/types'
+import type { ConditionalRule, FormField, FormFieldType, LikertScalePoint, LikertRow } from '@/types'
 import {
   createEmptyFormFieldOption,
   createEmptyInventoryOption,
@@ -18,11 +18,13 @@ import {
   CheckIcon,
   CalendarIcon,
 } from '@/components/icons'
+import ConditionalLogicEditor from '@/components/form-builder/ConditionalLogicEditor'
 
 // ─── Props ────────────────────────────────────────────────────
 
 interface QuestionCardProps {
   field: FormField
+  allFields?: FormField[]
   isFocused: boolean
   onFocus: () => void
   onUpdate: (field: FormField) => void
@@ -52,6 +54,7 @@ const questionTypes: { type: FormFieldType; label: string }[] = [
 
 export default function QuestionCard({
   field,
+  allFields = [],
   isFocused,
   onFocus,
   onUpdate,
@@ -66,6 +69,7 @@ export default function QuestionCard({
   const [showSectionMenu, setShowSectionMenu] = useState(false)
   const [showVarKey, setShowVarKey] = useState(!!(field.variableKey ?? ''))
   const [showDescription, setShowDescription] = useState(!!field.description)
+  const [showLogic, setShowLogic] = useState(!!(field.showWhen && field.showWhen.length > 0))
 
   const isSectionHeader = field.type === 'section-header'
 
@@ -372,6 +376,17 @@ export default function QuestionCard({
           </div>
         )}
 
+        {/* Conditional logic (toggleable) */}
+        {showLogic && !isSectionHeader && (
+          <div className="mt-3 bg-gray-50/60 border border-gray-200 rounded-lg p-3">
+            <ConditionalLogicEditor
+              field={field}
+              allFields={allFields}
+              onUpdate={(rules: ConditionalRule[] | undefined) => update({ showWhen: rules })}
+            />
+          </div>
+        )}
+
         {/* Separator */}
         <div className="border-t border-gray-200 mt-5 pt-3">
           <div className="flex items-center justify-end gap-1">
@@ -447,6 +462,20 @@ export default function QuestionCard({
                       {showVarKey ? <CheckIcon /> : <span className="w-4" />}
                       Chave de variável
                     </button>
+                    {!isSectionHeader && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (showLogic) update({ showWhen: undefined })
+                          setShowLogic(!showLogic)
+                          setShowMoreMenu(false)
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                      >
+                        {showLogic ? <CheckIcon /> : <span className="w-4" />}
+                        Lógica condicional
+                      </button>
+                    )}
                   </div>
                 </>
               )}

@@ -7,6 +7,8 @@ import { parseError } from '@/lib/api/error-handler'
 import { useFormValidation, isFieldEmpty } from '@/lib/hooks/use-form-validation'
 import { useFormDraft } from '@/lib/hooks/use-form-draft'
 import { useSortedFields } from '@/lib/hooks/use-sorted-fields'
+import { useFieldVisibility } from '@/lib/hooks/use-field-visibility'
+import { useAutoCalculatedFields } from '@/lib/hooks/use-auto-calculated-fields'
 import FormSectionFields from '@/components/form-fill/FormSectionFields'
 
 interface DraftPayload extends Record<string, unknown> {
@@ -92,8 +94,28 @@ export default function PublicFormFill() {
     }
   }, [formData, draftLoaded, initialDraft])
 
+  const allFields = useMemo(() => formData?.fields ?? [], [formData])
+  const visibleFieldIds = useFieldVisibility(allFields, answers)
+
+  const visibleFields = useMemo(
+    () => allFields.filter((f) => visibleFieldIds.has(f.id)),
+    [allFields, visibleFieldIds],
+  )
+
+  useAutoCalculatedFields({
+    fields: allFields,
+    answers,
+    onAnswerChange: (a) => {
+      setAnswers((prev) => {
+        const exists = prev.find((p) => p.fieldId === a.fieldId)
+        if (exists) return prev.map((p) => (p.fieldId === a.fieldId ? a : p))
+        return [...prev, a]
+      })
+    },
+  })
+
   const { validationErrors, validate, clearFieldError } = useFormValidation(
-    useCallback(() => formData?.fields ?? [], [formData]),
+    useCallback(() => visibleFields, [visibleFields]),
     useCallback(() => answers, [answers]),
   )
 
@@ -112,7 +134,7 @@ export default function PublicFormFill() {
     })
   }, [clearFieldError])
 
-  const { sectionGroups } = useSortedFields(formData?.fields)
+  const { sectionGroups } = useSortedFields(visibleFields)
 
   const pages = useMemo(() => {
     if (sectionGroups.length === 0) return []
@@ -131,11 +153,12 @@ export default function PublicFormFill() {
     const errors = new Set<string>()
     for (const field of fields) {
       if (!field.required || field.type === 'section-header') continue
+      if (!visibleFieldIds.has(field.id)) continue
       const answer = answers.find((a) => a.fieldId === field.id)
       if (!answer || isFieldEmpty(field, answer)) errors.add(field.id)
     }
     return errors
-  }, [answers])
+  }, [answers, visibleFieldIds])
 
   const handleNext = useCallback(() => {
     if (!currentSection) return
