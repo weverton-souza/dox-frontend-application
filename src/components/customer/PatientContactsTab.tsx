@@ -10,6 +10,35 @@ import {
 import { useError } from '@/contexts/ErrorContext'
 import { useConfirmDelete } from '@/lib/hooks/use-confirm-delete'
 import { applyMask } from '@/lib/masks'
+import { getAvatarColor, getInitials } from '@/lib/avatar-utils'
+
+type RelationCategory = 'family' | 'legal' | 'education' | 'health' | 'other'
+
+const CATEGORY_BY_TYPE: Record<PatientContactRelationType, RelationCategory> = {
+  PARENT: 'family',
+  MOTHER: 'family',
+  FATHER: 'family',
+  SPOUSE: 'family',
+  CHILD: 'family',
+  SIBLING: 'family',
+  GRANDPARENT: 'family',
+  UNCLE_AUNT: 'family',
+  LEGAL_GUARDIAN: 'legal',
+  TEACHER: 'education',
+  SCHOOL: 'education',
+  DOCTOR: 'health',
+  THERAPIST: 'health',
+  FRIEND: 'other',
+  OTHER: 'other',
+}
+
+const CATEGORY_PILL_CLASS: Record<RelationCategory, string> = {
+  family: 'bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200/60',
+  legal: 'bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200/60',
+  education: 'bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-200/60',
+  health: 'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200/60',
+  other: 'bg-gray-100 text-gray-600 ring-1 ring-inset ring-gray-200',
+}
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import Select from '@/components/ui/Select'
@@ -105,48 +134,88 @@ export default function PatientContactsTab({ customerId }: PatientContactsTabPro
           <p className="text-sm text-gray-500">Nenhum contato cadastrado</p>
         </div>
       ) : (
-        <div className="space-y-2">
-          {contacts.map((contact) => (
-            <div
-              key={contact.id}
-              className="rounded-lg border border-gray-200 p-4 group hover:border-gray-300 transition-colors"
-            >
-              <div className="flex items-start justify-between gap-3">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          {contacts.map((contact) => {
+            const category = CATEGORY_BY_TYPE[contact.relationType] ?? 'other'
+            const pillClass = CATEGORY_PILL_CLASS[category]
+            const relationLabel = PATIENT_CONTACT_RELATION_LABELS[contact.relationType] ?? '—'
+            const avatarColor = getAvatarColor(contact.name || '?')
+            const initials = getInitials(contact.name || '?')
+            return (
+              <div
+                key={contact.id}
+                className="relative rounded-xl border border-gray-200 bg-white p-4 group hover:border-gray-300 hover:shadow-sm transition-all"
+              >
                 <button
                   type="button"
                   onClick={() => setEditing(contact)}
-                  className="flex-1 min-w-0 text-left"
+                  className="w-full text-left flex items-start gap-3"
                 >
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="text-sm font-medium text-gray-900">{contact.name}</p>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-brand-50 text-brand-700">
-                      {PATIENT_CONTACT_RELATION_LABELS[contact.relationType]}
-                    </span>
-                    {!contact.canReceiveForms && (
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
-                        Não recebe formulários
+                  <div
+                    className={`shrink-0 w-10 h-10 rounded-full bg-gradient-to-br ${avatarColor} text-white text-sm font-semibold flex items-center justify-center shadow-sm`}
+                  >
+                    {initials}
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-semibold text-gray-900 truncate">
+                        {contact.name || '(sem nome)'}
+                      </p>
+                      <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${pillClass}`}>
+                        {relationLabel}
                       </span>
+                    </div>
+
+                    <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-500">
+                      {contact.email && (
+                        <span className="inline-flex items-center gap-1">
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400">
+                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                            <polyline points="22,6 12,13 2,6" />
+                          </svg>
+                          {contact.email}
+                        </span>
+                      )}
+                      {contact.phone && (
+                        <span className="inline-flex items-center gap-1">
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400">
+                            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                          </svg>
+                          {applyMask(contact.phone, 'phone')}
+                        </span>
+                      )}
+                    </div>
+
+                    {contact.notes && (
+                      <p className="text-xs text-gray-500 mt-2 line-clamp-2 leading-relaxed">
+                        {contact.notes}
+                      </p>
+                    )}
+
+                    {!contact.canReceiveForms && (
+                      <div className="mt-2 inline-flex items-center gap-1 text-[11px] text-gray-500">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="12" cy="12" r="10" />
+                          <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
+                        </svg>
+                        Não recebe formulários
+                      </div>
                     )}
                   </div>
-                  <div className="mt-1 flex flex-wrap gap-3 text-xs text-gray-500">
-                    {contact.email && <span>{contact.email}</span>}
-                    {contact.phone && <span>{applyMask(contact.phone, 'phone')}</span>}
-                  </div>
-                  {contact.notes && (
-                    <p className="text-xs text-gray-500 mt-1.5 line-clamp-2">{contact.notes}</p>
-                  )}
                 </button>
+
                 <button
                   type="button"
                   onClick={() => requestDelete(contact.id)}
-                  className="shrink-0 p-1.5 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
+                  className="absolute top-3 right-3 p-1.5 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
                   title="Excluir contato"
                 >
                   <TrashIcon />
                 </button>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 
