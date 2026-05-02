@@ -175,12 +175,6 @@ export default function FormComparisonView() {
 
       <div className="flex-1 bg-gray-50/50">
         <div className="max-w-page mx-auto px-page py-6 space-y-6">
-          {answeredRespondents.length < 2 && (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
-              É necessário ter ao menos 2 respondentes que responderam para uma comparação significativa.
-            </div>
-          )}
-
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
