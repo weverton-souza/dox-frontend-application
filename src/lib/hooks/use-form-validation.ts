@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react'
 import type { FormField, FormFieldAnswer } from '@/types'
 
-function isFieldEmpty(field: FormField, answer: FormFieldAnswer): boolean {
+export function isFieldEmpty(field: FormField, answer: FormFieldAnswer): boolean {
   switch (field.type) {
     case 'short-text':
     case 'long-text':
