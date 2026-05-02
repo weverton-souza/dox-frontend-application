@@ -465,7 +465,7 @@ export default function CustomerProfile() {
                         </p>
                       </div>
                       <FormLinkStatusPill status={link.status} />
-                      {link.status === 'PENDING' && (
+                      {link.status === 'pending' && (
                         <button
                           type="button"
                           onClick={() => handleRevokeLink(link.id)}
@@ -870,11 +870,11 @@ function formatRespondentLabel(link: FormLink): string {
 
 function FormLinkStatusPill({ status }: { status: FormLink['status'] }) {
   const config: Record<FormLink['status'], { label: string; className: string }> = {
-    PENDING: { label: 'Pendente', className: 'bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200/60' },
-    ANSWERED: { label: 'Respondido', className: 'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200/60' },
-    EXPIRED: { label: 'Expirado', className: 'bg-gray-100 text-gray-500 ring-1 ring-inset ring-gray-200' },
+    pending: { label: 'Pendente', className: 'bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200/60' },
+    answered: { label: 'Respondido', className: 'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200/60' },
+    expired: { label: 'Expirado', className: 'bg-gray-100 text-gray-500 ring-1 ring-inset ring-gray-200' },
   }
-  const c = config[status]
+  const c = config[status] ?? { label: status, className: 'bg-gray-100 text-gray-500 ring-1 ring-inset ring-gray-200' }
   return <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${c.className}`}>{c.label}</span>
 }
 

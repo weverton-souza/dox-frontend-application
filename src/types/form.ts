@@ -293,7 +293,7 @@ export interface FormSectionGroup {
 
 // ========== Public Form ==========
 
-export type FormLinkStatus = 'PENDING' | 'ANSWERED' | 'EXPIRED'
+export type FormLinkStatus = 'pending' | 'answered' | 'expired'
 
 export type RespondentType = 'professional' | 'customer' | 'contact'
 
