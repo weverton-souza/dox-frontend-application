@@ -7,6 +7,7 @@ import ReportList from '@/routes/ReportList'
 import ReportEditor from '@/routes/ReportEditor'
 import CustomerList from '@/routes/CustomerList'
 import CustomerProfile from '@/routes/CustomerProfile'
+import FormComparisonView from '@/routes/FormComparisonView'
 import FormList from '@/routes/FormList'
 import FormBuilder from '@/routes/FormBuilder'
 import FormFill from '@/routes/FormFill'
@@ -49,6 +50,7 @@ export default function App() {
           <Route path="/templates/:id" element={<TemplateEditor />} />
           <Route path="/customers" element={<CustomerList />} />
           <Route path="/customers/:id" element={<CustomerProfile />} />
+          <Route path="/customers/:customerId/forms/:formId/comparison" element={<FormComparisonView />} />
           <Route path="/forms" element={<FormList />} />
           <Route path="/forms/:id/edit" element={<FormBuilder />} />
           <Route path="/forms/:id/fill" element={<FormFill />} />

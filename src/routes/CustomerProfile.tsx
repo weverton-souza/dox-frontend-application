@@ -6,7 +6,9 @@ import type {
   CustomerNote,
   CustomerEvent,
   CustomerEventType,
-  FormLink,
+  AggregatedFormGroup,
+  AggregatedRespondent,
+  FormLinkStatus,
   Report,
 } from '@/types'
 import {
@@ -26,7 +28,8 @@ import {
   deleteCustomerEvent as apiDeleteCustomerEvent,
 } from '@/lib/api/customer-api'
 import { getReportsByCustomer } from '@/lib/api/report-api'
-import { getFormLinksByCustomer, revokeFormLink } from '@/lib/api/form-link-api'
+import { revokeFormLink } from '@/lib/api/form-link-api'
+import { getAggregatedForms } from '@/lib/api/customer-forms-api'
 import { formatDateTime, calculateAge } from '@/lib/utils'
 import { useCreateReport } from '@/lib/hooks/use-create-report'
 import { useError } from '@/contexts/ErrorContext'
@@ -121,7 +124,7 @@ export default function CustomerProfile() {
   const [newEvent, setNewEvent] = useState<CustomerEvent | null>(null)
 
   // Forms
-  const [formLinks, setFormLinks] = useState<FormLink[]>([])
+  const [formGroups, setFormGroups] = useState<AggregatedFormGroup[]>([])
   const [formsLoading, setFormsLoading] = useState(false)
   const [showSendModal, setShowSendModal] = useState(false)
 
@@ -243,12 +246,12 @@ export default function CustomerProfile() {
   )
 
   // Forms handlers
-  const loadFormLinks = useCallback(async () => {
+  const loadFormGroups = useCallback(async () => {
     if (!customer) return
     setFormsLoading(true)
     try {
-      const links = await getFormLinksByCustomer(customer.id)
-      setFormLinks(links)
+      const groups = await getAggregatedForms(customer.id)
+      setFormGroups(groups)
     } catch (err) {
       showError(err)
     } finally {
@@ -258,26 +261,26 @@ export default function CustomerProfile() {
 
   useEffect(() => {
     if (activeSection === 'forms' && customer) {
-      loadFormLinks()
+      loadFormGroups()
     }
-  }, [activeSection, customer, loadFormLinks])
+  }, [activeSection, customer, loadFormGroups])
 
   const handleRevokeLink = useCallback(
     async (linkId: string) => {
       try {
         await revokeFormLink(linkId)
-        await loadFormLinks()
+        await loadFormGroups()
       } catch (err) {
         showError(err)
       }
     },
-    [loadFormLinks, showError]
+    [loadFormGroups, showError]
   )
 
   const handleSendModalClose = useCallback(() => {
     setShowSendModal(false)
-    if (activeSection === 'forms') loadFormLinks()
-  }, [activeSection, loadFormLinks])
+    if (activeSection === 'forms') loadFormGroups()
+  }, [activeSection, loadFormGroups])
 
   // ========== Loading / Not found ==========
 
@@ -415,7 +418,6 @@ export default function CustomerProfile() {
   }
 
   function renderFormsSection() {
-    const grouped = groupLinksByForm(formLinks)
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
@@ -427,7 +429,7 @@ export default function CustomerProfile() {
           <div className="flex items-center justify-center py-12">
             <Spinner />
           </div>
-        ) : grouped.length === 0 ? (
+        ) : formGroups.length === 0 ? (
           <div className="rounded-2xl border-2 border-dashed border-gray-200 py-14 text-center">
             <div className="mx-auto w-14 h-14 rounded-full bg-brand-50 flex items-center justify-center mb-4">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-brand-500" strokeLinecap="round" strokeLinejoin="round">
@@ -443,43 +445,65 @@ export default function CustomerProfile() {
           </div>
         ) : (
           <div className="space-y-3">
-            {grouped.map((group) => (
-              <div key={group.key} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm font-semibold text-gray-900">
-                    Versão enviada em {formatDateTime(group.sentAt)}
-                  </p>
-                  <span className="text-xs text-gray-400">
-                    {group.links.length} respondente{group.links.length === 1 ? '' : 's'}
-                  </span>
-                </div>
-                <ul className="divide-y divide-gray-100">
-                  {group.links.map((link) => (
-                    <li key={link.id} className="py-2.5 flex items-center gap-3">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-gray-900 truncate">
-                          {link.respondent.name || '(sem nome)'}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {formatRespondentLabel(link)} · expira em {formatDateTime(link.expiresAt)}
-                        </p>
-                      </div>
-                      <FormLinkStatusPill status={link.status} />
-                      {link.status === 'pending' && (
-                        <button
-                          type="button"
-                          onClick={() => handleRevokeLink(link.id)}
-                          className="text-xs text-gray-400 hover:text-red-600 px-2 py-1 rounded transition-colors"
-                          title="Revogar link"
+            {formGroups.map((group) => {
+              const answeredCount = group.respondents.filter((r) => r.status === 'answered').length
+              const canCompare = answeredCount >= 2
+              return (
+                <div key={`${group.form.id}:${group.version.id}`} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+                  <div className="flex items-center justify-between mb-3 gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-gray-900 truncate">
+                        {group.form.title}
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        v{group.version.version} · enviado em {formatDateTime(group.sentAt)}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-xs text-gray-400">
+                        {group.respondents.length} respondente{group.respondents.length === 1 ? '' : 's'}
+                      </span>
+                      {canCompare && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => navigate(`/customers/${id}/forms/${group.form.id}/comparison?versionId=${group.version.id}`)}
                         >
-                          Revogar
-                        </button>
+                          Comparar respostas
+                        </Button>
                       )}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+                    </div>
+                  </div>
+                  <ul className="divide-y divide-gray-100">
+                    {group.respondents.map((r) => (
+                      <li key={r.linkId} className="py-2.5 flex items-center gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-gray-900 truncate">
+                            {r.respondentName || '(sem nome)'}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {formatAggregatedLabel(r)} · {r.status === 'answered' && r.submittedAt
+                              ? `respondido em ${formatDateTime(r.submittedAt)}`
+                              : `expira em ${formatDateTime(r.expiresAt)}`}
+                          </p>
+                        </div>
+                        <FormLinkStatusPill status={r.status} />
+                        {r.status === 'pending' && (
+                          <button
+                            type="button"
+                            onClick={() => handleRevokeLink(r.linkId)}
+                            className="text-xs text-gray-400 hover:text-red-600 px-2 py-1 rounded transition-colors"
+                            title="Revogar link"
+                          >
+                            Revogar
+                          </button>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )
+            })}
           </div>
         )}
       </div>
@@ -829,47 +853,18 @@ export default function CustomerProfile() {
 
 // ========== Forms helpers ==========
 
-interface FormLinkGroup {
-  key: string
-  formId: string
-  formVersionId: string
-  sentAt: string
-  links: FormLink[]
-}
-
-function groupLinksByForm(links: FormLink[]): FormLinkGroup[] {
-  const map = new Map<string, FormLinkGroup>()
-  for (const link of links) {
-    const key = `${link.formId}:${link.formVersionId}`
-    const existing = map.get(key)
-    if (existing) {
-      existing.links.push(link)
-      if (link.createdAt < existing.sentAt) existing.sentAt = link.createdAt
-    } else {
-      map.set(key, {
-        key,
-        formId: link.formId,
-        formVersionId: link.formVersionId,
-        sentAt: link.createdAt,
-        links: [link],
-      })
-    }
-  }
-  return Array.from(map.values()).sort((a, b) => b.sentAt.localeCompare(a.sentAt))
-}
-
-function formatRespondentLabel(link: FormLink): string {
-  if (link.respondent.type === 'customer') return 'Cliente'
-  if (link.respondent.type === 'professional') return 'Profissional'
-  const rt = link.respondent.relationType as keyof typeof CUSTOMER_CONTACT_RELATION_LABELS | undefined
+function formatAggregatedLabel(r: AggregatedRespondent): string {
+  if (r.respondentType === 'customer') return 'Cliente'
+  if (r.respondentType === 'professional') return 'Profissional'
+  const rt = r.relationType as keyof typeof CUSTOMER_CONTACT_RELATION_LABELS | undefined
   if (rt && CUSTOMER_CONTACT_RELATION_LABELS[rt]) {
     return rt === 'parent' ? 'Filiação' : CUSTOMER_CONTACT_RELATION_LABELS[rt]
   }
   return 'Contato'
 }
 
-function FormLinkStatusPill({ status }: { status: FormLink['status'] }) {
-  const config: Record<FormLink['status'], { label: string; className: string }> = {
+function FormLinkStatusPill({ status }: { status: FormLinkStatus }) {
+  const config: Record<FormLinkStatus, { label: string; className: string }> = {
     pending: { label: 'Pendente', className: 'bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200/60' },
     answered: { label: 'Respondido', className: 'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200/60' },
     expired: { label: 'Expirado', className: 'bg-gray-100 text-gray-500 ring-1 ring-inset ring-gray-200' },
