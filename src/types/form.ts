@@ -9,6 +9,8 @@ export type FormFieldType =
   | 'yes-no'
   | 'date'
   | 'section-header'
+  | 'inventory-item'
+  | 'likert-matrix'
 
 export const FORM_FIELD_TYPE_LABELS: Record<FormFieldType, string> = {
   'short-text': 'Texto Curto',
@@ -19,6 +21,8 @@ export const FORM_FIELD_TYPE_LABELS: Record<FormFieldType, string> = {
   'yes-no': 'Sim/Não',
   'date': 'Data',
   'section-header': 'Cabeçalho de Seção',
+  'inventory-item': 'Inventário',
+  'likert-matrix': 'Matriz Likert',
 }
 
 export const FORM_FIELD_TYPE_DESCRIPTIONS: Record<FormFieldType, string> = {
@@ -30,11 +34,31 @@ export const FORM_FIELD_TYPE_DESCRIPTIONS: Record<FormFieldType, string> = {
   'yes-no': 'Resposta Sim ou Não',
   'date': 'Seletor de data',
   'section-header': 'Título de seção para organizar o formulário',
+  'inventory-item': 'Lista de opções com valor próprio (ex: BDI, BAI)',
+  'likert-matrix': 'Tabela com escala compartilhada (ex: SRS-2, PSS-10)',
+}
+
+export const SCORABLE_FIELD_TYPES: FormFieldType[] = ['inventory-item', 'likert-matrix', 'scale']
+
+export function isScorableFieldType(type: FormFieldType): boolean {
+  return SCORABLE_FIELD_TYPES.includes(type)
 }
 
 export interface FormFieldOption {
   id: string
   label: string
+  value?: number             // para inventory-item: valor pontuado da opção
+}
+
+export interface LikertScalePoint {
+  value: number
+  label: string              // ex: "Nunca", "Raramente", "Às vezes", "Sempre"
+}
+
+export interface LikertRow {
+  id: string
+  label: string              // ex: "Tem dificuldade em fazer amigos"
+  reverseScored: boolean     // se true, valor invertido na escala
 }
 
 export interface FormField {
@@ -45,19 +69,50 @@ export interface FormField {
   required: boolean
   order: number
   // Configuração específica por tipo
-  options: FormFieldOption[]  // para single-choice, multiple-choice
+  options: FormFieldOption[]  // para single-choice, multiple-choice, inventory-item
   scaleMin: number            // para scale (default 1)
   scaleMax: number            // para scale (default 5)
   scaleMinLabel: string       // ex: "Nunca"
   scaleMaxLabel: string       // ex: "Sempre"
   placeholder: string         // para short-text, long-text
   variableKey: string         // chave para {{variableKey}} em templates (ex: "queixa_principal")
+  reverseScored: boolean      // para inventory-item: inverte valor no scoring
+  likertScale: LikertScalePoint[]  // para likert-matrix: pontos da escala compartilhada
+  likertRows: LikertRow[]     // para likert-matrix: linhas/perguntas
 }
 
 export interface FormFieldMapping {
   fieldId: string             // FormField.id
   targetSection: string       // ex: "ANAMNESE", "IDENTIFICAÇÃO"
   hint: string                // dica livre para a IA, ex: "nível de escolaridade do paciente"
+}
+
+export type ScoringOperation = 'sum' | 'mean' | 'min' | 'max' | 'count'
+
+export const SCORING_OPERATION_LABELS: Record<ScoringOperation, string> = {
+  sum: 'Soma',
+  mean: 'Média',
+  min: 'Mínimo',
+  max: 'Máximo',
+  count: 'Contagem',
+}
+
+export interface ScoringClassificationRange {
+  min: number
+  max: number
+  label: string              // ex: "Mínima", "Leve", "Moderada", "Severa"
+}
+
+export interface ScoringFormula {
+  id: string
+  name: string               // ex: "Score Total", "Cognição Social"
+  operation: ScoringOperation
+  fieldIds: string[]         // perguntas pontuáveis selecionadas
+  classification: ScoringClassificationRange[]
+}
+
+export interface ScoringConfig {
+  formulas: ScoringFormula[]
 }
 
 export interface Form {
@@ -69,6 +124,7 @@ export interface Form {
   fields: FormField[]
   linkedTemplateId: string | null  // link para ReportTemplate.id
   fieldMappings: FormFieldMapping[]
+  scoringConfig: ScoringConfig
   isDefault?: boolean
 }
 
@@ -87,8 +143,9 @@ export const FORM_RESPONSE_STATUS_COLORS: Record<FormResponseStatus, { bg: strin
 export interface FormFieldAnswer {
   fieldId: string
   value: string               // para short-text, long-text, date, yes-no ("sim"/"não")
-  selectedOptionIds: string[]  // para single-choice (1 item), multiple-choice (N items)
+  selectedOptionIds: string[]  // para single-choice (1 item), multiple-choice (N items), inventory-item (1 item)
   scaleValue: number | null    // para scale
+  likertAnswers: Record<string, number>  // para likert-matrix: rowId → valor selecionado
 }
 
 export interface FormResponse {
@@ -112,7 +169,47 @@ export function createEmptyFormFieldOption(): FormFieldOption {
   }
 }
 
+export function createEmptyInventoryOption(value: number = 0): FormFieldOption {
+  return {
+    id: crypto.randomUUID(),
+    label: '',
+    value,
+  }
+}
+
+export function createDefaultLikertScale(): LikertScalePoint[] {
+  return [
+    { value: 0, label: 'Nunca' },
+    { value: 1, label: 'Raramente' },
+    { value: 2, label: 'Às vezes' },
+    { value: 3, label: 'Sempre' },
+  ]
+}
+
+export function createEmptyLikertRow(): LikertRow {
+  return {
+    id: crypto.randomUUID(),
+    label: '',
+    reverseScored: false,
+  }
+}
+
 export function createEmptyFormField(type: FormFieldType = 'short-text', order: number = 0): FormField {
+  const baseOptions: FormFieldOption[] = (() => {
+    if (type === 'single-choice' || type === 'multiple-choice') {
+      return [createEmptyFormFieldOption(), createEmptyFormFieldOption()]
+    }
+    if (type === 'inventory-item') {
+      return [
+        createEmptyInventoryOption(0),
+        createEmptyInventoryOption(1),
+        createEmptyInventoryOption(2),
+        createEmptyInventoryOption(3),
+      ]
+    }
+    return []
+  })()
+
   return {
     id: crypto.randomUUID(),
     type,
@@ -120,15 +217,30 @@ export function createEmptyFormField(type: FormFieldType = 'short-text', order: 
     description: '',
     required: false,
     order,
-    options: type === 'single-choice' || type === 'multiple-choice'
-      ? [createEmptyFormFieldOption(), createEmptyFormFieldOption()]
-      : [],
+    options: baseOptions,
     scaleMin: 1,
     scaleMax: 5,
     scaleMinLabel: '',
     scaleMaxLabel: '',
     placeholder: '',
     variableKey: '',
+    reverseScored: false,
+    likertScale: type === 'likert-matrix' ? createDefaultLikertScale() : [],
+    likertRows: type === 'likert-matrix' ? [createEmptyLikertRow()] : [],
+  }
+}
+
+export function createEmptyScoringConfig(): ScoringConfig {
+  return { formulas: [] }
+}
+
+export function createEmptyScoringFormula(): ScoringFormula {
+  return {
+    id: crypto.randomUUID(),
+    name: '',
+    operation: 'sum',
+    fieldIds: [],
+    classification: [],
   }
 }
 
@@ -142,6 +254,7 @@ export function createEmptyForm(): Form {
     fields: [],
     linkedTemplateId: null,
     fieldMappings: [],
+    scoringConfig: createEmptyScoringConfig(),
   }
 }
 
@@ -151,6 +264,7 @@ export function createEmptyFormFieldAnswer(fieldId: string): FormFieldAnswer {
     value: '',
     selectedOptionIds: [],
     scaleValue: null,
+    likertAnswers: {},
   }
 }
 
