@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
 import type {
   ComparisonResult,
@@ -6,18 +6,27 @@ import type {
   FormField,
   FormFieldAnswer,
 } from '@/types'
-import { CUSTOMER_CONTACT_RELATION_LABELS, createEmptyFormFieldAnswer } from '@/types'
+import { CUSTOMER_CONTACT_RELATION_LABELS } from '@/types'
 import { getFormComparison } from '@/lib/api/customer-forms-api'
 import { buildFormSectionGroups } from '@/lib/utils'
 import { useError } from '@/contexts/ErrorContext'
 import Spinner from '@/components/ui/Spinner'
 import Button from '@/components/ui/Button'
-import FormSectionFields from '@/components/form-fill/FormSectionFields'
-import { getAvatarColor, getInitials } from '@/lib/avatar-utils'
+import { getInitials } from '@/lib/avatar-utils'
+import { colorForIndex, type RespondentColor } from '@/lib/respondent-colors'
+import ComparisonLegend from '@/components/comparison/ComparisonLegend'
+import ComparisonFormView from '@/components/comparison/ComparisonFormView'
+import ComparisonTablePreview from '@/components/comparison/ComparisonTablePreview'
 
-type ViewMode = 'table' | 'form'
+type ViewMode = 'form' | 'table'
 
-const DIVERGENCE_THRESHOLD = 5
+interface RespondentVisual {
+  respondent: ComparisonRespondent
+  index: number
+  color: RespondentColor
+  initials: string
+  label: string
+}
 
 function formatRespondentLabel(r: ComparisonRespondent): string {
   if (r.respondentType === 'customer') return 'Cliente'
@@ -29,45 +38,6 @@ function formatRespondentLabel(r: ComparisonRespondent): string {
   return 'Contato'
 }
 
-function findAnswer(answers: FormFieldAnswer[], fieldId: string): FormFieldAnswer | undefined {
-  return answers.find((a) => a.fieldId === fieldId)
-}
-
-function renderAnswerValue(field: FormField, answer: FormFieldAnswer | undefined): string {
-  if (!answer) return '—'
-  switch (field.type) {
-    case 'short-text':
-    case 'long-text':
-    case 'date':
-    case 'yes-no':
-      return answer.value || '—'
-    case 'scale':
-      return answer.scaleValue !== null && answer.scaleValue !== undefined ? String(answer.scaleValue) : '—'
-    case 'single-choice':
-    case 'inventory-item': {
-      const id = answer.selectedOptionIds[0]
-      const opt = field.options.find((o) => o.id === id)
-      if (!opt) return '—'
-      return opt.value !== undefined ? `${opt.label} (${opt.value})` : opt.label
-    }
-    case 'multiple-choice':
-      return answer.selectedOptionIds
-        .map((id) => field.options.find((o) => o.id === id)?.label)
-        .filter(Boolean)
-        .join(', ') || '—'
-    default:
-      return '—'
-  }
-}
-
-function renderLikertCell(field: FormField, rowId: string, answer: FormFieldAnswer | undefined): string {
-  if (!answer) return '—'
-  const v = answer.likertAnswers[rowId]
-  if (v === undefined || v === null) return '—'
-  const point = field.likertScale.find((p) => p.value === v)
-  return point ? `${v} (${point.label})` : String(v)
-}
-
 export default function FormComparisonView() {
   const { customerId, formId } = useParams<{ customerId: string; formId: string }>()
   const [searchParams] = useSearchParams()
@@ -77,7 +47,7 @@ export default function FormComparisonView() {
 
   const [data, setData] = useState<ComparisonResult | null>(null)
   const [loading, setLoading] = useState(true)
-  const [viewMode, setViewMode] = useState<ViewMode>('table')
+  const [viewMode, setViewMode] = useState<ViewMode>('form')
 
   useEffect(() => {
     if (!customerId || !formId || !versionId) {
@@ -101,42 +71,26 @@ export default function FormComparisonView() {
     }
   }, [customerId, formId, versionId, showError])
 
-  const answeredRespondents = useMemo(
-    () => (data?.respondents ?? []).filter((r) => r.status === 'answered'),
-    [data],
-  )
-
-  const totalsRow = useMemo(() => {
-    if (!data) return null
-    return data.respondents.map((r) => {
-      const total = r.scoreBreakdown[0]
-      return total ? { value: total.value, classification: total.classification } : null
-    })
+  const respondentVisuals = useMemo<RespondentVisual[]>(() => {
+    if (!data) return []
+    return data.respondents.map((r, idx) => ({
+      respondent: r,
+      index: idx,
+      color: colorForIndex(idx),
+      initials: getInitials(r.respondentName || '?'),
+      label: formatRespondentLabel(r),
+    }))
   }, [data])
 
-  const divergenceByField = useMemo(() => {
-    const map = new Map<string, boolean>()
-    if (!data) return map
-    for (const field of data.fields) {
-      if (field.type !== 'inventory-item' && field.type !== 'scale') continue
-      const values: number[] = []
-      for (const r of answeredRespondents) {
-        const answer = findAnswer(r.answers, field.id)
-        if (!answer) continue
-        if (field.type === 'scale' && answer.scaleValue !== null && answer.scaleValue !== undefined) {
-          values.push(answer.scaleValue)
-        } else if (field.type === 'inventory-item') {
-          const opt = field.options.find((o) => o.id === answer.selectedOptionIds[0])
-          if (opt?.value !== undefined && opt.value !== null) values.push(opt.value)
-        }
-      }
-      if (values.length >= 2) {
-        const diff = Math.max(...values) - Math.min(...values)
-        if (diff >= DIVERGENCE_THRESHOLD) map.set(field.id, true)
-      }
-    }
-    return map
-  }, [data, answeredRespondents])
+  const answeredVisuals = useMemo(
+    () => respondentVisuals.filter((v) => v.respondent.status === 'answered'),
+    [respondentVisuals],
+  )
+
+  const sectionGroups = useMemo(
+    () => (data ? buildFormSectionGroups([...data.fields].sort((a, b) => a.order - b.order)) : []),
+    [data],
+  )
 
   if (loading) {
     return (
@@ -157,10 +111,6 @@ export default function FormComparisonView() {
     )
   }
 
-  const flatFields = data.fields
-  const likertFields = flatFields.filter((f) => f.type === 'likert-matrix')
-  const nonLikertFields = flatFields.filter((f) => f.type !== 'likert-matrix' && f.type !== 'section-header')
-
   return (
     <div className="flex-1 flex flex-col">
       <div className="bg-white border-b border-gray-200">
@@ -173,23 +123,16 @@ export default function FormComparisonView() {
           </button>
           <h1 className="text-xl font-bold text-gray-900">{data.form.title}</h1>
           <p className="text-xs text-gray-500 mt-1">
-            v{data.version.version} · {answeredRespondents.length} de {data.respondents.length} respondentes responderam
+            v{data.version.version} · {answeredVisuals.length} de {data.respondents.length} respondentes responderam
           </p>
         </div>
       </div>
 
       <div className="flex-1 bg-gray-50/50">
-        <div className="max-w-page mx-auto px-page py-6 space-y-6">
+        <div className="max-w-page mx-auto px-page py-6 space-y-5">
+          <ComparisonLegend visuals={respondentVisuals} />
+
           <div className="inline-flex items-center bg-white rounded-xl border border-gray-200 p-1 shadow-sm">
-            <button
-              type="button"
-              onClick={() => setViewMode('table')}
-              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                viewMode === 'table' ? 'bg-brand-500 text-white' : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Tabela
-            </button>
             <button
               type="button"
               onClick={() => setViewMode('form')}
@@ -199,156 +142,26 @@ export default function FormComparisonView() {
             >
               Formulário
             </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('table')}
+              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                viewMode === 'table' ? 'bg-brand-500 text-white' : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Tabela
+            </button>
           </div>
-
-          {viewMode === 'table' && (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-gray-50 border-b border-gray-200">
-                    <th className="text-left px-4 py-3 font-semibold text-gray-700 sticky left-0 bg-gray-50 min-w-[240px]">
-                      Pergunta
-                    </th>
-                    {data.respondents.map((r) => (
-                      <th key={r.linkId} className="text-left px-4 py-3 font-semibold min-w-[180px]">
-                        <div className="flex items-center gap-2">
-                          <span className={`shrink-0 w-7 h-7 rounded-full bg-gradient-to-br ${getAvatarColor(r.respondentName || r.linkId)} flex items-center justify-center text-xs font-semibold text-white`}>
-                            {getInitials(r.respondentName || '?')}
-                          </span>
-                          <div className="min-w-0">
-                            <p className="text-gray-900 truncate">{r.respondentName || '(sem nome)'}</p>
-                            <p className="text-xs text-gray-500 font-normal">{formatRespondentLabel(r)}</p>
-                          </div>
-                        </div>
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {nonLikertFields.map((field) => {
-                    const isDivergent = divergenceByField.get(field.id) ?? false
-                    return (
-                      <tr key={field.id} className={`border-b border-gray-100 ${isDivergent ? 'bg-amber-50/40' : ''}`}>
-                        <td className="px-4 py-2.5 sticky left-0 bg-white">
-                          <div className="flex items-start gap-2">
-                            <span className="text-gray-700">{field.label}</span>
-                            {isDivergent && (
-                              <span title={`Diferença ≥ ${DIVERGENCE_THRESHOLD} pontos`} className="text-amber-600 text-xs">⚠</span>
-                            )}
-                          </div>
-                        </td>
-                        {data.respondents.map((r) => {
-                          const answer = findAnswer(r.answers, field.id)
-                          const display = r.status === 'answered' ? renderAnswerValue(field, answer) : '⏳'
-                          return (
-                            <td key={r.linkId} className="px-4 py-2.5 text-gray-600">
-                              {display}
-                            </td>
-                          )
-                        })}
-                      </tr>
-                    )
-                  })}
-
-                  {likertFields.flatMap((field) =>
-                    field.likertRows.map((row) => (
-                      <tr key={`${field.id}:${row.id}`} className="border-b border-gray-100">
-                        <td className="px-4 py-2.5 sticky left-0 bg-white">
-                          <span className="text-gray-700">{row.label}</span>
-                          {row.reverseScored && <span className="ml-1 text-xs text-gray-400">(reverso)</span>}
-                        </td>
-                        {data.respondents.map((r) => {
-                          const answer = findAnswer(r.answers, field.id)
-                          const display = r.status === 'answered' ? renderLikertCell(field, row.id, answer) : '⏳'
-                          return (
-                            <td key={r.linkId} className="px-4 py-2.5 text-gray-600">
-                              {display}
-                            </td>
-                          )
-                        })}
-                      </tr>
-                    )),
-                  )}
-
-                  {totalsRow && totalsRow.some((t) => t !== null) && (
-                    <tr className="bg-brand-50/40 border-t-2 border-brand-200 font-semibold">
-                      <td className="px-4 py-3 sticky left-0 bg-brand-50/40 text-gray-900">
-                        {data.respondents[0]?.scoreBreakdown[0]?.name ?? 'Score Total'}
-                      </td>
-                      {totalsRow.map((cell, idx) => {
-                        const r = data.respondents[idx]
-                        return (
-                          <td key={r.linkId} className="px-4 py-3 text-gray-900">
-                            {cell?.value !== null && cell?.value !== undefined ? (
-                              <span className="flex items-center gap-2">
-                                <span className="text-base">{cell.value}</span>
-                                {cell.classification && (
-                                  <span className="text-xs px-2 py-0.5 rounded bg-brand-100 text-brand-700">
-                                    {cell.classification}
-                                  </span>
-                                )}
-                              </span>
-                            ) : (
-                              <span className="text-gray-400">—</span>
-                            )}
-                          </td>
-                        )
-                      })}
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-          )}
 
           {viewMode === 'form' && (
-            <FormViewMode data={data} />
+            <ComparisonFormView
+              sectionGroups={sectionGroups}
+              visuals={answeredVisuals}
+            />
           )}
 
-          {viewMode === 'table' && data.respondents[0]?.scoreBreakdown.length > 1 && (
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-              <h2 className="text-sm font-semibold text-gray-900 mb-3">Subescalas</h2>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="text-left px-3 py-2 font-medium text-gray-500 min-w-[180px]">Subescala</th>
-                      {data.respondents.map((r) => (
-                        <th key={r.linkId} className="text-left px-3 py-2 font-medium text-gray-500 min-w-[140px]">
-                          {r.respondentName || '(sem nome)'}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.respondents[0].scoreBreakdown.slice(1).map((firstScore, idx) => (
-                      <tr key={firstScore.formulaId} className="border-b border-gray-100">
-                        <td className="px-3 py-2 text-gray-700">{firstScore.name}</td>
-                        {data.respondents.map((r) => {
-                          const score = r.scoreBreakdown[idx + 1]
-                          return (
-                            <td key={r.linkId} className="px-3 py-2">
-                              {score?.value !== null && score?.value !== undefined ? (
-                                <span className="flex items-center gap-2">
-                                  <span className="text-gray-900">{score.value}</span>
-                                  {score.classification && (
-                                    <span className="text-xs text-gray-500">({score.classification})</span>
-                                  )}
-                                </span>
-                              ) : (
-                                <span className="text-gray-400">—</span>
-                              )}
-                            </td>
-                          )
-                        })}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+          {viewMode === 'table' && (
+            <ComparisonTablePreview data={data} visuals={respondentVisuals} />
           )}
         </div>
       </div>
@@ -356,88 +169,14 @@ export default function FormComparisonView() {
   )
 }
 
-interface FormViewModeProps {
-  data: ComparisonResult
+export function findAnswer(answers: FormFieldAnswer[], fieldId: string): FormFieldAnswer | undefined {
+  return answers.find((a) => a.fieldId === fieldId)
 }
 
-function FormViewMode({ data }: FormViewModeProps) {
-  const sectionGroups = useMemo(
-    () => buildFormSectionGroups([...data.fields].sort((a, b) => a.order - b.order)),
-    [data.fields],
-  )
-
-  return (
-    <div className="space-y-6">
-      {data.respondents.map((r) => (
-        <RespondentFormCard key={r.linkId} respondent={r} sectionGroups={sectionGroups} />
-      ))}
-    </div>
-  )
-}
-
-interface RespondentFormCardProps {
-  respondent: ComparisonRespondent
-  sectionGroups: ReturnType<typeof buildFormSectionGroups>
-}
-
-function RespondentFormCard({ respondent, sectionGroups }: RespondentFormCardProps) {
-  const answersByField = useMemo(() => {
-    const map = new Map<string, FormFieldAnswer>()
-    for (const a of respondent.answers) map.set(a.fieldId, a)
-    return map
-  }, [respondent.answers])
-
-  const getAnswer = useCallback(
-    (fieldId: string) => answersByField.get(fieldId) ?? createEmptyFormFieldAnswer(fieldId),
-    [answersByField],
-  )
-
-  const noop = useCallback(() => {}, [])
-  const isAnswered = respondent.status === 'answered'
-  const totalScore = respondent.scoreBreakdown[0]
-
-  return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-      <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 bg-gray-50/60">
-        <span
-          className={`shrink-0 w-9 h-9 rounded-full bg-gradient-to-br ${getAvatarColor(respondent.respondentName || respondent.linkId)} flex items-center justify-center text-xs font-semibold text-white`}
-        >
-          {getInitials(respondent.respondentName || '?')}
-        </span>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-gray-900 truncate">
-            {respondent.respondentName || '(sem nome)'}
-          </p>
-          <p className="text-xs text-gray-500">{formatRespondentLabel(respondent)}</p>
-        </div>
-        {isAnswered && totalScore && totalScore.value !== null && (
-          <div className="flex items-center gap-2 text-sm">
-            <span className="text-gray-500">{totalScore.name}:</span>
-            <span className="font-semibold text-gray-900">{totalScore.value}</span>
-            {totalScore.classification && (
-              <span className="text-xs px-2 py-0.5 rounded bg-brand-100 text-brand-700">
-                {totalScore.classification}
-              </span>
-            )}
-          </div>
-        )}
-      </div>
-
-      {isAnswered ? (
-        <div className="p-5 space-y-3">
-          <FormSectionFields
-            sectionGroups={sectionGroups}
-            getAnswer={getAnswer}
-            onAnswerChange={noop}
-            validationErrors={new Set()}
-            readOnly
-          />
-        </div>
-      ) : (
-        <div className="px-5 py-8 text-center text-sm text-gray-500">
-          Aguardando resposta
-        </div>
-      )}
-    </div>
-  )
+export function getOptionValue(field: FormField, answer: FormFieldAnswer | undefined): number | null {
+  if (!answer) return null
+  const id = answer.selectedOptionIds[0]
+  if (!id) return null
+  const opt = field.options.find((o) => o.id === id)
+  return opt?.value ?? null
 }
