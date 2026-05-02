@@ -289,6 +289,19 @@ chore: descrição curta em português
 - Trabalhar, commitar, push, PR, merge
 - O dev server roda no repo principal — worktrees causam descompasso entre código editado e código servido
 
+## Modificação de Código Compartilhado
+
+Antes de alterar a assinatura, comportamento, default ou retorno de qualquer função, tipo, componente ou endpoint que já existe e é usado em mais de um lugar:
+
+1. Rodar grep e listar TODOS os call sites
+2. Apresentar: o que muda, quais arquivos/comportamentos podem quebrar, e por quê
+3. Pedir confirmação explícita antes de aplicar
+4. Se a mudança for invasiva, oferecer alternativa (criar função nova vs modificar in-place)
+
+Vale para: helpers em `lib/`, hooks em `lib/hooks/`, componentes UI compartilhados em `components/ui/`, tipos em `types/`, contratos de API consumidos pelo frontend.
+
+Não vale para: variáveis locais de uma função, novos arquivos, novos componentes, código sem outros consumidores.
+
 ## Coisas para Nunca Fazer
 
 - Nunca usar git worktree
