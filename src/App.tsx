@@ -10,7 +10,6 @@ import CustomerProfile from '@/routes/CustomerProfile'
 import FormComparisonView from '@/routes/FormComparisonView'
 import FormList from '@/routes/FormList'
 import FormBuilder from '@/routes/FormBuilder'
-import FormFill from '@/routes/FormFill'
 import FormResponseList from '@/routes/FormResponseList'
 import FormulaGuide from '@/routes/FormulaGuide'
 import PublicFormFill from '@/routes/PublicFormFill'
@@ -53,7 +52,6 @@ export default function App() {
           <Route path="/customers/:customerId/forms/:formId/comparison" element={<FormComparisonView />} />
           <Route path="/forms" element={<FormList />} />
           <Route path="/forms/:id/edit" element={<FormBuilder />} />
-          <Route path="/forms/:id/fill" element={<FormFill />} />
           <Route path="/forms/:id/responses" element={<FormResponseList />} />
           <Route path="/calendar" element={<Calendar />} />
           <Route path="/guides" element={<FormulaGuide />} />
