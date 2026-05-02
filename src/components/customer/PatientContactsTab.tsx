@@ -9,6 +9,7 @@ import {
 } from '@/lib/api/customer-api'
 import { useError } from '@/contexts/ErrorContext'
 import { useConfirmDelete } from '@/lib/hooks/use-confirm-delete'
+import { applyMask } from '@/lib/masks'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import Select from '@/components/ui/Select'
@@ -129,7 +130,7 @@ export default function PatientContactsTab({ customerId }: PatientContactsTabPro
                   </div>
                   <div className="mt-1 flex flex-wrap gap-3 text-xs text-gray-500">
                     {contact.email && <span>{contact.email}</span>}
-                    {contact.phone && <span>{contact.phone}</span>}
+                    {contact.phone && <span>{applyMask(contact.phone, 'phone')}</span>}
                   </div>
                   {contact.notes && (
                     <p className="text-xs text-gray-500 mt-1.5 line-clamp-2">{contact.notes}</p>
@@ -214,8 +215,8 @@ function ContactFormModal({ contact, onClose, onSave }: ContactFormModalProps) {
           />
           <Input
             label="Telefone"
-            value={draft.phone ?? ''}
-            onChange={(e) => update({ phone: e.target.value || null })}
+            value={applyMask(draft.phone ?? '', 'phone')}
+            onChange={(e) => update({ phone: applyMask(e.target.value, 'phone') || null })}
             placeholder="(11) 99999-9999"
           />
         </div>
