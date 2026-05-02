@@ -179,6 +179,98 @@ export default function FormFieldRenderer({ field, answer, onChange }: FormField
         />
       )
 
+    case 'inventory-item':
+      return (
+        <div className="space-y-1">
+          {field.options.map((opt) => {
+            const isSelected = answer.selectedOptionIds.includes(opt.id)
+            return (
+              <label
+                key={opt.id}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors ${
+                  isSelected ? 'bg-brand-50' : 'hover:bg-gray-50'
+                }`}
+              >
+                <span className={`w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
+                  isSelected ? 'border-brand-500' : 'border-gray-400'
+                }`}>
+                  {isSelected && <span className="w-2.5 h-2.5 rounded-full bg-brand-500" />}
+                </span>
+                <input
+                  type="radio"
+                  name={`field-${field.id}`}
+                  checked={isSelected}
+                  onChange={() => update({ selectedOptionIds: [opt.id] })}
+                  className="sr-only"
+                />
+                <span className="text-sm text-gray-700 flex-1">{opt.label || 'Opção'}</span>
+              </label>
+            )
+          })}
+        </div>
+      )
+
+    case 'likert-matrix': {
+      const setRowValue = (rowId: string, value: number) => {
+        update({ likertAnswers: { ...answer.likertAnswers, [rowId]: value } })
+      }
+      return (
+        <div className="overflow-x-auto -mx-3 sm:mx-0">
+          <table className="w-full min-w-[480px] text-sm">
+            <thead>
+              <tr className="border-b border-gray-200">
+                <th className="text-left text-xs text-gray-500 font-normal py-2 px-3 w-1/3"></th>
+                {field.likertScale.map((point) => (
+                  <th key={point.value} className="text-center text-xs text-gray-500 font-normal py-2 px-2">
+                    <div className="flex flex-col items-center gap-0.5">
+                      <span className="text-gray-400">{point.value}</span>
+                      <span>{point.label}</span>
+                    </div>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {field.likertRows.map((row, idx) => {
+                const selected = answer.likertAnswers[row.id]
+                return (
+                  <tr
+                    key={row.id}
+                    className={idx % 2 === 0 ? 'bg-gray-50/40' : ''}
+                  >
+                    <td className="text-sm text-gray-700 py-2.5 px-3">
+                      {row.label || `Pergunta ${idx + 1}`}
+                    </td>
+                    {field.likertScale.map((point) => {
+                      const isSelected = selected === point.value
+                      return (
+                        <td key={point.value} className="text-center py-2.5 px-2">
+                          <label className="inline-flex items-center justify-center cursor-pointer">
+                            <input
+                              type="radio"
+                              name={`field-${field.id}-row-${row.id}`}
+                              checked={isSelected}
+                              onChange={() => setRowValue(row.id, point.value)}
+                              className="sr-only"
+                            />
+                            <span className={`w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center transition-colors ${
+                              isSelected ? 'border-brand-500' : 'border-gray-300'
+                            }`}>
+                              {isSelected && <span className="w-2.5 h-2.5 rounded-full bg-brand-500" />}
+                            </span>
+                          </label>
+                        </td>
+                      )
+                    })}
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )
+    }
+
     default:
       return null
   }
