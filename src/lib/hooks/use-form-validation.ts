@@ -10,9 +10,12 @@ function isFieldEmpty(field: FormField, answer: FormFieldAnswer): boolean {
       return !answer.value.trim()
     case 'single-choice':
     case 'multiple-choice':
+    case 'inventory-item':
       return answer.selectedOptionIds.length === 0
     case 'scale':
       return answer.scaleValue === null
+    case 'likert-matrix':
+      return field.likertRows.some((row) => answer.likertAnswers[row.id] === undefined)
     default:
       return false
   }

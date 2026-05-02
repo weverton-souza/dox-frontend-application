@@ -37,8 +37,9 @@ import FormPreview from '@/components/form-builder/FormPreview'
 import SectionDeleteModal from '@/components/ui/SectionDeleteModal'
 import SectionReorderModal from '@/components/form-builder/SectionReorderModal'
 import GenerateFormLinkModal from '@/components/form-builder/GenerateFormLinkModal'
+import ScoringTab from '@/components/form-builder/ScoringTab'
 
-type ViewMode = 'editor' | 'preview' | 'mapping'
+type ViewMode = 'editor' | 'preview' | 'mapping' | 'scoring'
 
 export default function FormBuilder() {
   const { id } = useParams<{ id: string }>()
@@ -362,6 +363,7 @@ export default function FormBuilder() {
               <SegmentedControl
                 options={[
                   { value: 'editor', label: 'Perguntas' },
+                  { value: 'scoring', label: 'Pontuação' },
                   { value: 'preview', label: 'Preview' },
                 ]}
                 value={viewMode}
@@ -519,6 +521,17 @@ export default function FormBuilder() {
               title={form.title}
               description={form.description}
               fields={sortedFields}
+            />
+          </div>
+        )}
+
+        {/* Scoring mode */}
+        {viewMode === 'scoring' && (
+          <div className="max-w-[860px] mx-auto px-4">
+            <ScoringTab
+              fields={sortedFields}
+              scoringConfig={form.scoringConfig}
+              onChange={(scoringConfig) => updateFormState({ scoringConfig })}
             />
           </div>
         )}

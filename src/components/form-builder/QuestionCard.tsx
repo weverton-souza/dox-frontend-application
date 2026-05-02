@@ -1,8 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import type { FormField, FormFieldType } from '@/types'
-import { createEmptyFormFieldOption } from '@/types'
+import type { FormField, FormFieldType, LikertScalePoint, LikertRow } from '@/types'
+import {
+  createEmptyFormFieldOption,
+  createEmptyInventoryOption,
+  createEmptyLikertRow,
+  createDefaultLikertScale,
+} from '@/types'
 import { sanitizeVariableKey } from '@/lib/variable-service'
 import {
   DragDotsIcon,
@@ -39,6 +44,8 @@ const questionTypes: { type: FormFieldType; label: string }[] = [
   { type: 'scale', label: 'Escala linear' },
   { type: 'yes-no', label: 'Sim/Não' },
   { type: 'date', label: 'Data' },
+  { type: 'inventory-item', label: 'Inventário (pontuável)' },
+  { type: 'likert-matrix', label: 'Matriz Likert (pontuável)' },
 ]
 
 // ─── Component ────────────────────────────────────────────────
@@ -98,6 +105,25 @@ export default function QuestionCard({
       field.options.length < 2
     ) {
       updated.options = [createEmptyFormFieldOption(), createEmptyFormFieldOption()]
+    }
+    if (newType === 'inventory-item') {
+      if (field.options.length < 2) {
+        updated.options = [
+          createEmptyInventoryOption(0),
+          createEmptyInventoryOption(1),
+          createEmptyInventoryOption(2),
+          createEmptyInventoryOption(3),
+        ]
+      } else {
+        updated.options = field.options.map((opt, i) => ({
+          ...opt,
+          value: opt.value ?? i,
+        }))
+      }
+    }
+    if (newType === 'likert-matrix') {
+      if (field.likertScale.length === 0) updated.likertScale = createDefaultLikertScale()
+      if (field.likertRows.length === 0) updated.likertRows = [createEmptyLikertRow()]
     }
     update(updated)
   }
@@ -513,6 +539,59 @@ function renderCompactPreview(field: FormField) {
         </div>
       )
 
+    case 'inventory-item':
+      return (
+        <div className="space-y-1.5">
+          {field.options.slice(0, 4).map((opt, i) => (
+            <div key={opt.id} className="flex items-center gap-2.5">
+              <span className="w-4 h-4 rounded-full border-2 border-gray-300 shrink-0" />
+              <span className="text-sm text-gray-600 flex-1">{opt.label || `Opção ${i + 1}`}</span>
+              <span className="text-xs font-mono text-brand-600 bg-brand-50 px-2 py-0.5 rounded">
+                {opt.value ?? 0}
+              </span>
+            </div>
+          ))}
+          {field.options.length > 4 && (
+            <span className="text-xs text-gray-400">+{field.options.length - 4} opções</span>
+          )}
+        </div>
+      )
+
+    case 'likert-matrix':
+      return (
+        <div className="overflow-x-auto -mx-1">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-gray-200">
+                <th className="text-left text-xs text-gray-400 font-normal py-1.5 px-2 w-1/3"></th>
+                {field.likertScale.map((point) => (
+                  <th key={point.value} className="text-center text-xs text-gray-500 font-normal py-1.5 px-1.5">
+                    {point.label || point.value}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {field.likertRows.slice(0, 4).map((row, idx) => (
+                <tr key={row.id} className={idx % 2 === 0 ? 'bg-gray-50/40' : ''}>
+                  <td className="text-xs text-gray-600 py-1.5 px-2">
+                    {row.label || `Pergunta ${idx + 1}`}
+                  </td>
+                  {field.likertScale.map((point) => (
+                    <td key={point.value} className="text-center py-1.5 px-1.5">
+                      <span className="inline-block w-3 h-3 rounded-full border border-gray-300" />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {field.likertRows.length > 4 && (
+            <p className="text-xs text-gray-400 mt-1 px-2">+{field.likertRows.length - 4} linhas</p>
+          )}
+        </div>
+      )
+
     default:
       return null
   }
@@ -567,6 +646,12 @@ function renderFocusedContent(field: FormField, h: ContentHelpers) {
           <span className="text-sm text-gray-400">Dia, Mês, Ano</span>
         </div>
       )
+
+    case 'inventory-item':
+      return <InventoryItemEditor field={field} update={h.update} />
+
+    case 'likert-matrix':
+      return <LikertMatrixEditor field={field} update={h.update} />
 
     default:
       return null
@@ -688,6 +773,216 @@ function ScaleEditor({
             className="flex-1 text-sm text-gray-700 border-b border-gray-200 px-1 py-1 focus:border-brand-500 focus:outline-none placeholder:text-gray-400"
           />
         </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Inventory item editor ────────────────────────────────
+
+function InventoryItemEditor({
+  field,
+  update,
+}: {
+  field: FormField
+  update: (patch: Partial<FormField>) => void
+}) {
+  const updateOption = (index: number, patch: { label?: string; value?: number }) => {
+    const options = field.options.map((opt, i) =>
+      i === index ? { ...opt, ...patch } : opt,
+    )
+    update({ options })
+  }
+
+  const addOption = () => {
+    const nextValue = field.options.reduce((max, o) => Math.max(max, o.value ?? 0), -1) + 1
+    update({ options: [...field.options, createEmptyInventoryOption(nextValue)] })
+  }
+
+  const removeOption = (index: number) => {
+    if (field.options.length <= 1) return
+    update({ options: field.options.filter((_, i) => i !== index) })
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-gray-400">Opções com valor pontuado</span>
+        <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={field.reverseScored}
+            onChange={(e) => update({ reverseScored: e.target.checked })}
+            className="rounded border-gray-300 text-brand-500 focus:ring-brand-500"
+          />
+          Item reverso
+        </label>
+      </div>
+
+      <div className="space-y-2">
+        {field.options.map((opt, index) => (
+          <div key={opt.id} className="flex items-center gap-2 group/opt">
+            <span className="w-4 h-4 rounded-full border-2 border-gray-300 shrink-0" />
+            <input
+              type="text"
+              value={opt.label}
+              onChange={(e) => updateOption(index, { label: e.target.value })}
+              placeholder={`Opção ${index + 1}`}
+              className="flex-1 text-sm text-gray-700 bg-transparent border-b border-transparent hover:border-gray-200 focus:border-gray-300 px-1 py-1 focus:outline-none placeholder:text-gray-400 transition-colors"
+            />
+            <input
+              type="number"
+              value={opt.value ?? 0}
+              onChange={(e) => updateOption(index, { value: Number(e.target.value) })}
+              className="w-16 text-sm font-mono text-brand-600 bg-brand-50/50 border border-brand-200 rounded px-2 py-1 text-center focus:border-brand-500 focus:outline-none"
+            />
+            {field.options.length > 1 && (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); removeOption(index) }}
+                className="p-1 rounded-full hover:bg-gray-100 text-gray-300 opacity-0 group-hover/opt:opacity-100 transition-opacity"
+                title="Remover opção"
+              >
+                <CloseIcon />
+              </button>
+            )}
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); addOption() }}
+          className="text-sm text-gray-400 hover:text-gray-600 transition-colors px-1 py-1"
+        >
+          Adicionar opção
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ─── Likert matrix editor ─────────────────────────────────
+
+function LikertMatrixEditor({
+  field,
+  update,
+}: {
+  field: FormField
+  update: (patch: Partial<FormField>) => void
+}) {
+  const updateScalePoint = (index: number, patch: Partial<LikertScalePoint>) => {
+    const likertScale = field.likertScale.map((p, i) => (i === index ? { ...p, ...patch } : p))
+    update({ likertScale })
+  }
+
+  const addScalePoint = () => {
+    const nextValue = field.likertScale.reduce((max, p) => Math.max(max, p.value), -1) + 1
+    update({ likertScale: [...field.likertScale, { value: nextValue, label: '' }] })
+  }
+
+  const removeScalePoint = (index: number) => {
+    if (field.likertScale.length <= 2) return
+    update({ likertScale: field.likertScale.filter((_, i) => i !== index) })
+  }
+
+  const updateRow = (index: number, patch: Partial<LikertRow>) => {
+    const likertRows = field.likertRows.map((r, i) => (i === index ? { ...r, ...patch } : r))
+    update({ likertRows })
+  }
+
+  const addRow = () => {
+    update({ likertRows: [...field.likertRows, createEmptyLikertRow()] })
+  }
+
+  const removeRow = (index: number) => {
+    if (field.likertRows.length <= 1) return
+    update({ likertRows: field.likertRows.filter((_, i) => i !== index) })
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Scale */}
+      <div className="space-y-2">
+        <span className="text-xs text-gray-400">Escala compartilhada</span>
+        <div className="flex flex-wrap gap-2">
+          {field.likertScale.map((point, index) => (
+            <div key={point.value} className="flex items-center gap-1.5 bg-gray-50 rounded-lg px-2 py-1 group/sp">
+              <input
+                type="number"
+                value={point.value}
+                onChange={(e) => updateScalePoint(index, { value: Number(e.target.value) })}
+                className="w-12 text-sm font-mono text-brand-600 bg-white border border-brand-200 rounded px-1 py-0.5 text-center focus:border-brand-500 focus:outline-none"
+              />
+              <span className="text-xs text-gray-400">=</span>
+              <input
+                type="text"
+                value={point.label}
+                onChange={(e) => updateScalePoint(index, { label: e.target.value })}
+                placeholder="Rótulo"
+                className="w-28 text-sm text-gray-700 bg-white border border-gray-200 rounded px-2 py-0.5 focus:border-brand-500 focus:outline-none placeholder:text-gray-400"
+              />
+              {field.likertScale.length > 2 && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); removeScalePoint(index) }}
+                  className="p-0.5 rounded-full hover:bg-gray-200 text-gray-400 opacity-0 group-hover/sp:opacity-100 transition-opacity"
+                  title="Remover ponto"
+                >
+                  <CloseIcon />
+                </button>
+              )}
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); addScalePoint() }}
+            className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1"
+          >
+            + ponto
+          </button>
+        </div>
+      </div>
+
+      {/* Rows */}
+      <div className="space-y-2">
+        <span className="text-xs text-gray-400">Perguntas (linhas)</span>
+        {field.likertRows.map((row, index) => (
+          <div key={row.id} className="flex items-center gap-2 group/row">
+            <span className="text-xs text-gray-400 w-6 shrink-0">{index + 1}.</span>
+            <input
+              type="text"
+              value={row.label}
+              onChange={(e) => updateRow(index, { label: e.target.value })}
+              placeholder={`Pergunta ${index + 1}`}
+              className="flex-1 text-sm text-gray-700 bg-transparent border-b border-transparent hover:border-gray-200 focus:border-gray-300 px-1 py-1 focus:outline-none placeholder:text-gray-400 transition-colors"
+            />
+            <label className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={row.reverseScored}
+                onChange={(e) => updateRow(index, { reverseScored: e.target.checked })}
+                className="rounded border-gray-300 text-brand-500 focus:ring-brand-500"
+              />
+              Reversa
+            </label>
+            {field.likertRows.length > 1 && (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); removeRow(index) }}
+                className="p-1 rounded-full hover:bg-gray-100 text-gray-300 opacity-0 group-hover/row:opacity-100 transition-opacity"
+                title="Remover pergunta"
+              >
+                <CloseIcon />
+              </button>
+            )}
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); addRow() }}
+          className="text-sm text-gray-400 hover:text-gray-600 transition-colors px-1 py-1"
+        >
+          Adicionar pergunta
+        </button>
       </div>
     </div>
   )

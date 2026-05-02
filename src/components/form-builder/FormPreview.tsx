@@ -105,6 +105,48 @@ export default function FormPreview({ title, description, fields }: FormPreviewP
             className="border-0 border-b border-gray-200 bg-transparent px-0 py-2 text-sm text-gray-400 cursor-not-allowed"
           />
         )}
+
+        {field.type === 'inventory-item' && (
+          <div className="space-y-1">
+            {field.options.map((opt) => (
+              <label key={opt.id} className="flex items-center gap-3 px-3 py-2.5 cursor-not-allowed">
+                <span className="w-[18px] h-[18px] rounded-full border-2 border-gray-300 shrink-0" />
+                <span className="text-sm text-gray-500 flex-1">{opt.label || 'Opção'}</span>
+              </label>
+            ))}
+          </div>
+        )}
+
+        {field.type === 'likert-matrix' && (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[480px] text-sm">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="text-left text-xs text-gray-500 font-normal py-2 px-3 w-1/3"></th>
+                  {field.likertScale.map((point) => (
+                    <th key={point.value} className="text-center text-xs text-gray-500 font-normal py-2 px-2">
+                      {point.label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {field.likertRows.map((row, idx) => (
+                  <tr key={row.id} className={idx % 2 === 0 ? 'bg-gray-50/40' : ''}>
+                    <td className="text-sm text-gray-500 py-2.5 px-3">
+                      {row.label || `Pergunta ${idx + 1}`}
+                    </td>
+                    {field.likertScale.map((point) => (
+                      <td key={point.value} className="text-center py-2.5 px-2">
+                        <span className="inline-block w-[18px] h-[18px] rounded-full border-2 border-gray-300" />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     )
   }
