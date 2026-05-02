@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import type {
   Customer,
   CustomerData,
@@ -99,14 +99,26 @@ function groupEventsByMonth(events: CustomerEvent[]): { label: string; events: C
 
 // ========== Component ==========
 
+const VALID_SECTIONS: readonly ProfileSection[] = [
+  'personal', 'contact', 'clinical', 'contacts', 'reports', 'forms', 'notes', 'timeline',
+]
+
+function parseSection(raw: string | null): ProfileSection {
+  if (raw && (VALID_SECTIONS as readonly string[]).includes(raw)) {
+    return raw as ProfileSection
+  }
+  return 'personal'
+}
+
 export default function CustomerProfile() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { showError } = useError()
 
   const [customer, setCustomer] = useState<Customer | null>(null)
   const [editData, setEditData] = useState<CustomerData | null>(null)
-  const [activeSection, setActiveSection] = useState<ProfileSection>('personal')
+  const [activeSection, setActiveSection] = useState<ProfileSection>(() => parseSection(searchParams.get('tab')))
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
 
@@ -127,6 +139,16 @@ export default function CustomerProfile() {
   const [formGroups, setFormGroups] = useState<AggregatedFormGroup[]>([])
   const [formsLoading, setFormsLoading] = useState(false)
   const [showSendModal, setShowSendModal] = useState(false)
+
+  const handleSectionChange = useCallback((section: ProfileSection) => {
+    setActiveSection(section)
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      if (section === 'personal') next.delete('tab')
+      else next.set('tab', section)
+      return next
+    }, { replace: true })
+  }, [setSearchParams])
 
   // Load customer
   useEffect(() => {
@@ -816,7 +838,7 @@ export default function CustomerProfile() {
               return (
                 <button
                   key={tab.key}
-                  onClick={() => setActiveSection(tab.key)}
+                  onClick={() => handleSectionChange(tab.key)}
                   className={`
                     flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all whitespace-nowrap
                     ${isActive
