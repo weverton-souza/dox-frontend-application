@@ -13,21 +13,27 @@ export async function getFormById(id: string): Promise<Form> {
   return data
 }
 
-export async function createForm(form: Partial<Form>): Promise<Form> {
-  const { data } = await api.post<Form>('/forms', form)
-  return data
-}
-
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-export async function updateForm(form: Form): Promise<Form> {
-  const payload = {
-    ...form,
+function buildFormPayload(form: Partial<Form>) {
+  return {
+    title: form.title,
+    description: form.description,
+    fields: form.fields ?? [],
     linkedTemplateId: form.linkedTemplateId && UUID_REGEX.test(form.linkedTemplateId)
       ? form.linkedTemplateId
       : null,
+    fieldMappings: form.fieldMappings ?? [],
   }
-  const { data } = await api.put<Form>(`/forms/${form.id}`, payload)
+}
+
+export async function createForm(form: Partial<Form>): Promise<Form> {
+  const { data } = await api.post<Form>('/forms', buildFormPayload(form))
+  return data
+}
+
+export async function updateForm(form: Form): Promise<Form> {
+  const { data } = await api.put<Form>(`/forms/${form.id}`, buildFormPayload(form))
   return data
 }
 

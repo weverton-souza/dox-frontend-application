@@ -14,8 +14,7 @@ export async function getPublicForm(token: string): Promise<PublicFormData> {
 
 export async function submitPublicForm(
   token: string,
-  customerName: string,
   answers: FormFieldAnswer[],
 ): Promise<void> {
-  await publicApi.post(`/public/forms/${token}/submit`, { customerName, answers })
+  await publicApi.post(`/public/forms/${token}/submit`, { answers })
 }
