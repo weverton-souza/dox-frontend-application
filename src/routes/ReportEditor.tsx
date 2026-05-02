@@ -39,6 +39,7 @@ import type { ReviewSectionConfig } from '@/components/ai/AiSectionChecklist'
 import type { SectionInstruction } from '@/types'
 import { reviewText as reviewTextApi } from '@/lib/api/ai-api'
 import AiReviewModal from '@/components/ai/AiReviewModal'
+import MultiRespondentSendModal from '@/components/form-builder/MultiRespondentSendModal'
 
 interface BlockSelectorState {
   showBlockSelector: boolean
@@ -86,6 +87,7 @@ export default function ReportEditor() {
   const [customers, setCustomers] = useState<Customer[]>([])
   const [showVersionHistory, setShowVersionHistory] = useState(false)
   const [showPreviewModal, setShowPreviewModal] = useState(false)
+  const [showSendModal, setShowSendModal] = useState(false)
   const [activeItemId, setActiveItemId] = useState<string | null>(null)
   const [previewRefreshKey, setPreviewRefreshKey] = useState(0)
   const [formProvenanceLabel, setFormProvenanceLabel] = useState<string | null>(null)
@@ -916,6 +918,7 @@ export default function ReportEditor() {
               showPreview={showPreviewModal}
               onToggleNumbering={handleToggleNumbering}
               numberingActive={numberingActive}
+              onRequestResponses={report?.customerId ? () => setShowSendModal(true) : undefined}
             />
           </div>
         </div>
@@ -1188,6 +1191,20 @@ export default function ReportEditor() {
           onAccept={handleAcceptReview}
         />
       )}
+
+      {/* Multi-respondent send modal */}
+      {showSendModal && report?.customerId && (() => {
+        const reportCustomer = customers.find(c => c.id === report.customerId)
+        if (!reportCustomer) return null
+        return (
+          <MultiRespondentSendModal
+            isOpen={showSendModal}
+            onClose={() => setShowSendModal(false)}
+            customer={reportCustomer}
+            initialFormId={report.formId ?? undefined}
+          />
+        )
+      })()}
 
       {/* Finalization Modal */}
       <AiFinalizationModal
