@@ -377,8 +377,13 @@ export default function QuestionCard({
         )}
 
         {/* Conditional logic (toggleable) */}
-        {showLogic && !isSectionHeader && (
+        {showLogic && (
           <div className="mt-3 bg-gray-50/60 border border-gray-200 rounded-lg p-3">
+            {isSectionHeader && (
+              <p className="text-xs text-gray-500 mb-2">
+                A seção inteira (esta seção e todas as perguntas dentro dela) só aparece quando:
+              </p>
+            )}
             <ConditionalLogicEditor
               field={field}
               allFields={allFields}
@@ -462,20 +467,18 @@ export default function QuestionCard({
                       {showVarKey ? <CheckIcon /> : <span className="w-4" />}
                       Chave de variável
                     </button>
-                    {!isSectionHeader && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (showLogic) update({ showWhen: undefined })
-                          setShowLogic(!showLogic)
-                          setShowMoreMenu(false)
-                        }}
-                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                      >
-                        {showLogic ? <CheckIcon /> : <span className="w-4" />}
-                        Lógica condicional
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (showLogic) update({ showWhen: undefined })
+                        setShowLogic(!showLogic)
+                        setShowMoreMenu(false)
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                    >
+                      {showLogic ? <CheckIcon /> : <span className="w-4" />}
+                      Lógica condicional
+                    </button>
                   </div>
                 </>
               )}

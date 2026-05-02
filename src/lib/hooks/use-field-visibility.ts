@@ -134,6 +134,21 @@ export function useFieldVisibility(
         visible.add(field.id)
       }
     }
+
+    // Cascade: se section-header está invisível, todas as perguntas dela
+    // (até a próxima section-header) também ficam invisíveis.
+    const ordered = [...fields].sort((a, b) => a.order - b.order)
+    let currentSectionVisible = true
+    for (const field of ordered) {
+      if (field.type === 'section-header') {
+        currentSectionVisible = visible.has(field.id)
+        continue
+      }
+      if (!currentSectionVisible) {
+        visible.delete(field.id)
+      }
+    }
+
     return visible
   }, [fields, answers])
 }
