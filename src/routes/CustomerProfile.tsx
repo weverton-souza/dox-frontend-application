@@ -34,12 +34,13 @@ import Button from '@/components/ui/Button'
 import Spinner from '@/components/ui/Spinner'
 import StatusBadge from '@/components/ui/StatusBadge'
 import ListCard, { ListCardPill } from '@/components/ui/ListCard'
+import PatientContactsTab from '@/components/customer/PatientContactsTab'
 import { TrashIcon } from '@/components/icons'
 import { getAvatarColor, getInitials } from '@/lib/avatar-utils'
 
 // ========== Types ==========
 
-type ProfileSection = 'personal' | 'contact' | 'clinical' | 'reports' | 'notes' | 'timeline'
+type ProfileSection = 'personal' | 'contact' | 'clinical' | 'contacts' | 'reports' | 'notes' | 'timeline'
 
 interface TabItem {
   key: ProfileSection
@@ -53,6 +54,7 @@ const TABS: TabItem[] = [
   { key: 'personal', label: 'Dados Pessoais', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> },
   { key: 'contact', label: 'Contato', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg> },
   { key: 'clinical', label: 'Dados Clínicos', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg> },
+  { key: 'contacts', label: 'Contatos', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
   { key: 'reports', label: 'Relatórios', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> },
   { key: 'notes', label: 'Notas', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> },
   { key: 'timeline', label: 'Histórico', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> },
@@ -356,6 +358,11 @@ export default function CustomerProfile() {
     )
   }
 
+  function renderContactsSection() {
+    if (!id) return null
+    return <PatientContactsTab customerId={id} />
+  }
+
   function renderNotesSection() {
     return (
       <div className="space-y-4">
@@ -550,6 +557,7 @@ export default function CustomerProfile() {
     personal: renderPersonalSection,
     contact: renderContactSection,
     clinical: renderClinicalSection,
+    contacts: renderContactsSection,
     reports: renderReportsSection,
     notes: renderNotesSection,
     timeline: renderTimelineSection,

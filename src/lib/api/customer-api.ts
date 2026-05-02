@@ -1,5 +1,7 @@
-import type { Customer, CustomerNote, CustomerEvent, CustomerCalendarEvent, Page } from '@/types'
+import type { Customer, CustomerNote, CustomerEvent, CustomerCalendarEvent, PatientContact, Page } from '@/types'
 import { api } from '@/lib/api/api-client'
+
+type PatientContactPayload = Omit<PatientContact, 'id' | 'customerId' | 'createdAt' | 'updatedAt'>
 
 // ========== Customer CRUD ==========
 
@@ -89,4 +91,32 @@ export async function getAllCustomerEvents(from: string, to: string): Promise<Cu
   const params = new URLSearchParams({ from, to })
   const { data } = await api.get<CustomerCalendarEvent[]>(`/events?${params}`)
   return data
+}
+
+// ========== Patient Contacts ==========
+
+export async function getPatientContacts(customerId: string): Promise<PatientContact[]> {
+  const { data } = await api.get<PatientContact[]>(`/customers/${customerId}/contacts`)
+  return data
+}
+
+export async function createPatientContact(
+  customerId: string,
+  contact: PatientContactPayload,
+): Promise<PatientContact> {
+  const { data } = await api.post<PatientContact>(`/customers/${customerId}/contacts`, contact)
+  return data
+}
+
+export async function updatePatientContact(
+  customerId: string,
+  contactId: string,
+  contact: PatientContactPayload,
+): Promise<PatientContact> {
+  const { data } = await api.put<PatientContact>(`/customers/${customerId}/contacts/${contactId}`, contact)
+  return data
+}
+
+export async function deletePatientContact(customerId: string, contactId: string): Promise<void> {
+  await api.delete(`/customers/${customerId}/contacts/${contactId}`)
 }

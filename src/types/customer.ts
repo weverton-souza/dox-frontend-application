@@ -117,3 +117,67 @@ export function createEmptyCustomerEvent(customerId: string, type: CustomerEvent
     createdAt: now,
   }
 }
+
+// ========== Patient Contacts ==========
+
+export type PatientContactRelationType =
+  | 'MAE'
+  | 'PAI'
+  | 'RESPONSAVEL_LEGAL'
+  | 'CONJUGE'
+  | 'FILHO'
+  | 'IRMAO'
+  | 'AVO'
+  | 'TIO'
+  | 'PROFESSOR'
+  | 'ESCOLA'
+  | 'MEDICO'
+  | 'TERAPEUTA'
+  | 'AMIGO'
+  | 'OUTRO'
+
+export const PATIENT_CONTACT_RELATION_LABELS: Record<PatientContactRelationType, string> = {
+  MAE: 'Mãe',
+  PAI: 'Pai',
+  RESPONSAVEL_LEGAL: 'Responsável legal',
+  CONJUGE: 'Cônjuge',
+  FILHO: 'Filho(a)',
+  IRMAO: 'Irmão(ã)',
+  AVO: 'Avô/Avó',
+  TIO: 'Tio(a)',
+  PROFESSOR: 'Professor(a)',
+  ESCOLA: 'Escola',
+  MEDICO: 'Médico(a)',
+  TERAPEUTA: 'Terapeuta',
+  AMIGO: 'Amigo(a)',
+  OUTRO: 'Outro',
+}
+
+export interface PatientContact {
+  id: string
+  customerId: string
+  name: string
+  relationType: PatientContactRelationType
+  email: string | null
+  phone: string | null
+  notes: string | null
+  canReceiveForms: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export function createEmptyPatientContact(customerId: string): PatientContact {
+  const now = new Date().toISOString()
+  return {
+    id: crypto.randomUUID(),
+    customerId,
+    name: '',
+    relationType: 'MAE',
+    email: null,
+    phone: null,
+    notes: null,
+    canReceiveForms: true,
+    createdAt: now,
+    updatedAt: now,
+  }
+}
