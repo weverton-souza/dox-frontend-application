@@ -103,7 +103,7 @@ function buildRowsForField(field: FormField): QuestionRow[] {
 function CellContent({ cell, color }: { cell: CellValue; color: RespondentColor }) {
   const hasValue = cell.value !== null && cell.value !== undefined && cell.label !== '—'
   return (
-    <span className={`text-sm ${color.text} font-medium`}>
+    <span className="text-sm font-medium" style={{ color: color.primary }}>
       {cell.label}
       {hasValue && <span className="ml-1.5 text-xs opacity-70">({cell.value})</span>}
     </span>
@@ -115,10 +115,13 @@ function ScoreCell({ score, color }: { score: ScoreResult | undefined; color: Re
     return <span className="text-gray-400">—</span>
   }
   return (
-    <span className={`flex items-center gap-2 text-sm font-semibold ${color.text}`}>
+    <span className="flex items-center gap-2 text-sm font-semibold" style={{ color: color.primary }}>
       <span className="text-base">{score.value}</span>
       {score.classification && (
-        <span className={`text-xs px-2 py-0.5 rounded ${color.light} ${color.text} font-medium`}>
+        <span
+          className="text-xs px-2 py-0.5 rounded font-medium"
+          style={{ backgroundColor: color.cellTint, color: color.primary }}
+        >
           {score.classification}
         </span>
       )}
@@ -168,11 +171,16 @@ export default function ComparisonFormView({ data, sectionGroups, visuals }: Com
                       >
                         <div className="flex items-center gap-1.5">
                           <span
-                            className={`shrink-0 w-5 h-5 rounded-full ${v.color.bg} flex items-center justify-center text-[10px] font-semibold text-white`}
+                            className="shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-semibold text-white"
+                            style={{ backgroundColor: v.color.primary }}
                           >
                             {v.initials}
                           </span>
-                          <span className={`${v.color.text} normal-case truncate`} title={v.respondent.respondentName ?? ''}>
+                          <span
+                            className="normal-case truncate"
+                            style={{ color: v.color.primary }}
+                            title={v.respondent.respondentName ?? ''}
+                          >
                             {v.respondent.respondentName?.split(' ')[0] ?? '—'}
                             <span className="text-gray-400 font-normal ml-1">({v.label})</span>
                           </span>
@@ -189,7 +197,11 @@ export default function ComparisonFormView({ data, sectionGroups, visuals }: Com
                         {row.reverseScored && <span className="ml-1.5 text-xs text-gray-400">(reverso)</span>}
                       </td>
                       {visuals.map((v) => (
-                        <td key={v.respondent.linkId} className={`px-3 py-2.5 align-top ${v.color.light}`}>
+                        <td
+                          key={v.respondent.linkId}
+                          className="px-3 py-2.5 align-top"
+                          style={{ backgroundColor: v.color.cellTint }}
+                        >
                           <CellContent cell={row.cellRender(v)} color={v.color} />
                         </td>
                       ))}
@@ -207,13 +219,15 @@ export default function ComparisonFormView({ data, sectionGroups, visuals }: Com
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-brand-50/40 border-b border-brand-100">
+                <tr className="bg-gray-50/60 border-b border-gray-100">
                   <th className="text-left px-4 py-2.5 font-medium text-xs text-gray-500 uppercase tracking-wide w-[44%] min-w-[220px]">
                     Pontuação
                   </th>
                   {visuals.map((v) => (
                     <th key={v.respondent.linkId} className="text-left px-3 py-2.5 font-medium text-xs uppercase tracking-wide min-w-[140px]">
-                      <span className={v.color.text}>{v.respondent.respondentName?.split(' ')[0] ?? '—'}</span>
+                      <span style={{ color: v.color.primary }}>
+                        {v.respondent.respondentName?.split(' ')[0] ?? '—'}
+                      </span>
                     </th>
                   ))}
                 </tr>
@@ -225,7 +239,11 @@ export default function ComparisonFormView({ data, sectionGroups, visuals }: Com
                       {firstScore.name}
                     </td>
                     {visuals.map((v) => (
-                      <td key={v.respondent.linkId} className={`px-3 py-3 align-top ${v.color.light}`}>
+                      <td
+                        key={v.respondent.linkId}
+                        className="px-3 py-3 align-top"
+                        style={{ backgroundColor: v.color.cellTint }}
+                      >
                         <ScoreCell score={v.respondent.scoreBreakdown[idx]} color={v.color} />
                       </td>
                     ))}
