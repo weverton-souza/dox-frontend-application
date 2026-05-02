@@ -4,10 +4,12 @@ interface FormFieldRendererProps {
   field: FormField
   answer: FormFieldAnswer
   onChange: (answer: FormFieldAnswer) => void
+  readOnly?: boolean
 }
 
-export default function FormFieldRenderer({ field, answer, onChange }: FormFieldRendererProps) {
+export default function FormFieldRenderer({ field, answer, onChange, readOnly = false }: FormFieldRendererProps) {
   const update = (patch: Partial<FormFieldAnswer>) => {
+    if (readOnly) return
     onChange({ ...answer, ...patch })
   }
 

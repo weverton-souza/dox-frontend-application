@@ -14,6 +14,7 @@ export default function FormSectionFields({
   getAnswer,
   onAnswerChange,
   validationErrors,
+  readOnly = false,
 }: FormSectionFieldsProps) {
   return (
     <>
@@ -59,6 +60,7 @@ export default function FormSectionFields({
                   field={field}
                   answer={getAnswer(field.id)}
                   onChange={onAnswerChange}
+                  readOnly={readOnly}
                 />
 
                 {hasError && (

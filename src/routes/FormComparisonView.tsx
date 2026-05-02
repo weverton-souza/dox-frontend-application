@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
 import type {
   ComparisonResult,
@@ -6,12 +6,16 @@ import type {
   FormField,
   FormFieldAnswer,
 } from '@/types'
-import { CUSTOMER_CONTACT_RELATION_LABELS } from '@/types'
+import { CUSTOMER_CONTACT_RELATION_LABELS, createEmptyFormFieldAnswer } from '@/types'
 import { getFormComparison } from '@/lib/api/customer-forms-api'
+import { buildFormSectionGroups } from '@/lib/utils'
 import { useError } from '@/contexts/ErrorContext'
 import Spinner from '@/components/ui/Spinner'
 import Button from '@/components/ui/Button'
+import FormSectionFields from '@/components/form-fill/FormSectionFields'
 import { getAvatarColor, getInitials } from '@/lib/avatar-utils'
+
+type ViewMode = 'table' | 'form'
 
 const DIVERGENCE_THRESHOLD = 5
 
@@ -73,6 +77,7 @@ export default function FormComparisonView() {
 
   const [data, setData] = useState<ComparisonResult | null>(null)
   const [loading, setLoading] = useState(true)
+  const [viewMode, setViewMode] = useState<ViewMode>('table')
 
   useEffect(() => {
     if (!customerId || !formId || !versionId) {
@@ -175,6 +180,28 @@ export default function FormComparisonView() {
 
       <div className="flex-1 bg-gray-50/50">
         <div className="max-w-page mx-auto px-page py-6 space-y-6">
+          <div className="inline-flex items-center bg-white rounded-xl border border-gray-200 p-1 shadow-sm">
+            <button
+              type="button"
+              onClick={() => setViewMode('table')}
+              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                viewMode === 'table' ? 'bg-brand-500 text-white' : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Tabela
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('form')}
+              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                viewMode === 'form' ? 'bg-brand-500 text-white' : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Formulário
+            </button>
+          </div>
+
+          {viewMode === 'table' && (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -274,8 +301,13 @@ export default function FormComparisonView() {
               </table>
             </div>
           </div>
+          )}
 
-          {data.respondents[0]?.scoreBreakdown.length > 1 && (
+          {viewMode === 'form' && (
+            <FormViewMode data={data} />
+          )}
+
+          {viewMode === 'table' && data.respondents[0]?.scoreBreakdown.length > 1 && (
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
               <h2 className="text-sm font-semibold text-gray-900 mb-3">Subescalas</h2>
               <div className="overflow-x-auto">
@@ -320,6 +352,92 @@ export default function FormComparisonView() {
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+interface FormViewModeProps {
+  data: ComparisonResult
+}
+
+function FormViewMode({ data }: FormViewModeProps) {
+  const sectionGroups = useMemo(
+    () => buildFormSectionGroups([...data.fields].sort((a, b) => a.order - b.order)),
+    [data.fields],
+  )
+
+  return (
+    <div className="space-y-6">
+      {data.respondents.map((r) => (
+        <RespondentFormCard key={r.linkId} respondent={r} sectionGroups={sectionGroups} />
+      ))}
+    </div>
+  )
+}
+
+interface RespondentFormCardProps {
+  respondent: ComparisonRespondent
+  sectionGroups: ReturnType<typeof buildFormSectionGroups>
+}
+
+function RespondentFormCard({ respondent, sectionGroups }: RespondentFormCardProps) {
+  const answersByField = useMemo(() => {
+    const map = new Map<string, FormFieldAnswer>()
+    for (const a of respondent.answers) map.set(a.fieldId, a)
+    return map
+  }, [respondent.answers])
+
+  const getAnswer = useCallback(
+    (fieldId: string) => answersByField.get(fieldId) ?? createEmptyFormFieldAnswer(fieldId),
+    [answersByField],
+  )
+
+  const noop = useCallback(() => {}, [])
+  const isAnswered = respondent.status === 'answered'
+  const totalScore = respondent.scoreBreakdown[0]
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 bg-gray-50/60">
+        <span
+          className={`shrink-0 w-9 h-9 rounded-full bg-gradient-to-br ${getAvatarColor(respondent.respondentName || respondent.linkId)} flex items-center justify-center text-xs font-semibold text-white`}
+        >
+          {getInitials(respondent.respondentName || '?')}
+        </span>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-gray-900 truncate">
+            {respondent.respondentName || '(sem nome)'}
+          </p>
+          <p className="text-xs text-gray-500">{formatRespondentLabel(respondent)}</p>
+        </div>
+        {isAnswered && totalScore && totalScore.value !== null && (
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-gray-500">{totalScore.name}:</span>
+            <span className="font-semibold text-gray-900">{totalScore.value}</span>
+            {totalScore.classification && (
+              <span className="text-xs px-2 py-0.5 rounded bg-brand-100 text-brand-700">
+                {totalScore.classification}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+
+      {isAnswered ? (
+        <div className="p-5 space-y-3">
+          <FormSectionFields
+            sectionGroups={sectionGroups}
+            getAnswer={getAnswer}
+            onAnswerChange={noop}
+            validationErrors={new Set()}
+            readOnly
+          />
+        </div>
+      ) : (
+        <div className="px-5 py-8 text-center text-sm text-gray-500">
+          Aguardando resposta
+        </div>
+      )}
     </div>
   )
 }
