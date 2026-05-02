@@ -28,3 +28,25 @@ export async function submitPublicForm(
 ): Promise<void> {
   await publicApi.post(`/public/forms/${token}/submit`, { answers })
 }
+
+export interface PublicFormDraft {
+  partialResponse: Record<string, unknown>
+  savedAt: string
+}
+
+export async function getPublicFormDraft(token: string): Promise<PublicFormDraft | null> {
+  const response = await publicApi.get<PublicFormDraft | ''>(`/public/forms/${token}/draft`)
+  if (response.status === 204 || !response.data) return null
+  return response.data as PublicFormDraft
+}
+
+export async function savePublicFormDraft(
+  token: string,
+  partialResponse: Record<string, unknown>,
+): Promise<PublicFormDraft> {
+  const { data } = await publicApi.put<PublicFormDraft>(
+    `/public/forms/${token}/draft`,
+    { partialResponse },
+  )
+  return data
+}

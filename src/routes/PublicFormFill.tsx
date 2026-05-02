@@ -1,12 +1,41 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import type { PublicFormData, FormFieldAnswer } from '@/types'
 import { createEmptyFormFieldAnswer } from '@/types'
 import { getPublicForm, submitPublicForm } from '@/lib/api/public-form-api'
 import { parseError } from '@/lib/api/error-handler'
 import { useFormValidation } from '@/lib/hooks/use-form-validation'
+import { useFormDraft } from '@/lib/hooks/use-form-draft'
 import { useSortedFields } from '@/lib/hooks/use-sorted-fields'
 import FormSectionFields from '@/components/form-fill/FormSectionFields'
+
+interface DraftPayload extends Record<string, unknown> {
+  answers: FormFieldAnswer[]
+}
+
+function DraftIndicator({
+  status,
+  lastSavedAt,
+}: {
+  status: 'idle' | 'saving' | 'saved' | 'error'
+  lastSavedAt: string | null
+}) {
+  if (status === 'idle' && !lastSavedAt) return null
+  if (status === 'saving') {
+    return <span className="hidden sm:inline text-xs text-gray-400">Salvando…</span>
+  }
+  if (status === 'error') {
+    return <span className="hidden sm:inline text-xs text-amber-600">Erro ao salvar rascunho</span>
+  }
+  return (
+    <span className="hidden sm:inline-flex items-center gap-1 text-xs text-gray-400">
+      <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="#22C55E" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M5 10l3 3 7-7" />
+      </svg>
+      Rascunho salvo
+    </span>
+  )
+}
 
 type PageState = 'loading' | 'form' | 'success' | 'error'
 
@@ -19,16 +48,20 @@ export default function PublicFormFill() {
   const [errorMessage, setErrorMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
+  const draftPayload = useMemo<DraftPayload | null>(
+    () => (formData ? { answers } : null),
+    [formData, answers],
+  )
+
+  const { initialDraft, draftLoaded, status: draftStatus, lastSavedAt } =
+    useFormDraft<DraftPayload>(token, draftPayload, pageState === 'form')
+
   useEffect(() => {
     if (!token) return
 
     getPublicForm(token)
       .then((data) => {
         setFormData(data)
-        const initialAnswers = data.fields
-          .filter((f) => f.type !== 'section-header')
-          .map((f) => createEmptyFormFieldAnswer(f.id))
-        setAnswers(initialAnswers)
         setPageState('form')
       })
       .catch((err: unknown) => {
@@ -37,6 +70,21 @@ export default function PublicFormFill() {
         setPageState('error')
       })
   }, [token])
+
+  useEffect(() => {
+    if (!formData || !draftLoaded) return
+    const baseAnswers = formData.fields
+      .filter((f) => f.type !== 'section-header')
+      .map((f) => createEmptyFormFieldAnswer(f.id))
+    if (initialDraft && Array.isArray(initialDraft.answers)) {
+      const draftMap = new Map(
+        (initialDraft.answers as FormFieldAnswer[]).map((a) => [a.fieldId, a]),
+      )
+      setAnswers(baseAnswers.map((a) => draftMap.get(a.fieldId) ?? a))
+    } else {
+      setAnswers(baseAnswers)
+    }
+  }, [formData, draftLoaded, initialDraft])
 
   const { validationErrors, validate, clearFieldError } = useFormValidation(
     useCallback(() => formData?.fields ?? [], [formData]),
@@ -122,7 +170,7 @@ export default function PublicFormFill() {
   return (
     <div className="min-h-screen bg-[#f0ebf8]/40">
       <header className="bg-white/80 backdrop-blur-md border-b border-gray-200/60 sticky top-0 z-30 h-16">
-        <div className="max-w-[860px] mx-auto px-4 sm:px-6 h-full flex items-center">
+        <div className="max-w-[860px] mx-auto px-4 sm:px-6 h-full flex items-center gap-3">
           <div className="flex-1 min-w-0">
             <h1 className="text-sm font-medium text-gray-700 truncate">
               {formData?.formTitle || 'Formulário'}
@@ -131,6 +179,7 @@ export default function PublicFormFill() {
               <p className="text-xs text-gray-400 truncate">{formData.customerName}</p>
             )}
           </div>
+          <DraftIndicator status={draftStatus} lastSavedAt={lastSavedAt} />
         </div>
       </header>
 
