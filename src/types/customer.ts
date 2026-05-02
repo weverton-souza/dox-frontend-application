@@ -7,10 +7,6 @@ export interface CustomerData {
   age: string // editável — ex: "32 anos e 4 meses"
   education: string
   profession: string
-  motherName: string
-  fatherName: string
-  guardianName?: string         // Nome do responsável legal
-  guardianRelationship?: string // Grau de parentesco (Avó, Tio, etc.)
   // Contato
   phone?: string
   email?: string
@@ -80,8 +76,6 @@ export function createEmptyCustomerData(): CustomerData {
     age: '',
     education: '',
     profession: '',
-    motherName: '',
-    fatherName: '',
   }
 }
 
@@ -121,36 +115,38 @@ export function createEmptyCustomerEvent(customerId: string, type: CustomerEvent
 // ========== Patient Contacts ==========
 
 export type PatientContactRelationType =
-  | 'MAE'
-  | 'PAI'
-  | 'RESPONSAVEL_LEGAL'
-  | 'CONJUGE'
-  | 'FILHO'
-  | 'IRMAO'
-  | 'AVO'
-  | 'TIO'
-  | 'PROFESSOR'
-  | 'ESCOLA'
-  | 'MEDICO'
-  | 'TERAPEUTA'
-  | 'AMIGO'
-  | 'OUTRO'
+  | 'PARENT'
+  | 'LEGAL_GUARDIAN'
+  | 'MOTHER'
+  | 'FATHER'
+  | 'SPOUSE'
+  | 'CHILD'
+  | 'SIBLING'
+  | 'GRANDPARENT'
+  | 'UNCLE_AUNT'
+  | 'TEACHER'
+  | 'SCHOOL'
+  | 'DOCTOR'
+  | 'THERAPIST'
+  | 'FRIEND'
+  | 'OTHER'
 
 export const PATIENT_CONTACT_RELATION_LABELS: Record<PatientContactRelationType, string> = {
-  MAE: 'Mãe',
-  PAI: 'Pai',
-  RESPONSAVEL_LEGAL: 'Responsável legal',
-  CONJUGE: 'Cônjuge',
-  FILHO: 'Filho(a)',
-  IRMAO: 'Irmão(ã)',
-  AVO: 'Avô/Avó',
-  TIO: 'Tio(a)',
-  PROFESSOR: 'Professor(a)',
-  ESCOLA: 'Escola',
-  MEDICO: 'Médico(a)',
-  TERAPEUTA: 'Terapeuta',
-  AMIGO: 'Amigo(a)',
-  OUTRO: 'Outro',
+  PARENT: 'Filiação',
+  LEGAL_GUARDIAN: 'Responsável legal',
+  MOTHER: 'Mãe',
+  FATHER: 'Pai',
+  SPOUSE: 'Cônjuge',
+  CHILD: 'Filho(a)',
+  SIBLING: 'Irmão(ã)',
+  GRANDPARENT: 'Avô/Avó',
+  UNCLE_AUNT: 'Tio(a)',
+  TEACHER: 'Professor(a)',
+  SCHOOL: 'Escola',
+  DOCTOR: 'Médico(a)',
+  THERAPIST: 'Terapeuta',
+  FRIEND: 'Amigo(a)',
+  OTHER: 'Outro',
 }
 
 export interface PatientContact {
@@ -166,13 +162,13 @@ export interface PatientContact {
   updatedAt: string
 }
 
-export function createEmptyPatientContact(customerId: string): PatientContact {
+export function createEmptyPatientContact(customerId: string, relationType: PatientContactRelationType = 'PARENT'): PatientContact {
   const now = new Date().toISOString()
   return {
     id: crypto.randomUUID(),
     customerId,
     name: '',
-    relationType: 'MAE',
+    relationType,
     email: null,
     phone: null,
     notes: null,

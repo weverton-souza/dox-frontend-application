@@ -75,9 +75,8 @@ function getBlockSummary(block: Block): string {
       const d = block.data as ClosingPageData
       const sigs = [
         d.showPatientSignature && 'Paciente',
-        d.showMotherSignature && 'Mãe',
-        d.showFatherSignature && 'Pai',
-        d.showGuardianSignature && 'Responsável',
+        d.showParentSignatures && 'Filiação',
+        d.showGuardianSignatures && 'Responsável legal',
       ].filter(Boolean)
       return sigs.length > 0 ? `Assinaturas: ${sigs.join(', ')}` : ''
     }

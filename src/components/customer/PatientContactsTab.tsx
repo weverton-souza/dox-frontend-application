@@ -215,8 +215,9 @@ function ContactFormModal({ contact, onClose, onSave }: ContactFormModalProps) {
           />
           <Input
             label="Telefone"
-            value={applyMask(draft.phone ?? '', 'phone')}
-            onChange={(e) => update({ phone: applyMask(e.target.value, 'phone') || null })}
+            mask="phone"
+            value={draft.phone ?? ''}
+            onChange={(e) => update({ phone: e.target.value || null })}
             placeholder="(11) 99999-9999"
           />
         </div>

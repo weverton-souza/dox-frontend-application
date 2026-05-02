@@ -35,6 +35,7 @@ import Spinner from '@/components/ui/Spinner'
 import StatusBadge from '@/components/ui/StatusBadge'
 import ListCard, { ListCardPill } from '@/components/ui/ListCard'
 import PatientContactsTab from '@/components/customer/PatientContactsTab'
+import FamilyAndGuardiansSection from '@/components/customer/FamilyAndGuardiansSection'
 import { TrashIcon } from '@/components/icons'
 import { getAvatarColor, getInitials } from '@/lib/avatar-utils'
 
@@ -268,20 +269,23 @@ export default function CustomerProfile() {
 
   function renderPersonalSection() {
     return (
-      <SectionCard title="Dados Pessoais" onSave={handleSaveSection} saving={saving}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Input label="Nome completo" value={editData!.name} onChange={(e) => updateField('name', e.target.value)} />
-          <Input label="CPF" value={editData!.cpf} onChange={(e) => updateField('cpf', e.target.value)} mask="cpf" />
-          <Input label="Data de Nascimento" type="date" value={editData!.birthDate} onChange={(e) => { updateField('birthDate', e.target.value); updateField('age', calculateAge(e.target.value)) }} />
-          <Input label="Idade" value={editData!.age} onChange={(e) => updateField('age', e.target.value)} placeholder="Ex: 32 anos e 4 meses" readOnly />
-          <Input label="Escolaridade" value={editData!.education} onChange={(e) => updateField('education', e.target.value)} />
-          <Input label="Profissão" value={editData!.profession} onChange={(e) => updateField('profession', e.target.value)} />
-          <Input label="Nome da Mãe" value={editData!.motherName} onChange={(e) => updateField('motherName', e.target.value)} />
-          <Input label="Nome do Pai" value={editData!.fatherName} onChange={(e) => updateField('fatherName', e.target.value)} />
-          <Input label="Responsável Legal" value={editData!.guardianName ?? ''} onChange={(e) => updateField('guardianName', e.target.value)} />
-          <Input label="Parentesco" value={editData!.guardianRelationship ?? ''} onChange={(e) => updateField('guardianRelationship', e.target.value)} />
-        </div>
-      </SectionCard>
+      <div className="space-y-4">
+        <SectionCard title="Dados Pessoais" onSave={handleSaveSection} saving={saving}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input label="Nome completo" value={editData!.name} onChange={(e) => updateField('name', e.target.value)} />
+            <Input label="CPF" value={editData!.cpf} onChange={(e) => updateField('cpf', e.target.value)} mask="cpf" />
+            <Input label="Data de Nascimento" type="date" value={editData!.birthDate} onChange={(e) => { updateField('birthDate', e.target.value); updateField('age', calculateAge(e.target.value)) }} />
+            <Input label="Idade" value={editData!.age} onChange={(e) => updateField('age', e.target.value)} placeholder="Ex: 32 anos e 4 meses" readOnly />
+            <Input label="Escolaridade" value={editData!.education} onChange={(e) => updateField('education', e.target.value)} />
+            <Input label="Profissão" value={editData!.profession} onChange={(e) => updateField('profession', e.target.value)} />
+          </div>
+        </SectionCard>
+        {id && (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+            <FamilyAndGuardiansSection customerId={id} />
+          </div>
+        )}
+      </div>
     )
   }
 

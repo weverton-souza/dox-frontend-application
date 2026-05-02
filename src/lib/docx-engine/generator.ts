@@ -448,21 +448,31 @@ function renderIdentification(data: IdentificationData): (Paragraph | Table)[] {
 
   // Section: Dados do Paciente
   elements.push(createSectionHeader('DADOS DO PACIENTE'))
-  const guardianLabel = data.customer.guardianRelationship
-    ? `Responsável Legal (${data.customer.guardianRelationship})`
-    : 'Responsável Legal'
 
-  const customerRows = [
+  const baseRows = [
     ['Nome', data.customer.name],
     ['CPF', data.customer.cpf],
     ['Data de Nascimento', formatDate(data.customer.birthDate)],
     ['Idade', data.customer.age],
     ['Escolaridade', data.customer.education],
     ['Profissão', data.customer.profession],
-    ['Filiação (Mãe)', data.customer.motherName],
-    ['Filiação (Pai)', data.customer.fatherName],
-    [guardianLabel, data.customer.guardianName ?? ''],
-  ].filter(([, val]) => val)
+  ]
+
+  const parentRows = (data.customer.parents ?? [])
+    .map((name, i) => [
+      data.customer.parents.length === 1 ? 'Filiação' : `Filiação ${i + 1}`,
+      name,
+    ])
+
+  const guardianRows = (data.customer.guardians ?? [])
+    .map((g) => {
+      const label = g.relationship
+        ? `Responsável Legal (${g.relationship})`
+        : 'Responsável Legal'
+      return [label, g.name]
+    })
+
+  const customerRows = [...baseRows, ...parentRows, ...guardianRows].filter(([, val]) => val)
 
   elements.push(createKeyValueTable(customerRows))
 
@@ -1591,9 +1601,8 @@ async function renderClosingPage(data: ClosingPageData, report: Report, prof: im
 
   // Backward compatibility: old reports may have showSignatureLines instead of individual toggles
   const showPatient = data.showPatientSignature ?? data.showSignatureLines ?? true
-  const showMother = data.showMotherSignature ?? false
-  const showFather = data.showFatherSignature ?? false
-  const showGuardian = data.showGuardianSignature ?? false
+  const showParents = data.showParentSignatures ?? false
+  const showGuardians = data.showGuardianSignatures ?? false
 
   if (data.title) {
     elements.push(new Paragraph({ children: [new PageBreak()] }))
@@ -1675,23 +1684,27 @@ async function renderClosingPage(data: ClosingPageData, report: Report, prof: im
       subtitle: 'Paciente',
     })
   }
-  if (showMother) {
-    signatures.push({
-      name: idData?.customer?.motherName || 'Mãe',
-      subtitle: 'Mãe',
+  if (showParents) {
+    const parents = idData?.customer?.parents ?? []
+    parents.forEach((parentName, i) => {
+      signatures.push({
+        name: parentName || `Filiação ${i + 1}`,
+        subtitle: parents.length === 1 ? 'Filiação' : `Filiação ${i + 1}`,
+      })
     })
   }
-  if (showFather) {
-    signatures.push({
-      name: idData?.customer?.fatherName || 'Pai',
-      subtitle: 'Pai',
-    })
-  }
-  if (showGuardian) {
-    const guardianRel = idData?.customer?.guardianRelationship
-    signatures.push({
-      name: idData?.customer?.guardianName || 'Responsável Legal',
-      subtitle: guardianRel ? `Responsável Legal (${guardianRel})` : 'Responsável Legal',
+  if (showGuardians) {
+    const guardians = idData?.customer?.guardians ?? []
+    guardians.forEach((g, i) => {
+      const subtitle = g.relationship
+        ? `Responsável Legal (${g.relationship})`
+        : guardians.length === 1
+          ? 'Responsável Legal'
+          : `Responsável Legal ${i + 1}`
+      signatures.push({
+        name: g.name || `Responsável Legal ${i + 1}`,
+        subtitle,
+      })
     })
   }
 

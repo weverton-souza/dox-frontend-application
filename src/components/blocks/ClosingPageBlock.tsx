@@ -45,19 +45,14 @@ export default function ClosingPageBlock({ data, onChange }: ClosingPageBlockPro
             onChange={(checked) => onChange({ ...data, showPatientSignature: checked })}
           />
           <Toggle
-            label="Mãe"
-            checked={data.showMotherSignature}
-            onChange={(checked) => onChange({ ...data, showMotherSignature: checked })}
+            label="Filiação (uma assinatura por filiação cadastrada)"
+            checked={data.showParentSignatures}
+            onChange={(checked) => onChange({ ...data, showParentSignatures: checked })}
           />
           <Toggle
-            label="Pai"
-            checked={data.showFatherSignature}
-            onChange={(checked) => onChange({ ...data, showFatherSignature: checked })}
-          />
-          <Toggle
-            label="Responsável Legal"
-            checked={data.showGuardianSignature}
-            onChange={(checked) => onChange({ ...data, showGuardianSignature: checked })}
+            label="Responsáveis legais (uma assinatura por responsável)"
+            checked={data.showGuardianSignatures}
+            onChange={(checked) => onChange({ ...data, showGuardianSignatures: checked })}
           />
           <p className="text-xs text-gray-400 italic mt-1">
             Os nomes serão preenchidos automaticamente a partir do bloco de identificação.
