@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
-import type { PatientContact, PatientContactRelationType } from '@/types'
-import { PATIENT_CONTACT_RELATION_LABELS, createEmptyPatientContact } from '@/types'
+import type { CustomerContact, CustomerContactRelationType } from '@/types'
+import { CUSTOMER_CONTACT_RELATION_LABELS, createEmptyCustomerContact } from '@/types'
 import {
-  getPatientContacts,
-  createPatientContact,
-  updatePatientContact,
-  deletePatientContact,
+  getCustomerContacts,
+  createCustomerContact,
+  updateCustomerContact,
+  deleteCustomerContact,
 } from '@/lib/api/customer-api'
 import { useError } from '@/contexts/ErrorContext'
 import { useConfirmDelete } from '@/lib/hooks/use-confirm-delete'
@@ -19,16 +19,16 @@ interface FamilyAndGuardiansSectionProps {
   customerId: string
 }
 
-const FAMILY_TYPES: PatientContactRelationType[] = ['PARENT', 'LEGAL_GUARDIAN']
+const FAMILY_TYPES: CustomerContactRelationType[] = ['parent', 'legal_guardian']
 
 const TYPE_OPTIONS = FAMILY_TYPES.map((value) => ({
   value,
-  label: PATIENT_CONTACT_RELATION_LABELS[value],
+  label: CUSTOMER_CONTACT_RELATION_LABELS[value],
 }))
 
 export default function FamilyAndGuardiansSection({ customerId }: FamilyAndGuardiansSectionProps) {
   const { showError } = useError()
-  const [contacts, setContacts] = useState<PatientContact[]>([])
+  const [contacts, setContacts] = useState<CustomerContact[]>([])
   const [loading, setLoading] = useState(true)
 
   const [drafts, setDrafts] = useState<Set<string>>(new Set())
@@ -36,7 +36,7 @@ export default function FamilyAndGuardiansSection({ customerId }: FamilyAndGuard
   const load = useCallback(async () => {
     try {
       setLoading(true)
-      const data = await getPatientContacts(customerId)
+      const data = await getCustomerContacts(customerId)
       setContacts(data.filter((c) => FAMILY_TYPES.includes(c.relationType)))
     } catch (err) {
       showError(err)
@@ -50,16 +50,16 @@ export default function FamilyAndGuardiansSection({ customerId }: FamilyAndGuard
   }, [load])
 
   const handleAdd = useCallback(() => {
-    const draft = createEmptyPatientContact(customerId, 'PARENT')
+    const draft = createEmptyCustomerContact(customerId, 'parent')
     setContacts((prev) => [...prev, draft])
     setDrafts((prev) => new Set(prev).add(draft.id))
   }, [customerId])
 
-  const handleUpdate = useCallback((id: string, patch: Partial<PatientContact>) => {
+  const handleUpdate = useCallback((id: string, patch: Partial<CustomerContact>) => {
     setContacts((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)))
   }, [])
 
-  const handleSave = useCallback(async (contact: PatientContact) => {
+  const handleSave = useCallback(async (contact: CustomerContact) => {
     if (!contact.name.trim()) return
     const payload = {
       name: contact.name,
@@ -71,7 +71,7 @@ export default function FamilyAndGuardiansSection({ customerId }: FamilyAndGuard
     }
     try {
       if (drafts.has(contact.id)) {
-        const created = await createPatientContact(customerId, payload)
+        const created = await createCustomerContact(customerId, payload)
         setContacts((prev) => prev.map((c) => (c.id === contact.id ? created : c)))
         setDrafts((prev) => {
           const next = new Set(prev)
@@ -79,7 +79,7 @@ export default function FamilyAndGuardiansSection({ customerId }: FamilyAndGuard
           return next
         })
       } else {
-        await updatePatientContact(customerId, contact.id, payload)
+        await updateCustomerContact(customerId, contact.id, payload)
       }
     } catch (err) {
       showError(err)
@@ -89,7 +89,7 @@ export default function FamilyAndGuardiansSection({ customerId }: FamilyAndGuard
   const handleRemove = useCallback(async (id: string) => {
     try {
       if (!drafts.has(id)) {
-        await deletePatientContact(customerId, id)
+        await deleteCustomerContact(customerId, id)
       }
       setContacts((prev) => prev.filter((c) => c.id !== id))
       setDrafts((prev) => {
@@ -137,8 +137,8 @@ export default function FamilyAndGuardiansSection({ customerId }: FamilyAndGuard
                   label="Tipo"
                   value={contact.relationType}
                   onChange={(value) => {
-                    handleUpdate(contact.id, { relationType: value as PatientContactRelationType })
-                    handleSave({ ...contact, relationType: value as PatientContactRelationType })
+                    handleUpdate(contact.id, { relationType: value as CustomerContactRelationType })
+                    handleSave({ ...contact, relationType: value as CustomerContactRelationType })
                   }}
                   options={TYPE_OPTIONS}
                 />

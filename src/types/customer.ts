@@ -114,46 +114,46 @@ export function createEmptyCustomerEvent(customerId: string, type: CustomerEvent
 
 // ========== Patient Contacts ==========
 
-export type PatientContactRelationType =
-  | 'PARENT'
-  | 'LEGAL_GUARDIAN'
-  | 'MOTHER'
-  | 'FATHER'
-  | 'SPOUSE'
-  | 'CHILD'
-  | 'SIBLING'
-  | 'GRANDPARENT'
-  | 'UNCLE_AUNT'
-  | 'TEACHER'
-  | 'SCHOOL'
-  | 'DOCTOR'
-  | 'THERAPIST'
-  | 'FRIEND'
-  | 'OTHER'
+export type CustomerContactRelationType =
+  | 'parent'
+  | 'legal_guardian'
+  | 'mother'
+  | 'father'
+  | 'spouse'
+  | 'child'
+  | 'sibling'
+  | 'grandparent'
+  | 'uncle_aunt'
+  | 'teacher'
+  | 'school'
+  | 'doctor'
+  | 'therapist'
+  | 'friend'
+  | 'other'
 
-export const PATIENT_CONTACT_RELATION_LABELS: Record<PatientContactRelationType, string> = {
-  PARENT: 'Filiação',
-  LEGAL_GUARDIAN: 'Responsável legal',
-  MOTHER: 'Mãe',
-  FATHER: 'Pai',
-  SPOUSE: 'Cônjuge',
-  CHILD: 'Filho(a)',
-  SIBLING: 'Irmão(ã)',
-  GRANDPARENT: 'Avô/Avó',
-  UNCLE_AUNT: 'Tio(a)',
-  TEACHER: 'Professor(a)',
-  SCHOOL: 'Escola',
-  DOCTOR: 'Médico(a)',
-  THERAPIST: 'Terapeuta',
-  FRIEND: 'Amigo(a)',
-  OTHER: 'Outro',
+export const CUSTOMER_CONTACT_RELATION_LABELS: Record<CustomerContactRelationType, string> = {
+  parent: 'Filiação',
+  legal_guardian: 'Responsável legal',
+  mother: 'Mãe',
+  father: 'Pai',
+  spouse: 'Cônjuge',
+  child: 'Filho(a)',
+  sibling: 'Irmão(ã)',
+  grandparent: 'Avô/Avó',
+  uncle_aunt: 'Tio(a)',
+  teacher: 'Professor(a)',
+  school: 'Escola',
+  doctor: 'Médico(a)',
+  therapist: 'Terapeuta',
+  friend: 'Amigo(a)',
+  other: 'Outro',
 }
 
-export interface PatientContact {
+export interface CustomerContact {
   id: string
   customerId: string
   name: string
-  relationType: PatientContactRelationType
+  relationType: CustomerContactRelationType
   email: string | null
   phone: string | null
   notes: string | null
@@ -162,7 +162,7 @@ export interface PatientContact {
   updatedAt: string
 }
 
-export function createEmptyPatientContact(customerId: string, relationType: PatientContactRelationType = 'PARENT'): PatientContact {
+export function createEmptyCustomerContact(customerId: string, relationType: CustomerContactRelationType = 'parent'): CustomerContact {
   const now = new Date().toISOString()
   return {
     id: crypto.randomUUID(),

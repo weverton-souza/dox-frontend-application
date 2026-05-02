@@ -1,29 +1,29 @@
-import type { Report, Customer, ReportTemplate, Block, IdentificationCustomerSnapshot, GuardianEntry, PatientContact } from '@/types'
+import type { Report, Customer, ReportTemplate, Block, IdentificationCustomerSnapshot, GuardianEntry, CustomerContact } from '@/types'
 import { createEmptyIdentificationData } from '@/types'
 import { createReport } from '@/lib/api/report-api'
 import { getProfessional } from '@/lib/api/professional-api'
-import { getPatientContacts } from '@/lib/api/customer-api'
+import { getCustomerContacts } from '@/lib/api/customer-api'
 import { createBlock } from '@/lib/utils'
 
-const PARENT_TYPES = new Set(['PARENT', 'MOTHER', 'FATHER'])
+const PARENT_TYPES = new Set(['parent', 'mother', 'father'])
 
-function buildSnapshot(customer: Customer, contacts: PatientContact[]): IdentificationCustomerSnapshot {
+function buildSnapshot(customer: Customer, contacts: CustomerContact[]): IdentificationCustomerSnapshot {
   const parents = contacts
     .filter((c) => PARENT_TYPES.has(c.relationType))
     .map((c) => c.name)
     .filter((n) => n.trim())
 
   const guardians: GuardianEntry[] = contacts
-    .filter((c) => c.relationType === 'LEGAL_GUARDIAN')
+    .filter((c) => c.relationType === 'legal_guardian')
     .map((c) => ({ name: c.name, relationship: c.notes ?? undefined }))
     .filter((g) => g.name.trim())
 
   return { ...customer.data, parents, guardians }
 }
 
-async function fetchContactsSafely(customerId: string): Promise<PatientContact[]> {
+async function fetchContactsSafely(customerId: string): Promise<CustomerContact[]> {
   try {
-    return await getPatientContacts(customerId)
+    return await getCustomerContacts(customerId)
   } catch {
     return []
   }

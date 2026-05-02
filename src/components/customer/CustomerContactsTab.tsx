@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
-import type { PatientContact, PatientContactRelationType } from '@/types'
-import { PATIENT_CONTACT_RELATION_LABELS, createEmptyPatientContact } from '@/types'
+import type { CustomerContact, CustomerContactRelationType } from '@/types'
+import { CUSTOMER_CONTACT_RELATION_LABELS, createEmptyCustomerContact } from '@/types'
 import {
-  getPatientContacts,
-  createPatientContact,
-  updatePatientContact,
-  deletePatientContact,
+  getCustomerContacts,
+  createCustomerContact,
+  updateCustomerContact,
+  deleteCustomerContact,
 } from '@/lib/api/customer-api'
 import { useError } from '@/contexts/ErrorContext'
 import { useConfirmDelete } from '@/lib/hooks/use-confirm-delete'
@@ -14,48 +14,22 @@ import { getAvatarColor, getInitials } from '@/lib/avatar-utils'
 
 type RelationCategory = 'family' | 'legal' | 'education' | 'health' | 'other'
 
-const CATEGORY_BY_TYPE: Record<PatientContactRelationType, RelationCategory> = {
-  PARENT: 'family',
-  MOTHER: 'family',
-  FATHER: 'family',
-  SPOUSE: 'family',
-  CHILD: 'family',
-  SIBLING: 'family',
-  GRANDPARENT: 'family',
-  UNCLE_AUNT: 'family',
-  LEGAL_GUARDIAN: 'legal',
-  TEACHER: 'education',
-  SCHOOL: 'education',
-  DOCTOR: 'health',
-  THERAPIST: 'health',
-  FRIEND: 'other',
-  OTHER: 'other',
-}
-
-// Mapeia valores antigos (PT/intermediários) para os novos enums (EN).
-// Backend Kotlin é strict, então isso protege dados criados em versões anteriores.
-const LEGACY_RELATION_MAP: Record<string, PatientContactRelationType> = {
-  FILIACAO: 'PARENT',
-  MAE: 'MOTHER',
-  PAI: 'FATHER',
-  RESPONSAVEL_LEGAL: 'LEGAL_GUARDIAN',
-  CONJUGE: 'SPOUSE',
-  FILHO: 'CHILD',
-  IRMAO: 'SIBLING',
-  AVO: 'GRANDPARENT',
-  TIO: 'UNCLE_AUNT',
-  PROFESSOR: 'TEACHER',
-  ESCOLA: 'SCHOOL',
-  MEDICO: 'DOCTOR',
-  TERAPEUTA: 'THERAPIST',
-  AMIGO: 'FRIEND',
-  OUTRO: 'OTHER',
-}
-
-function normalizeRelation(raw: string): PatientContactRelationType {
-  if (raw in PATIENT_CONTACT_RELATION_LABELS) return raw as PatientContactRelationType
-  if (raw in LEGACY_RELATION_MAP) return LEGACY_RELATION_MAP[raw]
-  return 'OTHER'
+const CATEGORY_BY_TYPE: Record<CustomerContactRelationType, RelationCategory> = {
+  parent: 'family',
+  mother: 'family',
+  father: 'family',
+  spouse: 'family',
+  child: 'family',
+  sibling: 'family',
+  grandparent: 'family',
+  uncle_aunt: 'family',
+  legal_guardian: 'legal',
+  teacher: 'education',
+  school: 'education',
+  doctor: 'health',
+  therapist: 'health',
+  friend: 'other',
+  other: 'other',
 }
 
 const CATEGORY_PILL_CLASS: Record<RelationCategory, string> = {
@@ -72,25 +46,25 @@ import Modal from '@/components/ui/Modal'
 import ConfirmDeleteModal from '@/components/ui/ConfirmDeleteModal'
 import { TrashIcon } from '@/components/icons'
 
-interface PatientContactsTabProps {
+interface CustomerContactsTabProps {
   customerId: string
 }
 
-const RELATION_OPTIONS = (Object.keys(PATIENT_CONTACT_RELATION_LABELS) as PatientContactRelationType[]).map((value) => ({
+const RELATION_OPTIONS = (Object.keys(CUSTOMER_CONTACT_RELATION_LABELS) as CustomerContactRelationType[]).map((value) => ({
   value,
-  label: PATIENT_CONTACT_RELATION_LABELS[value],
+  label: CUSTOMER_CONTACT_RELATION_LABELS[value],
 }))
 
-export default function PatientContactsTab({ customerId }: PatientContactsTabProps) {
+export default function CustomerContactsTab({ customerId }: CustomerContactsTabProps) {
   const { showError } = useError()
-  const [contacts, setContacts] = useState<PatientContact[]>([])
+  const [contacts, setContacts] = useState<CustomerContact[]>([])
   const [loading, setLoading] = useState(true)
-  const [editing, setEditing] = useState<PatientContact | null>(null)
+  const [editing, setEditing] = useState<CustomerContact | null>(null)
 
   const load = useCallback(async () => {
     try {
       setLoading(true)
-      const data = await getPatientContacts(customerId)
+      const data = await getCustomerContacts(customerId)
       setContacts(data)
     } catch (err) {
       showError(err)
@@ -103,7 +77,7 @@ export default function PatientContactsTab({ customerId }: PatientContactsTabPro
     load()
   }, [load])
 
-  const handleSave = useCallback(async (contact: PatientContact) => {
+  const handleSave = useCallback(async (contact: CustomerContact) => {
     try {
       const payload = {
         name: contact.name,
@@ -115,9 +89,9 @@ export default function PatientContactsTab({ customerId }: PatientContactsTabPro
       }
       const exists = contacts.some((c) => c.id === contact.id)
       if (exists) {
-        await updatePatientContact(customerId, contact.id, payload)
+        await updateCustomerContact(customerId, contact.id, payload)
       } else {
-        await createPatientContact(customerId, payload)
+        await createCustomerContact(customerId, payload)
       }
       setEditing(null)
       await load()
@@ -128,7 +102,7 @@ export default function PatientContactsTab({ customerId }: PatientContactsTabPro
 
   const handleDelete = useCallback(async (id: string) => {
     try {
-      await deletePatientContact(customerId, id)
+      await deleteCustomerContact(customerId, id)
       await load()
     } catch (err) {
       showError(err)
@@ -146,7 +120,7 @@ export default function PatientContactsTab({ customerId }: PatientContactsTabPro
             Pessoas próximas ao paciente que podem receber formulários — mãe, pai, professor, etc.
           </p>
         </div>
-        <Button size="sm" onClick={() => setEditing(createEmptyPatientContact(customerId))}>
+        <Button size="sm" onClick={() => setEditing(createEmptyCustomerContact(customerId))}>
           + Novo Contato
         </Button>
       </div>
@@ -162,10 +136,9 @@ export default function PatientContactsTab({ customerId }: PatientContactsTabPro
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
           {contacts.map((contact) => {
-            const normalizedRelation = normalizeRelation(contact.relationType as unknown as string)
-            const category = CATEGORY_BY_TYPE[normalizedRelation]
+            const category = CATEGORY_BY_TYPE[contact.relationType] ?? 'other'
             const pillClass = CATEGORY_PILL_CLASS[category]
-            const relationLabel = PATIENT_CONTACT_RELATION_LABELS[normalizedRelation]
+            const relationLabel = CUSTOMER_CONTACT_RELATION_LABELS[contact.relationType] ?? 'Outro'
             const avatarColor = getAvatarColor(contact.name || '?')
             const initials = getInitials(contact.name || '?')
             return (
@@ -263,13 +236,13 @@ export default function PatientContactsTab({ customerId }: PatientContactsTabPro
 }
 
 interface ContactFormModalProps {
-  contact: PatientContact | null
+  contact: CustomerContact | null
   onClose: () => void
-  onSave: (contact: PatientContact) => void
+  onSave: (contact: CustomerContact) => void
 }
 
 function ContactFormModal({ contact, onClose, onSave }: ContactFormModalProps) {
-  const [draft, setDraft] = useState<PatientContact | null>(contact)
+  const [draft, setDraft] = useState<CustomerContact | null>(contact)
 
   useEffect(() => {
     setDraft(contact)
@@ -277,7 +250,7 @@ function ContactFormModal({ contact, onClose, onSave }: ContactFormModalProps) {
 
   if (!draft) return null
 
-  const update = (patch: Partial<PatientContact>) => setDraft({ ...draft, ...patch })
+  const update = (patch: Partial<CustomerContact>) => setDraft({ ...draft, ...patch })
 
   return (
     <Modal
@@ -297,7 +270,7 @@ function ContactFormModal({ contact, onClose, onSave }: ContactFormModalProps) {
         <Select
           label="Tipo de relação"
           value={draft.relationType}
-          onChange={(value) => update({ relationType: value as PatientContactRelationType })}
+          onChange={(value) => update({ relationType: value as CustomerContactRelationType })}
           options={RELATION_OPTIONS}
         />
 

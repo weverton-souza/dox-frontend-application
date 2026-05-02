@@ -34,7 +34,7 @@ import Button from '@/components/ui/Button'
 import Spinner from '@/components/ui/Spinner'
 import StatusBadge from '@/components/ui/StatusBadge'
 import ListCard, { ListCardPill } from '@/components/ui/ListCard'
-import PatientContactsTab from '@/components/customer/PatientContactsTab'
+import CustomerContactsTab from '@/components/customer/CustomerContactsTab'
 import FamilyAndGuardiansSection from '@/components/customer/FamilyAndGuardiansSection'
 import { TrashIcon } from '@/components/icons'
 import { getAvatarColor, getInitials } from '@/lib/avatar-utils'
@@ -364,7 +364,7 @@ export default function CustomerProfile() {
 
   function renderContactsSection() {
     if (!id) return null
-    return <PatientContactsTab customerId={id} />
+    return <CustomerContactsTab customerId={id} />
   }
 
   function renderNotesSection() {
