@@ -357,31 +357,10 @@ export default function CustomerList() {
                 onChange={(e) => updateEditingField('profession', e.target.value)}
                 placeholder="Profissão"
               />
-              <Input
-                label="Nome da Mãe"
-                value={editingCustomer.data.motherName}
-                onChange={(e) => updateEditingField('motherName', e.target.value)}
-                placeholder="Nome da mãe"
-              />
-              <Input
-                label="Nome do Pai"
-                value={editingCustomer.data.fatherName}
-                onChange={(e) => updateEditingField('fatherName', e.target.value)}
-                placeholder="Nome do pai"
-              />
-              <Input
-                label="Responsável Legal (opcional)"
-                value={editingCustomer.data.guardianName ?? ''}
-                onChange={(e) => updateEditingField('guardianName', e.target.value)}
-                placeholder="Nome do responsável"
-              />
-              <Input
-                label="Grau de Parentesco"
-                value={editingCustomer.data.guardianRelationship ?? ''}
-                onChange={(e) => updateEditingField('guardianRelationship', e.target.value)}
-                placeholder="Ex: Avó, Tio, Tutor"
-              />
             </div>
+            <p className="text-xs text-gray-500 -mt-2">
+              Filiação e responsáveis legais podem ser cadastrados após criar o cliente, na aba "Dados Pessoais" do perfil.
+            </p>
             <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
               <Button variant="ghost" onClick={() => { setShowFormModal(false); setEditingCustomer(null) }}>
                 Cancelar

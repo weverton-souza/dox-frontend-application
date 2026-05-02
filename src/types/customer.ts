@@ -7,10 +7,6 @@ export interface CustomerData {
   age: string // editável — ex: "32 anos e 4 meses"
   education: string
   profession: string
-  motherName: string
-  fatherName: string
-  guardianName?: string         // Nome do responsável legal
-  guardianRelationship?: string // Grau de parentesco (Avó, Tio, etc.)
   // Contato
   phone?: string
   email?: string
@@ -80,8 +76,6 @@ export function createEmptyCustomerData(): CustomerData {
     age: '',
     education: '',
     profession: '',
-    motherName: '',
-    fatherName: '',
   }
 }
 
@@ -115,5 +109,71 @@ export function createEmptyCustomerEvent(customerId: string, type: CustomerEvent
     description: '',
     date: now,
     createdAt: now,
+  }
+}
+
+// ========== Patient Contacts ==========
+
+export type CustomerContactRelationType =
+  | 'parent'
+  | 'legal_guardian'
+  | 'mother'
+  | 'father'
+  | 'spouse'
+  | 'child'
+  | 'sibling'
+  | 'grandparent'
+  | 'uncle_aunt'
+  | 'teacher'
+  | 'school'
+  | 'doctor'
+  | 'therapist'
+  | 'friend'
+  | 'other'
+
+export const CUSTOMER_CONTACT_RELATION_LABELS: Record<CustomerContactRelationType, string> = {
+  parent: 'Filiação',
+  legal_guardian: 'Responsável legal',
+  mother: 'Mãe',
+  father: 'Pai',
+  spouse: 'Cônjuge',
+  child: 'Filho(a)',
+  sibling: 'Irmão(ã)',
+  grandparent: 'Avô/Avó',
+  uncle_aunt: 'Tio(a)',
+  teacher: 'Professor(a)',
+  school: 'Escola',
+  doctor: 'Médico(a)',
+  therapist: 'Terapeuta',
+  friend: 'Amigo(a)',
+  other: 'Outro',
+}
+
+export interface CustomerContact {
+  id: string
+  customerId: string
+  name: string
+  relationType: CustomerContactRelationType
+  email: string | null
+  phone: string | null
+  notes: string | null
+  canReceiveForms: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export function createEmptyCustomerContact(customerId: string, relationType: CustomerContactRelationType = 'parent'): CustomerContact {
+  const now = new Date().toISOString()
+  return {
+    id: crypto.randomUUID(),
+    customerId,
+    name: '',
+    relationType,
+    email: null,
+    phone: null,
+    notes: null,
+    canReceiveForms: true,
+    createdAt: now,
+    updatedAt: now,
   }
 }

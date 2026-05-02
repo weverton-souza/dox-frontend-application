@@ -26,9 +26,6 @@ const CUSTOMER_VARIABLE_DEFS: { key: string; label: string; field: keyof Custome
   { key: 'paciente_idade', label: 'Idade', field: 'age' },
   { key: 'paciente_escolaridade', label: 'Escolaridade', field: 'education' },
   { key: 'paciente_profissao', label: 'Profissão', field: 'profession' },
-  { key: 'paciente_mae', label: 'Nome da Mãe', field: 'motherName' },
-  { key: 'paciente_pai', label: 'Nome do Pai', field: 'fatherName' },
-  { key: 'paciente_responsavel', label: 'Responsável', field: 'guardianName' },
   { key: 'paciente_telefone', label: 'Telefone', field: 'phone' },
   { key: 'paciente_email', label: 'E-mail', field: 'email' },
   { key: 'paciente_endereco', label: 'Endereço', field: 'addressStreet' },
@@ -41,15 +38,22 @@ const CUSTOMER_VARIABLE_DEFS: { key: string; label: string; field: keyof Custome
   { key: 'paciente_medico', label: 'Médico Solicitante', field: 'referralDoctor' },
 ]
 
+const PARENTS_VARIABLE_KEY = 'paciente_filiacao'
+const GUARDIANS_VARIABLE_KEY = 'paciente_responsavel'
+
 /**
  * Returns customer variable definitions as VariableInfo items.
  */
 export function getCustomerVariableInfos(): VariableInfo[] {
-  return CUSTOMER_VARIABLE_DEFS.map((d) => ({
-    key: d.key,
-    label: d.label,
-    source: 'customer' as const,
-  }))
+  return [
+    ...CUSTOMER_VARIABLE_DEFS.map((d) => ({
+      key: d.key,
+      label: d.label,
+      source: 'customer' as const,
+    })),
+    { key: PARENTS_VARIABLE_KEY, label: 'Filiação (lista)', source: 'customer' as const },
+    { key: GUARDIANS_VARIABLE_KEY, label: 'Responsável legal (lista)', source: 'customer' as const },
+  ]
 }
 
 /**
@@ -115,6 +119,10 @@ export function resolveAnswerDisplay(
 
 /**
  * Builds a VariableMap from customer data.
+ *
+ * Filiação e responsáveis (paciente_filiacao, paciente_responsavel) são
+ * resolvidos a partir do snapshot do bloco de identificação ou de
+ * PatientContacts no caller — não estão em CustomerData.
  */
 function getCustomerVariables(customer: CustomerData | null): VariableMap {
   if (!customer) return {}

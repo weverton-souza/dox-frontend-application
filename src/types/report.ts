@@ -2,6 +2,18 @@ import type { ContactItem } from './common'
 import type { CustomerData } from './customer'
 import type { SlateContent } from './slate'
 
+// Snapshot do cliente dentro de um relatório — desacoplado de CustomerData.
+// Filiação modelada como lista (padrão CNJ/FHIR), responsáveis idem.
+export interface GuardianEntry {
+  name: string
+  relationship?: string  // ex: "Avó", "Tio", "Tutor"
+}
+
+export interface IdentificationCustomerSnapshot extends CustomerData {
+  parents: string[]
+  guardians: GuardianEntry[]
+}
+
 // ========== Professional & Solicitor ==========
 
 export interface Professional {
@@ -35,7 +47,7 @@ export interface Solicitor {
 export interface IdentificationData {
   professional: Professional
   solicitor?: Solicitor
-  customer: CustomerData
+  customer: IdentificationCustomerSnapshot
   date: string // data do relatório
   location: string // ex: "Belo Horizonte - MG"
 }
@@ -199,9 +211,8 @@ export interface ClosingPageData {
   bodyText: string
   // Assinaturas (profissional sempre aparece)
   showPatientSignature: boolean
-  showMotherSignature: boolean
-  showFatherSignature: boolean
-  showGuardianSignature: boolean
+  showParentSignatures: boolean    // se true, gera 1 assinatura por filiação cadastrada
+  showGuardianSignatures: boolean  // se true, gera 1 assinatura por responsável legal
   // Campo de escrita abaixo das assinaturas
   footerNote: string
   // backward compat — campo antigo, se existir
@@ -353,7 +364,7 @@ export function createEmptyProfessional(): Professional {
 export function createEmptyIdentificationData(professional?: Professional): IdentificationData {
   return {
     professional: professional ?? createEmptyProfessional(),
-    customer: createEmptyCustomerData(),
+    customer: { ...createEmptyCustomerData(), parents: [], guardians: [] },
     date: new Date().toISOString().split('T')[0],
     location: '',
   }
@@ -420,9 +431,8 @@ export function createEmptyClosingPageData(): ClosingPageData {
     title: 'TERMO DE ENTREGA E CIÊNCIA',
     bodyText: DEFAULT_CLOSING_PAGE_TEXT,
     showPatientSignature: true,
-    showMotherSignature: false,
-    showFatherSignature: false,
-    showGuardianSignature: false,
+    showParentSignatures: false,
+    showGuardianSignatures: false,
     footerNote: '',
   }
 }

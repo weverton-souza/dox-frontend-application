@@ -1,8 +1,9 @@
 import { useCallback, useMemo } from 'react'
-import type { IdentificationData, Professional, CustomerData, Solicitor, Customer } from '@/types'
+import type { IdentificationData, IdentificationCustomerSnapshot, GuardianEntry, Professional, CustomerData, Solicitor, Customer } from '@/types'
 import Input from '@/components/ui/Input'
 import Toggle from '@/components/ui/Toggle'
 import Select from '@/components/ui/Select'
+import { CloseIcon } from '@/components/icons'
 
 interface IdentificationBlockProps {
   data: IdentificationData
@@ -83,8 +84,12 @@ export default function IdentificationBlock({ data, onChange, customers, onCusto
       if (!customerId || !customers) return
       const customer = customers.find((p) => p.id === customerId)
       if (!customer) return
-      // Copy customer data into the identification block
-      onChange({ ...data, customer: { ...customer.data } })
+      // Copy basic customer data; parents/guardians stay empty (parent component
+      // can populate from PatientContacts via onCustomerSelected callback)
+      onChange({
+        ...data,
+        customer: { ...customer.data, parents: [], guardians: [] },
+      })
       onCustomerSelected?.(customerId)
     },
     [data, onChange, customers, onCustomerSelected]
@@ -112,6 +117,53 @@ export default function IdentificationBlock({ data, onChange, customers, onCusto
       onChange({ ...data, customer: updatedCustomer })
     },
     [data, onChange]
+  )
+
+  const updateSnapshot = useCallback(
+    (patch: Partial<IdentificationCustomerSnapshot>) => {
+      onChange({ ...data, customer: { ...data.customer, ...patch } })
+    },
+    [data, onChange],
+  )
+
+  const addParent = useCallback(() => {
+    updateSnapshot({ parents: [...(data.customer.parents ?? []), ''] })
+  }, [data.customer.parents, updateSnapshot])
+
+  const updateParent = useCallback(
+    (index: number, value: string) => {
+      const next = [...(data.customer.parents ?? [])]
+      next[index] = value
+      updateSnapshot({ parents: next })
+    },
+    [data.customer.parents, updateSnapshot],
+  )
+
+  const removeParent = useCallback(
+    (index: number) => {
+      updateSnapshot({ parents: (data.customer.parents ?? []).filter((_, i) => i !== index) })
+    },
+    [data.customer.parents, updateSnapshot],
+  )
+
+  const addGuardian = useCallback(() => {
+    updateSnapshot({ guardians: [...(data.customer.guardians ?? []), { name: '', relationship: '' }] })
+  }, [data.customer.guardians, updateSnapshot])
+
+  const updateGuardian = useCallback(
+    (index: number, patch: Partial<GuardianEntry>) => {
+      const next = [...(data.customer.guardians ?? [])]
+      next[index] = { ...next[index], ...patch }
+      updateSnapshot({ guardians: next })
+    },
+    [data.customer.guardians, updateSnapshot],
+  )
+
+  const removeGuardian = useCallback(
+    (index: number) => {
+      updateSnapshot({ guardians: (data.customer.guardians ?? []).filter((_, i) => i !== index) })
+    },
+    [data.customer.guardians, updateSnapshot],
   )
 
   const updateSolicitor = useCallback(
@@ -299,30 +351,89 @@ export default function IdentificationBlock({ data, onChange, customers, onCusto
             onChange={(e) => updateCustomer('profession', e.target.value)}
             placeholder="Profissão"
           />
-          <Input
-            label="Nome da Mãe"
-            value={data.customer.motherName}
-            onChange={(e) => updateCustomer('motherName', e.target.value)}
-            placeholder="Nome da mãe"
-          />
-          <Input
-            label="Nome do Pai"
-            value={data.customer.fatherName}
-            onChange={(e) => updateCustomer('fatherName', e.target.value)}
-            placeholder="Nome do pai"
-          />
-          <Input
-            label="Responsável Legal (opcional)"
-            value={data.customer.guardianName ?? ''}
-            onChange={(e) => updateCustomer('guardianName', e.target.value)}
-            placeholder="Nome do responsável"
-          />
-          <Input
-            label="Grau de Parentesco"
-            value={data.customer.guardianRelationship ?? ''}
-            onChange={(e) => updateCustomer('guardianRelationship', e.target.value)}
-            placeholder="Ex: Avó, Tio, Tutor"
-          />
+        </div>
+
+        <div className="mt-5 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+              Filiação
+            </span>
+            <button
+              type="button"
+              onClick={addParent}
+              className="text-xs text-brand-600 hover:text-brand-700 font-medium"
+            >
+              + Adicionar filiação
+            </button>
+          </div>
+          {(data.customer.parents ?? []).length === 0 ? (
+            <p className="text-xs text-gray-400 italic">Nenhuma filiação cadastrada.</p>
+          ) : (
+            (data.customer.parents ?? []).map((parent, index) => (
+              <div key={index} className="flex items-center gap-2 group/p">
+                <span className="text-xs text-gray-400 shrink-0 w-20">Filiação {index + 1}</span>
+                <Input
+                  value={parent}
+                  onChange={(e) => updateParent(index, e.target.value)}
+                  placeholder="Nome completo"
+                />
+                <button
+                  type="button"
+                  onClick={() => removeParent(index)}
+                  className="p-1.5 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 opacity-0 group-hover/p:opacity-100 transition-all"
+                  title="Remover"
+                >
+                  <CloseIcon />
+                </button>
+              </div>
+            ))
+          )}
+          {(data.customer.parents ?? []).length > 4 && (
+            <p className="text-xs text-amber-600">
+              Atenção: o registro civil brasileiro aceita no máximo 4 filiações (Provimento CNJ 63/2017).
+            </p>
+          )}
+        </div>
+
+        <div className="mt-5 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+              Responsáveis legais
+            </span>
+            <button
+              type="button"
+              onClick={addGuardian}
+              className="text-xs text-brand-600 hover:text-brand-700 font-medium"
+            >
+              + Adicionar responsável
+            </button>
+          </div>
+          {(data.customer.guardians ?? []).length === 0 ? (
+            <p className="text-xs text-gray-400 italic">Nenhum responsável legal cadastrado.</p>
+          ) : (
+            (data.customer.guardians ?? []).map((guardian, index) => (
+              <div key={index} className="grid grid-cols-[1fr_180px_auto] gap-2 items-center group/g">
+                <Input
+                  value={guardian.name}
+                  onChange={(e) => updateGuardian(index, { name: e.target.value })}
+                  placeholder={`Responsável ${index + 1}`}
+                />
+                <Input
+                  value={guardian.relationship ?? ''}
+                  onChange={(e) => updateGuardian(index, { relationship: e.target.value })}
+                  placeholder="Ex: Avó, Tio, Tutor"
+                />
+                <button
+                  type="button"
+                  onClick={() => removeGuardian(index)}
+                  className="p-1.5 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 opacity-0 group-hover/g:opacity-100 transition-all"
+                  title="Remover"
+                >
+                  <CloseIcon />
+                </button>
+              </div>
+            ))
+          )}
         </div>
       </section>
 
