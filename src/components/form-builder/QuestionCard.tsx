@@ -241,6 +241,20 @@ export default function QuestionCard({
                           <div className="border-t border-gray-100 my-1" />
                           <button
                             type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              if (showLogic) update({ showWhen: undefined })
+                              setShowLogic(!showLogic)
+                              setShowSectionMenu(false)
+                            }}
+                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                          >
+                            {showLogic ? <CheckIcon /> : <span className="w-4" />}
+                            Lógica condicional
+                          </button>
+                          <div className="border-t border-gray-100 my-1" />
+                          <button
+                            type="button"
                             onClick={(e) => { e.stopPropagation(); onRemove(); setShowSectionMenu(false) }}
                             className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
                           >
@@ -261,6 +275,19 @@ export default function QuestionCard({
                   <p className="text-sm text-gray-500 mt-1">{field.description}</p>
                 )}
               </>
+            )}
+
+            {showLogic && isFocused && (
+              <div className="mt-4 bg-gray-50/60 border border-gray-200 rounded-lg p-3">
+                <p className="text-xs text-gray-500 mb-2">
+                  A seção inteira (esta seção e todas as perguntas dentro dela) só aparece quando:
+                </p>
+                <ConditionalLogicEditor
+                  field={field}
+                  allFields={allFields}
+                  onUpdate={(rules: ConditionalRule[] | undefined) => update({ showWhen: rules })}
+                />
+              </div>
             )}
           </div>
         </div>
