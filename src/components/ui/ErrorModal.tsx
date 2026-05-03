@@ -48,7 +48,20 @@ export default function ErrorModal({ error, onClose }: ErrorModalProps) {
       }}
     >
       <div className="space-y-4">
-        <p className="text-sm text-gray-600">{error.message}</p>
+        {(!error.businessViolations || error.businessViolations.length === 0) && (
+          <p className="text-sm text-gray-600">{error.message}</p>
+        )}
+
+        {error.businessViolations && error.businessViolations.length > 0 && (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+            <p className="text-xs font-medium text-amber-800 mb-2">Corrija os seguintes pontos:</p>
+            <ul className="space-y-1 list-disc list-inside">
+              {error.businessViolations.map((v, i) => (
+                <li key={i} className="text-xs text-amber-700">{v}</li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {error.validationErrors && error.validationErrors.length > 0 && (
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
