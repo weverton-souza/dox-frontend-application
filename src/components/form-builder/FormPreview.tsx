@@ -2,6 +2,8 @@ import { useMemo, useState, useCallback } from 'react'
 import type { FormField, FormFieldAnswer } from '@/types'
 import { createEmptyFormFieldAnswer } from '@/types'
 import { buildFormSectionGroups } from '@/lib/utils'
+import { useFieldVisibility } from '@/lib/hooks/use-field-visibility'
+import { useAutoCalculatedFields } from '@/lib/hooks/use-auto-calculated-fields'
 import FormSectionFields from '@/components/form-fill/FormSectionFields'
 
 interface FormPreviewProps {
@@ -12,8 +14,15 @@ interface FormPreviewProps {
 
 export default function FormPreview({ title, description, fields }: FormPreviewProps) {
   const sortedFields = useMemo(() => [...fields].sort((a, b) => a.order - b.order), [fields])
-  const sectionGroups = useMemo(() => buildFormSectionGroups(sortedFields), [sortedFields])
   const [answers, setAnswers] = useState<Map<string, FormFieldAnswer>>(new Map())
+
+  const answersList = useMemo(() => Array.from(answers.values()), [answers])
+  const visibleFieldIds = useFieldVisibility(sortedFields, answersList)
+  const visibleFields = useMemo(
+    () => sortedFields.filter((f) => visibleFieldIds.has(f.id)),
+    [sortedFields, visibleFieldIds],
+  )
+  const sectionGroups = useMemo(() => buildFormSectionGroups(visibleFields), [visibleFields])
 
   const getAnswer = useCallback(
     (fieldId: string) => answers.get(fieldId) ?? createEmptyFormFieldAnswer(fieldId),
@@ -27,6 +36,12 @@ export default function FormPreview({ title, description, fields }: FormPreviewP
       return next
     })
   }, [])
+
+  useAutoCalculatedFields({
+    fields: sortedFields,
+    answers: answersList,
+    onAnswerChange: handleAnswerChange,
+  })
 
   return (
     <div className="max-w-[860px] mx-auto space-y-3 py-2">

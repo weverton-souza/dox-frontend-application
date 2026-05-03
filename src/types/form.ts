@@ -61,24 +61,48 @@ export interface LikertRow {
   reverseScored: boolean     // se true, valor invertido na escala
 }
 
+export type ConditionalOperator =
+  | 'EQUALS'
+  | 'NOT_EQUALS'
+  | 'CONTAINS'
+  | 'GREATER'
+  | 'LESS'
+  | 'IS_EMPTY'
+
+export const CONDITIONAL_OPERATOR_LABELS: Record<ConditionalOperator, string> = {
+  EQUALS: 'é igual a',
+  NOT_EQUALS: 'é diferente de',
+  CONTAINS: 'contém',
+  GREATER: 'é maior que',
+  LESS: 'é menor que',
+  IS_EMPTY: 'está vazia',
+}
+
+export interface ConditionalRule {
+  questionRef: string
+  operator: ConditionalOperator
+  value?: string | number
+  combinator?: 'AND' | 'OR'
+}
+
 export interface FormField {
   id: string
   type: FormFieldType
-  label: string              // texto da pergunta / título da seção
-  description: string        // texto auxiliar abaixo da pergunta
+  label: string
+  description: string
   required: boolean
   order: number
-  // Configuração específica por tipo
-  options: FormFieldOption[]  // para single-choice, multiple-choice, inventory-item
-  scaleMin: number            // para scale (default 1)
-  scaleMax: number            // para scale (default 5)
-  scaleMinLabel: string       // ex: "Nunca"
-  scaleMaxLabel: string       // ex: "Sempre"
-  placeholder: string         // para short-text, long-text
-  variableKey: string         // chave para {{variableKey}} em templates (ex: "queixa_principal")
-  reverseScored: boolean      // para inventory-item: inverte valor no scoring
-  likertScale: LikertScalePoint[]  // para likert-matrix: pontos da escala compartilhada
-  likertRows: LikertRow[]     // para likert-matrix: linhas/perguntas
+  options: FormFieldOption[]
+  scaleMin: number
+  scaleMax: number
+  scaleMinLabel: string
+  scaleMaxLabel: string
+  placeholder: string
+  variableKey: string
+  reverseScored: boolean
+  likertScale: LikertScalePoint[]
+  likertRows: LikertRow[]
+  showWhen?: ConditionalRule[]
 }
 
 export interface FormFieldMapping {

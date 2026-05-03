@@ -434,6 +434,7 @@ export default function FormBuilder() {
                       <div key={field.id} className="relative">
                         <QuestionCard
                           field={field}
+                          allFields={form?.fields ?? []}
                           isFocused={isFocused}
                           onFocus={() => setFocusedFieldId(field.id)}
                           onUpdate={handleFieldUpdate}
