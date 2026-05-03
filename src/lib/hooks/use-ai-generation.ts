@@ -211,11 +211,12 @@ export function useAiGeneration(): UseAiGenerationReturn {
       setGenerationStatus('loading')
       setError(null)
 
-      const isRegeneration = !!opts?.generationId
+      const generationId = opts?.generationId
+      const isRegeneration = !!generationId
 
       try {
         const result = isRegeneration
-          ? await apiRegenerateSection(reportId, { sectionType, generationId: opts!.generationId! })
+          ? await apiRegenerateSection(reportId, { sectionType, generationId })
           : await apiGenerateSection(reportId, { sectionType, formResponseId: opts?.formResponseId })
         setGenerationStatus('success')
         refreshUsage()

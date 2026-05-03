@@ -144,10 +144,10 @@ export default function InlineBlock({
         </div>
 
         <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-          {showReview && (
+          {showReview && onReviewBlock && (
             <button
               type="button"
-              onClick={() => onReviewBlock!(block.id)}
+              onClick={() => onReviewBlock(block.id)}
               className="p-1.5 rounded-md hover:bg-brand-50 text-brand-600 transition-colors"
               title="Revisar com Assistente"
             >
