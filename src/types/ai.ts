@@ -1,5 +1,20 @@
 // ========== AI Types ==========
 
+import type { Form, FormResponse } from './form'
+import type { Block, ReportTemplate, Professional } from './report'
+
+export interface ReportGenerationRequest {
+  form: Form
+  response: FormResponse
+  template: ReportTemplate
+  professional: Professional
+}
+
+export interface ReportGenerationResult {
+  blocks: Block[]
+  customerName: string
+}
+
 export interface AiGenerationRequest {
   sectionType: string
   formResponseId?: string

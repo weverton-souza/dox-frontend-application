@@ -1,4 +1,4 @@
-import { ButtonHTMLAttributes, forwardRef } from 'react'
+import type { ButtonHTMLAttributes, Ref } from 'react'
 
 type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost'
 type ButtonSize = 'sm' | 'md' | 'lg'
@@ -6,6 +6,7 @@ type ButtonSize = 'sm' | 'md' | 'lg'
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant
   size?: ButtonSize
+  ref?: Ref<HTMLButtonElement>
 }
 
 const variantStyles: Record<ButtonVariant, string> = {
@@ -21,28 +22,29 @@ const sizeStyles: Record<ButtonSize, string> = {
   lg: 'h-11 px-6 text-base',
 }
 
-const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ variant = 'primary', size = 'md', className = '', children, ...props }, ref) => {
-    return (
-      <button
-        ref={ref}
-        className={`
-          inline-flex items-center justify-center gap-2
-          ${variantStyles[variant]}
-          ${sizeStyles[size]}
-          rounded-md font-medium transition-colors duration-150
-          focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:ring-offset-2
-          disabled:opacity-50 disabled:pointer-events-none
-          ${className}
-        `.trim()}
-        {...props}
-      >
-        {children}
-      </button>
-    )
-  }
-)
-
-Button.displayName = 'Button'
-
-export default Button
+export default function Button({
+  variant = 'primary',
+  size = 'md',
+  className = '',
+  children,
+  ref,
+  ...props
+}: ButtonProps) {
+  return (
+    <button
+      ref={ref}
+      className={`
+        inline-flex items-center justify-center gap-2
+        ${variantStyles[variant]}
+        ${sizeStyles[size]}
+        rounded-md font-medium transition-colors duration-150
+        focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:ring-offset-2
+        disabled:opacity-50 disabled:pointer-events-none
+        ${className}
+      `.trim()}
+      {...props}
+    >
+      {children}
+    </button>
+  )
+}
