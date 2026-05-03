@@ -237,7 +237,7 @@ export default function ReferencesBlock({ data, onChange, readOnly = false }: Re
   const handleSaveLibraryEntry = useCallback(async (formData: { title: string; content: SlateContent; authors: string; instrument: string; year: string }) => {
     const payload = {
       title: formData.title.trim(),
-      content: formData.content as unknown[],
+      content: Array.isArray(formData.content) ? formData.content : [],
       type: 'reference',
       category: '',
       instrument: formData.instrument.trim() || null,
@@ -281,7 +281,7 @@ export default function ReferencesBlock({ data, onChange, readOnly = false }: Re
 
             if (editingIndex === index) {
               return (
-                <div key={index} className="flex items-start gap-2">
+                <div key={`ref-edit-${index}`} className="flex items-start gap-2">
                   <span className="text-xs text-gray-400 pt-2.5 w-5 text-right shrink-0">{index + 1}.</span>
                   <div className="flex-1 border border-brand-300 rounded-lg overflow-hidden">
                     <PlateEditor
@@ -300,7 +300,7 @@ export default function ReferencesBlock({ data, onChange, readOnly = false }: Re
             }
 
             return (
-              <div key={index} className="group flex items-start gap-2 py-1.5 px-2 -mx-2 rounded-lg hover:bg-gray-50 transition-colors">
+              <div key={`ref-${index}-${text.slice(0, 40)}`} className="group flex items-start gap-2 py-1.5 px-2 -mx-2 rounded-lg hover:bg-gray-50 transition-colors">
                 <span className="text-xs text-gray-400 pt-0.5 w-5 text-right shrink-0">{index + 1}.</span>
                 <p
                   className={`flex-1 text-[13px] text-gray-700 leading-relaxed min-w-0 ${readOnly ? '' : 'cursor-text'}`}
