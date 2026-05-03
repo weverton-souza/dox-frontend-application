@@ -1,32 +1,34 @@
-import { useState } from 'react'
+import { useActionState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { useError } from '@/contexts/ErrorContext'
 import Input from '@/components/ui/Input'
-import Button from '@/components/ui/Button'
+import SubmitButton from '@/components/ui/SubmitButton'
+
+type RegisterFormState = { error: string | null }
+const initialState: RegisterFormState = { error: null }
 
 export default function Register() {
   const { register } = useAuth()
   const { showError } = useError()
   const navigate = useNavigate()
 
-  const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setLoading(true)
-    try {
-      await register({ name, email, password })
-      navigate('/', { replace: true })
-    } catch (err) {
-      showError(err)
-    } finally {
-      setLoading(false)
-    }
-  }
+  const [, formAction] = useActionState(
+    async (_prev: RegisterFormState, formData: FormData): Promise<RegisterFormState> => {
+      const name = (formData.get('name') as string | null) ?? ''
+      const email = (formData.get('email') as string | null) ?? ''
+      const password = (formData.get('password') as string | null) ?? ''
+      try {
+        await register({ name, email, password })
+        navigate('/', { replace: true })
+        return { error: null }
+      } catch (err) {
+        showError(err)
+        return { error: err instanceof Error ? err.message : 'Erro ao criar conta' }
+      }
+    },
+    initialState,
+  )
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
@@ -36,15 +38,13 @@ export default function Register() {
           <p className="text-sm text-gray-500 mt-1">Crie sua conta</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-4">
+        <form action={formAction} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-4">
           <Input
             label="Nome"
             name="name"
             type="text"
             autoComplete="name"
             placeholder="Seu nome completo"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
             required
             autoFocus
           />
@@ -55,8 +55,6 @@ export default function Register() {
             type="email"
             autoComplete="email"
             placeholder="seu@email.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
             required
           />
 
@@ -66,15 +64,13 @@ export default function Register() {
             type="password"
             autoComplete="new-password"
             placeholder="Mínimo 8 caracteres"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
             required
             minLength={8}
           />
 
-          <Button type="submit" disabled={loading} className="w-full">
-            {loading ? 'Criando conta...' : 'Criar conta'}
-          </Button>
+          <SubmitButton className="w-full" pendingLabel="Criando conta...">
+            Criar conta
+          </SubmitButton>
         </form>
 
         <p className="text-center text-sm text-gray-500 mt-4">
