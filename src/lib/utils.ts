@@ -304,6 +304,39 @@ export function buildFormSectionGroups(sortedFields: FormField[]): FormSectionGr
   return groups
 }
 
+// ========== Time ==========
+
+/** Centraliza acesso a Date.now()/new Date() para facilitar mock em testes. */
+export function getNow(): Date {
+  return new Date()
+}
+
+/** ISO 8601 do "agora" — usado em timestamps de eventos, criação, error logs. */
+export function getNowIso(): string {
+  return getNow().toISOString()
+}
+
+// ========== JSON safety ==========
+
+/** Parse JSON com fallback se for inválido (localStorage corrompido, API drift). */
+export function safeJsonParse<T>(raw: string | null | undefined, fallback: T): T {
+  if (!raw) return fallback
+  try {
+    return JSON.parse(raw) as T
+  } catch {
+    return fallback
+  }
+}
+
+/** Stringify JSON com fallback se houver referência circular ou erro inesperado. */
+export function safeJsonStringify(value: unknown, fallback = '{}'): string {
+  try {
+    return JSON.stringify(value)
+  } catch {
+    return fallback
+  }
+}
+
 // ========== Pagination ==========
 
 export function paginate<T>(items: T[], page: number, size: number): Page<T> {
