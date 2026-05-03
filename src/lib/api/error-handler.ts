@@ -41,6 +41,7 @@ export interface ParsedError {
   colorClass: string
   iconType: ErrorIconType
   validationErrors?: { field: string; message: string }[]
+  businessViolations?: string[]
   isAuthError: boolean
 }
 
@@ -61,6 +62,7 @@ function fromProblemDetail(
   detail: string | undefined,
   code: ApiErrorCode,
   errors?: { field: string; message: string; rejectedValue?: unknown }[],
+  violations?: string[],
 ): ParsedError {
   const icon = ERROR_ICONS[code] ?? ERROR_ICONS.INTERNAL_ERROR
   return {
@@ -70,6 +72,7 @@ function fromProblemDetail(
     colorClass: icon.colorClass,
     iconType: icon.iconType,
     validationErrors: errors?.map((e) => ({ field: e.field, message: e.message })),
+    businessViolations: violations,
     isAuthError: SESSION_EXPIRED_CODES.includes(code),
   }
 }
@@ -80,7 +83,13 @@ export function parseError(error: unknown): ParsedError {
   if (error instanceof ApiError) {
     const { problemDetail } = error
     const code = problemDetail.properties?.errorCode ?? 'INTERNAL_ERROR'
-    return fromProblemDetail(problemDetail.title, problemDetail.detail, code, problemDetail.properties?.errors)
+    return fromProblemDetail(
+      problemDetail.title,
+      problemDetail.detail,
+      code,
+      problemDetail.properties?.errors,
+      problemDetail.properties?.violations,
+    )
   }
 
   if (error instanceof NetworkError) {
@@ -95,7 +104,13 @@ export function parseError(error: unknown): ParsedError {
     const data = error.response.data as Partial<ProblemDetail> | null
     if (data && typeof data.type === 'string' && data.type.startsWith('urn:dox:error:')) {
       const code = data.properties?.errorCode ?? 'INTERNAL_ERROR'
-      return fromProblemDetail(data.title, data.detail, code, data.properties?.errors)
+      return fromProblemDetail(
+        data.title,
+        data.detail,
+        code,
+        data.properties?.errors,
+        data.properties?.violations,
+      )
     }
 
     const detail = (data as Record<string, unknown> | null)?.detail

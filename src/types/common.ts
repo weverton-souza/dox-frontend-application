@@ -135,6 +135,7 @@ export interface ProblemDetailProperties {
   field?: string
   value?: string
   errors?: ValidationFieldError[]
+  violations?: string[]
   traceId?: string
 }
 
