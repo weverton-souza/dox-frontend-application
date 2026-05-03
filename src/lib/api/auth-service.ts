@@ -1,6 +1,20 @@
 import type { LoginRequest, RegisterRequest, AuthResponse, AuthUser } from '@/types'
 import { api, setAccessToken, setRefreshToken, setRememberMe, clearTokens, getRefreshToken, refreshTokens } from '@/lib/api/api-client'
 
+function isAuthResponse(value: unknown): value is AuthResponse {
+  if (!value || typeof value !== 'object') return false
+  const v = value as Record<string, unknown>
+  return (
+    typeof v.accessToken === 'string' &&
+    typeof v.refreshToken === 'string' &&
+    typeof v.userId === 'string' &&
+    typeof v.email === 'string' &&
+    typeof v.name === 'string' &&
+    typeof v.tenantId === 'string' &&
+    typeof v.vertical === 'string'
+  )
+}
+
 export async function login(credentials: LoginRequest, rememberMe = true): Promise<AuthResponse> {
   setRememberMe(rememberMe)
   const { data } = await api.post<AuthResponse>('/auth/login', credentials)
@@ -34,7 +48,8 @@ export async function logout(): Promise<void> {
 export async function refreshSession(): Promise<AuthResponse | null> {
   const result = await refreshTokens()
   if (!result) return null
-  return result as unknown as AuthResponse
+  if (!isAuthResponse(result)) return null
+  return result
 }
 
 export async function switchTenant(tenantId: string): Promise<AuthResponse> {

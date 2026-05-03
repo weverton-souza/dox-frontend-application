@@ -72,6 +72,20 @@ export function clearTokens(): void {
   sessionStorage.removeItem(USER_KEY)
 }
 
+// ========== Type Guards ==========
+
+export function isProblemDetail(value: unknown): value is ProblemDetail {
+  if (!value || typeof value !== 'object') return false
+  const v = value as Record<string, unknown>
+  return (
+    typeof v.type === 'string' &&
+    v.type.startsWith('urn:dox:error:') &&
+    typeof v.title === 'string' &&
+    typeof v.status === 'number' &&
+    typeof v.detail === 'string'
+  )
+}
+
 // ========== Error Classes ==========
 
 export class ApiError extends Error {
@@ -194,14 +208,11 @@ api.interceptors.response.use(
       originalRequest &&
       !(originalRequest as InternalAxiosRequestConfig & { _retry?: boolean })._retry
     ) {
-      const problemData = data as ProblemDetail | null
-      const errorCode = problemData?.properties?.errorCode
+      const isProblem = isProblemDetail(data)
+      const errorCode = isProblem ? data.properties?.errorCode : undefined
 
       // Tenta refresh se: qualquer 401, TOKEN_EXPIRED explícito, ou 403 sem ProblemDetail (Spring Security default)
-      const rawData = data as Record<string, unknown> | null
-      const isProblemDetail = rawData && typeof rawData.type === 'string'
-        && rawData.type.startsWith('urn:dox:error:')
-      const shouldRefresh = status === 401 || errorCode === 'TOKEN_EXPIRED' || (status === 403 && !isProblemDetail)
+      const shouldRefresh = status === 401 || errorCode === 'TOKEN_EXPIRED' || (status === 403 && !isProblem)
 
       if (shouldRefresh) {
         (originalRequest as InternalAxiosRequestConfig & { _retry?: boolean })._retry = true
@@ -234,9 +245,8 @@ api.interceptors.response.use(
     }
 
     // Parse ProblemDetail from response
-    const responseData = data as Record<string, unknown> | null
-    if (responseData && typeof responseData.type === 'string' && responseData.type.startsWith('urn:dox:error:')) {
-      return Promise.reject(new ApiError(responseData as unknown as ProblemDetail, status))
+    if (isProblemDetail(data)) {
+      return Promise.reject(new ApiError(data, status))
     }
 
     // Fallback for non-ProblemDetail errors
