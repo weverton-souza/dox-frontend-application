@@ -445,54 +445,66 @@ export default function FormBuilder() {
           backgroundSize: '22px 22px',
         }}
       >
-        {/* Toolbar dentro do main para o dot pattern chegar ao topo */}
-        <div className="max-w-[860px] mx-auto px-3 sm:px-4 pt-4 pb-6">
-          <div className="flex items-center justify-between bg-white rounded-full px-3 py-1.5 shadow-card">
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={handleBack}
-                className="h-11 w-11 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors shrink-0"
-              >
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
-                </svg>
-              </button>
-              <SaveStatusIndicator status={saveStatus} />
-            </div>
+        {/* Header — Figma-style centered (mesmo padrao do ReportEditor) */}
+        <div className="sticky top-0 z-30 bg-white/90 backdrop-blur-md shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
+          <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-2 lg:py-2.5">
+            <div className="flex items-center justify-between">
+              {/* Left: back + save status */}
+              <div className="flex items-center gap-2 w-40 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleBack}
+                  className="h-9 w-9 flex items-center justify-center rounded-full hover:bg-white/80 text-gray-500 hover:text-gray-700 transition-colors"
+                  title="Voltar"
+                >
+                  <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z" clipRule="evenodd" />
+                  </svg>
+                </button>
+                <SaveStatusIndicator status={saveStatus} showLabel={false} />
+              </div>
 
-            <div className="flex items-center gap-2">
-              <SegmentedControl
-                options={[
-                  { value: 'editor', label: 'Perguntas' },
-                  { value: 'scoring', label: 'Pontuação' },
-                  { value: 'preview', label: 'Preview' },
-                ]}
-                value={viewMode}
-                onChange={(v) => setViewMode(v as ViewMode)}
-                size="sm"
-              />
+              {/* Center: nome do form */}
+              <div className="flex items-center gap-2 min-w-0 justify-center flex-1">
+                <span className="text-sm font-medium text-gray-700 truncate max-w-xs">
+                  {form.title || 'Formulário sem título'}
+                </span>
+              </div>
 
-              <button
-                type="button"
-                onClick={() => setShowLinkModal(true)}
-                className="hidden sm:flex h-11 w-11 items-center justify-center rounded-full bg-gray-200 text-gray-600 hover:bg-gray-300 transition-colors shadow-sm shrink-0"
-                title="Gerar Link"
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-                  <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-                </svg>
-              </button>
+              {/* Right: actions */}
+              <div className="flex items-center gap-2 shrink-0">
+                <SegmentedControl
+                  options={[
+                    { value: 'editor', label: 'Perguntas' },
+                    { value: 'scoring', label: 'Pontuação' },
+                    { value: 'preview', label: 'Preview' },
+                  ]}
+                  value={viewMode}
+                  onChange={(v) => setViewMode(v as ViewMode)}
+                  size="sm"
+                />
 
-              <Button
-                variant={form.linkedTemplateId ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setShowTemplateLinkModal(true)}
-                className="hidden sm:inline-flex rounded-full"
-              >
-                {form.linkedTemplateId ? linkedTemplate?.name ?? 'Template' : 'Vincular Template'}
-              </Button>
+                <button
+                  type="button"
+                  onClick={() => setShowLinkModal(true)}
+                  className="hidden sm:flex h-8 w-8 items-center justify-center rounded-full text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors shrink-0"
+                  title="Gerar Link"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                  </svg>
+                </button>
+
+                <Button
+                  variant={form.linkedTemplateId ? 'secondary' : 'ghost'}
+                  size="sm"
+                  onClick={() => setShowTemplateLinkModal(true)}
+                  className="hidden sm:inline-flex rounded-full"
+                >
+                  {form.linkedTemplateId ? linkedTemplate?.name ?? 'Template' : 'Vincular Template'}
+                </Button>
+              </div>
             </div>
           </div>
         </div>
