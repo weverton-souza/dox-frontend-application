@@ -443,6 +443,7 @@ export default function FormBuilder() {
         style={{
           backgroundImage: 'radial-gradient(circle, rgba(0,0,0,0.10) 1px, transparent 1px)',
           backgroundSize: '22px 22px',
+          backgroundAttachment: 'fixed',
         }}
       >
         {/* Header — sticky logo abaixo da GlobalTopBar (h-12) */}
