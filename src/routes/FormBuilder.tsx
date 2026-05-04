@@ -510,8 +510,9 @@ export default function FormBuilder() {
               onReorder={handleReorderSections}
             />
 
-            {/* Content column: ocupa todo o restante (igual ao SectionEditor do report) */}
+            {/* Content column: ocupa o restante mas limita largura interna pra leitura confortavel */}
             <div className="flex-1 min-w-0">
+              <div className="max-w-3xl mx-auto">
                 {/* Title card (always visible, always editable) */}
                 <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden mb-3">
                   <div className="h-2.5 bg-brand-500 rounded-t-lg" />
@@ -598,6 +599,7 @@ export default function FormBuilder() {
                     </div>
                   </div>
                 )}
+              </div>
             </div>
 
             {/* Mobile floating action buttons (visible on smaller screens) */}
