@@ -1,13 +1,18 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useOptimistic, useState, startTransition } from 'react'
 import type { Report, ReportVersion } from '@/types'
 import { REPORT_STATUS_LABELS } from '@/types'
 import { getReportVersions, createReportVersion } from '@/lib/api/report-api'
+import { getNowIso } from '@/lib/utils'
 
 export function useVersioning(
   report: Report | null,
   onError?: (err: unknown) => void,
 ) {
   const [versions, setVersions] = useState<ReportVersion[]>([])
+  const [optimisticVersions, addOptimisticVersion] = useOptimistic(
+    versions,
+    (current: ReportVersion[], optimistic: ReportVersion) => [optimistic, ...current],
+  )
 
   const refreshVersions = useCallback(async () => {
     if (!report) return
@@ -32,17 +37,34 @@ export function useVersioning(
         }
       }
 
-      try {
-        await createReportVersion(report.id, { description })
-        const v = await getReportVersions(report.id)
-        setVersions(v)
-        return true
-      } catch (err) {
-        onError?.(err)
-        return false
-      }
+      let succeeded = false
+      await new Promise<void>((resolve) => {
+        startTransition(async () => {
+          const optimisticVersion: ReportVersion = {
+            id: `optimistic-${crypto.randomUUID()}`,
+            reportId: report.id,
+            customerName: report.customerName,
+            status: report.status,
+            description,
+            blocks: report.blocks,
+            createdAt: getNowIso(),
+          }
+          addOptimisticVersion(optimisticVersion)
+          try {
+            await createReportVersion(report.id, { description })
+            const v = await getReportVersions(report.id)
+            setVersions(v)
+            succeeded = true
+          } catch (err) {
+            onError?.(err)
+          } finally {
+            resolve()
+          }
+        })
+      })
+      return succeeded
     },
-    [report, versions, onError]
+    [report, versions, addOptimisticVersion, onError]
   )
 
   const createStatusChangeSnapshot = useCallback(
@@ -65,7 +87,7 @@ export function useVersioning(
   }, [createSnapshot])
 
   return {
-    versions,
+    versions: optimisticVersions,
     refreshVersions,
     createSnapshot,
     createStatusChangeSnapshot,

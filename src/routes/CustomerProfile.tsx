@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useOptimistic, startTransition } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import type {
   Customer,
@@ -129,6 +129,10 @@ export default function CustomerProfile() {
   // Notes
   const [notes, setNotes] = useState<CustomerNote[]>([])
   const [newNoteContent, setNewNoteContent] = useState('')
+  const [optimisticNotes, addOptimisticNote] = useOptimistic(
+    notes,
+    (current: CustomerNote[], optimistic: CustomerNote) => [optimistic, ...current],
+  )
 
   // Timeline
   const [events, setEvents] = useState<CustomerEvent[]>([])
@@ -209,15 +213,27 @@ export default function CustomerProfile() {
 
   const handleAddNote = useCallback(async () => {
     if (!customer || !newNoteContent.trim()) return
-    try {
-      await createCustomerNote(customer.id, { content: newNoteContent.trim() })
-      const updatedNotes = await getCustomerNotes(customer.id)
-      setNotes(updatedNotes)
-      setNewNoteContent('')
-    } catch (err) {
-      showError(err)
+    const content = newNoteContent.trim()
+    const now = getNowIso()
+    const optimisticNote: CustomerNote = {
+      id: `optimistic-${crypto.randomUUID()}`,
+      customerId: customer.id,
+      createdAt: now,
+      updatedAt: now,
+      content,
     }
-  }, [customer, newNoteContent, showError])
+    setNewNoteContent('')
+    startTransition(async () => {
+      addOptimisticNote(optimisticNote)
+      try {
+        await createCustomerNote(customer.id, { content })
+        const updatedNotes = await getCustomerNotes(customer.id)
+        setNotes(updatedNotes)
+      } catch (err) {
+        showError(err)
+      }
+    })
+  }, [customer, newNoteContent, addOptimisticNote, showError])
 
   const handleDeleteNote = useCallback(
     async (noteId: string) => {
@@ -553,13 +569,13 @@ export default function CustomerProfile() {
             <Button size="sm" onClick={handleAddNote} disabled={!newNoteContent.trim()}>Adicionar Nota</Button>
           </div>
         </div>
-        {notes.length === 0 ? (
+        {optimisticNotes.length === 0 ? (
           <div className="rounded-lg border border-dashed border-gray-300 py-8 text-center">
             <p className="text-sm text-gray-500">Nenhuma nota ainda</p>
           </div>
         ) : (
           <div className="space-y-2">
-            {notes.map((note) => (
+            {optimisticNotes.map((note) => (
               <div key={note.id} className="rounded-lg border border-gray-200 p-3 group">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
