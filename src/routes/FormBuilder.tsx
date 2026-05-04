@@ -498,22 +498,20 @@ export default function FormBuilder() {
         </div>
         {/* Editor mode */}
         {viewMode === 'editor' && (
-          <div className="max-w-[1400px] mx-auto px-4 lg:px-6 relative">
-            <div className="lg:flex lg:gap-8 lg:items-start">
-              {/* Sidebar (sections) — desktop sticky a esquerda, mobile stacked on top */}
-              <SectionSidebar
-                sections={sectionTabs}
-                activeId={activeSectionId}
-                onActivate={(sid) => { setActiveSectionId(sid); setFocusedFieldId(null) }}
-                onRename={handleRenameSection}
-                onAdd={handleAddSection}
-                onRemove={handleRemoveSection}
-                onReorder={handleReorderSections}
-              />
+          <div className="px-4 sm:px-6 lg:px-8 flex flex-col lg:flex-row gap-4 lg:gap-8">
+            {/* Sidebar (sections) — desktop sticky a esquerda, mobile stacked on top */}
+            <SectionSidebar
+              sections={sectionTabs}
+              activeId={activeSectionId}
+              onActivate={(sid) => { setActiveSectionId(sid); setFocusedFieldId(null) }}
+              onRename={handleRenameSection}
+              onAdd={handleAddSection}
+              onRemove={handleRemoveSection}
+              onReorder={handleReorderSections}
+            />
 
-              {/* Right column: content centralizado dentro do espaco disponivel */}
-              <div className="flex-1 min-w-0 mt-3 lg:mt-0 lg:flex lg:justify-center">
-                <div className="w-full lg:max-w-[720px]">
+            {/* Content column: ocupa todo o restante (igual ao SectionEditor do report) */}
+            <div className="flex-1 min-w-0">
                 {/* Title card (always visible, always editable) */}
                 <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden mb-3">
                   <div className="h-2.5 bg-brand-500 rounded-t-lg" />
@@ -600,8 +598,6 @@ export default function FormBuilder() {
                     </div>
                   </div>
                 )}
-                </div>
-              </div>
             </div>
 
             {/* Mobile floating action buttons (visible on smaller screens) */}

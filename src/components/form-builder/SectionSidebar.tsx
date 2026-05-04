@@ -151,7 +151,7 @@ export default function SectionSidebar({
   const sectionIds = sections.map((s) => s.id)
 
   return (
-    <aside className="w-full lg:w-72 lg:shrink-0 lg:flex lg:flex-col lg:self-start lg:sticky lg:top-24 lg:min-h-[600px] lg:max-h-[calc(100vh-7rem)] bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+    <aside className="w-full lg:w-72 xl:w-80 lg:shrink-0 flex flex-col lg:self-start lg:sticky lg:top-24 lg:min-h-[600px] lg:max-h-[calc(100vh-7rem)] bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
       <div className="px-3 pt-4 pb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
         Seções
       </div>
