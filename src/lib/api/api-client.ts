@@ -1,6 +1,7 @@
 import axios from 'axios'
 import type { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios'
 import type { ProblemDetail, RefreshRequest } from '@/types'
+import { getNowIso } from '@/lib/utils'
 
 // ========== Token Management ==========
 
@@ -235,7 +236,7 @@ api.interceptors.response.use(
               instance: originalRequest?.url || '',
               properties: {
                 errorCode: 'TOKEN_EXPIRED',
-                timestamp: new Date().toISOString(),
+                timestamp: getNowIso(),
               },
             },
             status,

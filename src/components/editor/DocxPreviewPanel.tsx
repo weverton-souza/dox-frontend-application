@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import type { Report } from '@/types'
 import { renderAsync } from 'docx-preview'
-import { generateDocx } from '@/lib/docx-engine'
 
 interface DocxPreviewPanelProps {
   report: Report
@@ -22,6 +21,7 @@ export default function DocxPreviewPanel({ report, refreshKey }: DocxPreviewPane
     setErrorMessage('')
 
     try {
+      const { generateDocx } = await import('@/lib/docx-engine')
       const blob = await generateDocx(reportRef.current)
 
       if (containerRef.current) {

@@ -1,36 +1,39 @@
-import { useState } from 'react'
+import { useActionState, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { useError } from '@/contexts/ErrorContext'
-import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
+import SubmitButton from '@/components/ui/SubmitButton'
 import { EyeIcon, EyeOffIcon } from '@/components/icons'
 import logoDox from '@/assets/logo-dox.svg'
 import loginBg from '@/assets/login_background.svg'
+
+type LoginFormState = { error: string | null }
+const initialState: LoginFormState = { error: null }
 
 export default function Login() {
   const { login } = useAuth()
   const { showError } = useError()
   const navigate = useNavigate()
 
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [rememberMe, setRememberMe] = useState(true)
-  const [loading, setLoading] = useState(false)
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setLoading(true)
-    try {
-      await login({ email, password }, rememberMe)
-      navigate('/', { replace: true })
-    } catch (err) {
-      showError(err)
-    } finally {
-      setLoading(false)
-    }
-  }
+  const [, formAction] = useActionState(
+    async (_prev: LoginFormState, formData: FormData): Promise<LoginFormState> => {
+      const email = (formData.get('email') as string | null) ?? ''
+      const password = (formData.get('password') as string | null) ?? ''
+      try {
+        await login({ email, password }, rememberMe)
+        navigate('/', { replace: true })
+        return { error: null }
+      } catch (err) {
+        showError(err)
+        return { error: err instanceof Error ? err.message : 'Erro ao entrar' }
+      }
+    },
+    initialState,
+  )
 
   return (
     <div className="fixed inset-0 overflow-hidden bg-gray-100" style={{ height: '100dvh' }}>
@@ -55,7 +58,7 @@ export default function Login() {
             style={{ boxShadow: '0 8px 30px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06)' }}>
           <img src={logoDox} alt="Dox" className="h-10 mx-auto mb-6" />
 
-          <form onSubmit={handleSubmit} className="space-y-3.5">
+          <form action={formAction} className="space-y-3.5">
             <Input
               label="E-mail"
               id="email"
@@ -63,8 +66,6 @@ export default function Login() {
               type="email"
               autoComplete="email"
               placeholder="seu@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
               required
               autoFocus
               className="border-gray-300/80 bg-white/40 py-2.5 sm:py-1.5 text-base sm:text-sm"
@@ -79,8 +80,6 @@ export default function Login() {
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="current-password"
                   placeholder="Sua senha"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
                   required
                   className="border-gray-300/80 bg-white/50 py-2.5 sm:py-1.5 pr-9 text-base sm:text-sm"
                 />
@@ -104,9 +103,9 @@ export default function Login() {
               <span className="text-xs text-gray-600">Manter conectado</span>
             </label>
 
-            <Button type="submit" disabled={loading} className="w-full">
-              {loading ? 'Entrando...' : 'Login'}
-            </Button>
+            <SubmitButton className="w-full" pendingLabel="Entrando...">
+              Login
+            </SubmitButton>
           </form>
 
           <p className="text-center text-xs text-gray-500 mt-4">
