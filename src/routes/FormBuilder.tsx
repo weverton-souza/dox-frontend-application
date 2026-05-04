@@ -514,9 +514,10 @@ export default function FormBuilder() {
               onReorder={handleReorderSections}
             />
 
-            {/* Content column: ocupa o restante mas limita largura interna pra leitura confortavel */}
+            {/* Content column: ocupa o restante, limita largura mas sem centralizar
+                — mesmo padrao do SectionEditor no ReportEditor (cola apos o gap da sidebar) */}
             <div className="flex-1 min-w-0">
-              <div className="max-w-3xl mx-auto">
+              <div className="max-w-3xl">
                 {/* Title card (always visible, always editable) */}
                 <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden mb-3">
                   <div className="h-2.5 bg-brand-500 rounded-t-lg" />
