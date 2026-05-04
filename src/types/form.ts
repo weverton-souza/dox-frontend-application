@@ -270,13 +270,15 @@ export function createEmptyScoringFormula(): ScoringFormula {
 }
 
 export function createEmptyForm(): Form {
+  const initialSection = createEmptyFormField('section-header', 0)
+  initialSection.label = 'Seção 1'
   return {
     id: crypto.randomUUID(),
     title: '',
     description: '',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    fields: [],
+    fields: [initialSection],
     linkedTemplateId: null,
     fieldMappings: [],
     scoringConfig: createEmptyScoringConfig(),

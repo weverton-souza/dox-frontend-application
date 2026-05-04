@@ -38,8 +38,36 @@ import SectionDeleteModal from '@/components/ui/SectionDeleteModal'
 import SectionReorderModal from '@/components/form-builder/SectionReorderModal'
 import GenerateFormLinkModal from '@/components/form-builder/GenerateFormLinkModal'
 import ScoringTab from '@/components/form-builder/ScoringTab'
+import SectionTabs from '@/components/form-builder/SectionTabs'
 
 type ViewMode = 'editor' | 'preview' | 'mapping' | 'scoring'
+
+/**
+ * Garante que o form sempre comece com section-header.
+ * Forms antigos sem secao ou com orfas (campos antes do primeiro
+ * section-header) ganham uma secao 'Geral' no inicio que absorve
+ * essas orfas.
+ */
+function ensureSectionsAtStart(form: Form): { form: Form; migrated: boolean } {
+  const sorted = [...form.fields].sort((a, b) => a.order - b.order)
+
+  if (sorted.length === 0) {
+    const section = createEmptyFormField('section-header', 0)
+    section.label = 'Seção 1'
+    return { form: { ...form, fields: [section] }, migrated: true }
+  }
+
+  if (sorted[0].type === 'section-header') {
+    return { form, migrated: false }
+  }
+
+  const newSection = createEmptyFormField('section-header', 0)
+  const hasAnySection = sorted.some((f) => f.type === 'section-header')
+  newSection.label = hasAnySection ? 'Geral' : 'Seção 1'
+
+  const reordered = [newSection, ...sorted].map((f, i) => ({ ...f, order: i }))
+  return { form: { ...form, fields: reordered }, migrated: true }
+}
 
 export default function FormBuilder() {
   const { id } = useParams<{ id: string }>()
@@ -51,6 +79,7 @@ export default function FormBuilder() {
   const [showSectionReorderModal, setShowSectionReorderModal] = useState(false)
   const [showLinkModal, setShowLinkModal] = useState(false)
   const [focusedFieldId, setFocusedFieldId] = useState<string | null>(null)
+  const [activeSectionId, setActiveSectionId] = useState<string | null>(null)
 
   const updateFormFn = useCallback((data: Form) => updateForm(data), [])
   const { saveStatus, scheduleSave, forceSave } = useAutoSave<Form>(updateFormFn)
@@ -61,12 +90,19 @@ export default function FormBuilder() {
     if (!id) return
     Promise.all([getFormById(id), getReportTemplates()])
       .then(([raw, customTemplates]) => {
-        if (raw) setForm(raw)
-        else navigate('/forms')
+        if (raw) {
+          const { form: normalized, migrated } = ensureSectionsAtStart(raw)
+          setForm(normalized)
+          if (migrated) scheduleSave(normalized)
+          const firstSection = normalized.fields.find((f) => f.type === 'section-header')
+          if (firstSection) setActiveSectionId(firstSection.id)
+        } else {
+          navigate('/forms')
+        }
         setTemplates(getAllTemplates(customTemplates))
       })
       .catch(() => navigate('/forms'))
-  }, [id, navigate])
+  }, [id, navigate, scheduleSave])
 
   const updateFormState = useCallback((patch: Partial<Form>) => {
     setForm((prev) => {
@@ -89,44 +125,90 @@ export default function FormBuilder() {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
 
+  const { sortedFields, sectionGroups } = useSortedFields(form?.fields)
+
+  const sectionTabs = useMemo(
+    () => sectionGroups
+      .filter((g) => g.sectionField)
+      .map((g) => ({ id: g.sectionFieldId, title: g.sectionTitle })),
+    [sectionGroups],
+  )
+
+  const activeGroup = useMemo(
+    () => sectionGroups.find((g) => g.sectionFieldId === activeSectionId) ?? null,
+    [sectionGroups, activeSectionId],
+  )
+
+  const activeChildren = activeGroup?.children ?? []
+  const activeSectionField = activeGroup?.sectionField ?? null
+
+  /** Reconstroi form.fields preservando outras secoes e substituindo os children da ativa. */
+  const replaceActiveChildren = useCallback(
+    (newChildren: FormField[]): FormField[] => {
+      const out: FormField[] = []
+      for (const group of sectionGroups) {
+        if (group.sectionField) out.push(group.sectionField)
+        if (group.sectionFieldId === activeSectionId) {
+          out.push(...newChildren)
+        } else {
+          out.push(...group.children)
+        }
+      }
+      return out.map((f, i) => ({ ...f, order: i }))
+    },
+    [sectionGroups, activeSectionId],
+  )
+
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event
-    if (!over || active.id === over.id || !form) return
+    if (!over || active.id === over.id || !form || !activeGroup) return
 
-    const fields = [...form.fields]
-    const oldIndex = fields.findIndex((f) => f.id === active.id)
-    const newIndex = fields.findIndex((f) => f.id === over.id)
+    const oldIndex = activeGroup.children.findIndex((f) => f.id === active.id)
+    const newIndex = activeGroup.children.findIndex((f) => f.id === over.id)
     if (oldIndex < 0 || newIndex < 0) return
 
-    const [moved] = fields.splice(oldIndex, 1)
-    fields.splice(newIndex, 0, moved)
+    const newChildren = [...activeGroup.children]
+    const [moved] = newChildren.splice(oldIndex, 1)
+    newChildren.splice(newIndex, 0, moved)
 
-    const reordered = fields.map((f, i) => ({ ...f, order: i }))
-    updateFormState({ fields: reordered })
-  }, [form, updateFormState])
+    updateFormState({ fields: replaceActiveChildren(newChildren) })
+  }, [form, activeGroup, replaceActiveChildren, updateFormState])
 
   // ─── Field CRUD ───────────────────────────────────────
 
   const addFieldAfterFocused = useCallback((type: FormFieldType) => {
     if (!form) return
-    const sorted = [...form.fields].sort((a, b) => a.order - b.order)
-    let insertOrder = sorted.length
 
-    if (focusedFieldId) {
-      const idx = sorted.findIndex((f) => f.id === focusedFieldId)
-      if (idx >= 0) insertOrder = idx + 1
+    if (type === 'section-header') {
+      const sorted = [...form.fields].sort((a, b) => a.order - b.order)
+      const sectionCount = sorted.filter((f) => f.type === 'section-header').length
+      const section = createEmptyFormField('section-header', sorted.length)
+      section.label = `Seção ${sectionCount + 1}`
+      const reordered = [...sorted, section].map((f, i) => ({ ...f, order: i }))
+      updateFormState({ fields: reordered })
+      setActiveSectionId(section.id)
+      setFocusedFieldId(null)
+      return
     }
 
-    const field = createEmptyFormField(type, insertOrder)
-    if (type === 'section-header') field.label = 'Seção sem título'
+    if (!activeGroup) return
 
-    const updated = [...sorted]
-    updated.splice(insertOrder, 0, field)
-    const reordered = updated.map((f, i) => ({ ...f, order: i }))
+    const newField = createEmptyFormField(type, 0)
+    const focusedInActive = focusedFieldId
+      ? activeGroup.children.some((c) => c.id === focusedFieldId)
+      : false
 
-    updateFormState({ fields: reordered })
-    setFocusedFieldId(field.id)
-  }, [form, focusedFieldId, updateFormState])
+    const newChildren = [...activeGroup.children]
+    if (focusedInActive) {
+      const idx = newChildren.findIndex((c) => c.id === focusedFieldId)
+      newChildren.splice(idx + 1, 0, newField)
+    } else {
+      newChildren.push(newField)
+    }
+
+    updateFormState({ fields: replaceActiveChildren(newChildren) })
+    setFocusedFieldId(newField.id)
+  }, [form, activeGroup, focusedFieldId, replaceActiveChildren, updateFormState])
 
   const handleFieldUpdate = useCallback((updatedField: FormField) => {
     if (!form) return
@@ -166,7 +248,11 @@ export default function FormBuilder() {
     const fieldMappings = form.fieldMappings.filter((m) => m.fieldId !== fieldId)
     updateFormState({ fields, fieldMappings })
     if (focusedFieldId === fieldId) setFocusedFieldId(null)
-  }, [form, updateFormState, focusedFieldId])
+    if (activeSectionId === fieldId) {
+      const remainingSections = fields.filter((f) => f.type === 'section-header')
+      setActiveSectionId(remainingSections[0]?.id ?? null)
+    }
+  }, [form, updateFormState, focusedFieldId, activeSectionId])
 
   // ─── Section delete with modal ────────────────────────
 
@@ -175,8 +261,6 @@ export default function FormBuilder() {
     sectionTitle: string
     childFieldIds: string[]
   } | null>(null)
-
-  const { sortedFields, sectionGroups } = useSortedFields(form?.fields)
 
   const handleRemoveFieldOrSection = useCallback((fieldId: string) => {
     if (!form) return
@@ -300,17 +384,38 @@ export default function FormBuilder() {
     [form, templates]
   )
 
-  const fieldIds = useMemo(() => sortedFields.map((f) => f.id), [sortedFields])
+  const activeChildIds = useMemo(() => activeChildren.map((f) => f.id), [activeChildren])
 
-  // Section numbering for section-header cards
-  const sectionNumbers = useMemo(() => {
-    const sectionFields = sortedFields.filter((f) => f.type === 'section-header')
-    const map = new Map<string, { index: number; total: number }>()
-    sectionFields.forEach((f, i) => {
-      map.set(f.id, { index: i + 1, total: sectionFields.length })
-    })
-    return map
-  }, [sortedFields])
+  /** Reativa primeira secao se a ativa some (apos delete em cascata, merge, etc). */
+  useEffect(() => {
+    if (!form) return
+    const sections = form.fields.filter((f) => f.type === 'section-header')
+    if (sections.length === 0) return
+    if (!activeSectionId || !sections.some((s) => s.id === activeSectionId)) {
+      setActiveSectionId(sections[0].id)
+    }
+  }, [form, activeSectionId])
+
+  // ─── Section actions (tabs) ──────────────────────────
+
+  const handleRenameSection = useCallback((sectionId: string, newTitle: string) => {
+    if (!form) return
+    const fields = form.fields.map((f) =>
+      f.id === sectionId ? { ...f, label: newTitle } : f
+    )
+    updateFormState({ fields })
+  }, [form, updateFormState])
+
+  const handleAddSection = useCallback(() => {
+    addFieldAfterFocused('section-header')
+  }, [addFieldAfterFocused])
+
+  const handleRemoveActiveSection = useCallback(() => {
+    if (!activeSectionField) return
+    const sectionCount = sectionTabs.length
+    if (sectionCount <= 1) return
+    handleRemoveFieldOrSection(activeSectionField.id)
+  }, [activeSectionField, sectionTabs.length, handleRemoveFieldOrSection])
 
   // Template link
   const handleTemplateSelect = useCallback((templateId: string | null) => {
@@ -418,16 +523,53 @@ export default function FormBuilder() {
               </div>
             </div>
 
-            {/* Question cards with DnD */}
+            {/* Section tabs */}
+            <div className="flex items-center gap-2 mb-3">
+              <SectionTabs
+                sections={sectionTabs}
+                activeId={activeSectionId}
+                onActivate={(sid) => { setActiveSectionId(sid); setFocusedFieldId(null) }}
+                onRename={handleRenameSection}
+                onAdd={handleAddSection}
+              />
+              {sectionTabs.length > 1 && (
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setShowSectionReorderModal(true)}
+                    title="Reorganizar seções"
+                    className="h-8 w-8 inline-flex items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 transition-colors"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="3" y1="6" x2="21" y2="6" />
+                      <line x1="3" y1="12" x2="21" y2="12" />
+                      <line x1="3" y1="18" x2="21" y2="18" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleRemoveActiveSection}
+                    title="Excluir seção atual"
+                    className="h-8 w-8 inline-flex items-center justify-center rounded-full text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="3 6 5 6 21 6" />
+                      <path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6" />
+                    </svg>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Question cards with DnD (active section only) */}
             <DndContext
               sensors={sensors}
               collisionDetection={closestCenter}
               onDragEnd={handleDragEnd}
             >
-              <SortableContext items={fieldIds} strategy={verticalListSortingStrategy}>
+              <SortableContext items={activeChildIds} strategy={verticalListSortingStrategy}>
                 <div className="space-y-3">
-                  {sortedFields.map((field) => {
-                    const sn = sectionNumbers.get(field.id)
+                  {activeChildren.map((field) => {
                     const isFocused = focusedFieldId === field.id
 
                     return (
@@ -442,8 +584,6 @@ export default function FormBuilder() {
                           onRemove={() => handleRemoveFieldOrSection(field.id)}
                           onReorderSections={() => setShowSectionReorderModal(true)}
                           onMergeUp={() => handleMergeUp(field.id)}
-                          sectionIndex={sn?.index}
-                          totalSections={sn?.total}
                         />
 
                         {/* Floating toolbar - positioned to the right of the focused card */}
@@ -462,11 +602,11 @@ export default function FormBuilder() {
               </SortableContext>
             </DndContext>
 
-            {/* Empty state */}
-            {sortedFields.length === 0 && (
+            {/* Empty state for active section */}
+            {activeChildren.length === 0 && (
               <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-12 text-center">
                 <p className="text-gray-400 text-sm mb-4">
-                  Nenhuma pergunta adicionada ainda
+                  Esta seção ainda não tem perguntas
                 </p>
                 <div className="flex justify-center gap-3">
                   <button
@@ -481,7 +621,7 @@ export default function FormBuilder() {
                     onClick={() => addFieldAfterFocused('section-header')}
                     className="px-4 py-2 rounded-lg border border-gray-300 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors"
                   >
-                    Adicionar seção
+                    Nova seção
                   </button>
                 </div>
               </div>
