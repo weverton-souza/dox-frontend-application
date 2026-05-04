@@ -19,6 +19,7 @@ import {
   CalendarIcon,
 } from '@/components/icons'
 import ConditionalLogicEditor from '@/components/form-builder/ConditionalLogicEditor'
+import IconButton from '@/components/ui/IconButton'
 
 // ─── Props ────────────────────────────────────────────────────
 
@@ -200,14 +201,11 @@ export default function QuestionCard({
                 <div className="flex items-center gap-0.5 shrink-0 pt-1">
                   {/* Three-dots menu */}
                   <div className="relative">
-                    <button
-                      type="button"
+                    <IconButton
+                      icon={<ThreeDotsIcon />}
+                      label="Opções da seção"
                       onClick={(e) => { e.stopPropagation(); setShowSectionMenu(!showSectionMenu) }}
-                      className="p-2 rounded-full hover:bg-gray-100 text-gray-500 transition-colors"
-                      title="Opções da seção"
-                    >
-                      <ThreeDotsIcon />
-                    </button>
+                    />
 
                     {showSectionMenu && (
                       <>
@@ -423,24 +421,18 @@ export default function QuestionCard({
         <div className="border-t border-gray-200 mt-5 pt-3">
           <div className="flex items-center justify-end gap-1">
             {/* Copy */}
-            <button
-              type="button"
+            <IconButton
+              icon={<CopyIcon />}
+              label="Duplicar"
               onClick={(e) => { e.stopPropagation(); onDuplicate() }}
-              className="p-2 rounded-full hover:bg-gray-100 text-gray-500 transition-colors"
-              title="Duplicar"
-            >
-              <CopyIcon />
-            </button>
+            />
 
             {/* Delete */}
-            <button
-              type="button"
+            <IconButton
+              icon={<TrashIcon />}
+              label="Excluir"
               onClick={(e) => { e.stopPropagation(); onRemove() }}
-              className="p-2 rounded-full hover:bg-gray-100 text-gray-500 transition-colors"
-              title="Excluir"
-            >
-              <TrashIcon />
-            </button>
+            />
 
             {/* Vertical separator */}
             <div className="w-px h-6 bg-gray-200 mx-2" />
@@ -465,14 +457,11 @@ export default function QuestionCard({
 
             {/* Three-dots menu */}
             <div className="relative ml-1">
-              <button
-                type="button"
+              <IconButton
+                icon={<ThreeDotsIcon />}
+                label="Mais opções"
                 onClick={(e) => { e.stopPropagation(); setShowMoreMenu(!showMoreMenu) }}
-                className="p-2 rounded-full hover:bg-gray-100 text-gray-500 transition-colors"
-                title="Mais opções"
-              >
-                <ThreeDotsIcon />
-              </button>
+              />
 
               {showMoreMenu && (
                 <>
@@ -745,14 +734,13 @@ function ChoiceEditor({
             className="flex-1 text-sm text-gray-700 bg-transparent border-b border-transparent hover:border-gray-200 focus:border-gray-300 px-1 py-1 focus:outline-none placeholder:text-gray-400 transition-colors"
           />
           {field.options.length > 1 && (
-            <button
-              type="button"
+            <IconButton
+              icon={<CloseIcon />}
+              label="Remover opção"
+              size="sm"
+              className="text-gray-300 opacity-0 group-hover/opt:opacity-100 transition-opacity"
               onClick={(e) => { e.stopPropagation(); helpers.removeOption(index) }}
-              className="p-1 rounded-full hover:bg-gray-100 text-gray-300 opacity-0 group-hover/opt:opacity-100 transition-opacity"
-              title="Remover opção"
-            >
-              <CloseIcon />
-            </button>
+            />
           )}
         </div>
       ))}
@@ -896,14 +884,13 @@ function InventoryItemEditor({
               className="w-16 text-sm font-mono text-brand-600 bg-brand-50/50 border border-brand-200 rounded px-2 py-1 text-center focus:border-brand-500 focus:outline-none"
             />
             {field.options.length > 1 && (
-              <button
-                type="button"
+              <IconButton
+                icon={<CloseIcon />}
+                label="Remover opção"
+                size="sm"
+                className="text-gray-300 opacity-0 group-hover/opt:opacity-100 transition-opacity"
                 onClick={(e) => { e.stopPropagation(); removeOption(index) }}
-                className="p-1 rounded-full hover:bg-gray-100 text-gray-300 opacity-0 group-hover/opt:opacity-100 transition-opacity"
-                title="Remover opção"
-              >
-                <CloseIcon />
-              </button>
+              />
             )}
           </div>
         ))}
@@ -980,14 +967,13 @@ function LikertMatrixEditor({
                 className="w-28 text-sm text-gray-700 bg-white border border-gray-200 rounded px-2 py-0.5 focus:border-brand-500 focus:outline-none placeholder:text-gray-400"
               />
               {field.likertScale.length > 2 && (
-                <button
-                  type="button"
+                <IconButton
+                  icon={<CloseIcon />}
+                  label="Remover ponto"
+                  size="sm"
+                  className="!p-0.5 text-gray-400 hover:bg-gray-200 opacity-0 group-hover/sp:opacity-100 transition-opacity"
                   onClick={(e) => { e.stopPropagation(); removeScalePoint(index) }}
-                  className="p-0.5 rounded-full hover:bg-gray-200 text-gray-400 opacity-0 group-hover/sp:opacity-100 transition-opacity"
-                  title="Remover ponto"
-                >
-                  <CloseIcon />
-                </button>
+                />
               )}
             </div>
           ))}
@@ -1024,14 +1010,13 @@ function LikertMatrixEditor({
               Reversa
             </label>
             {field.likertRows.length > 1 && (
-              <button
-                type="button"
+              <IconButton
+                icon={<CloseIcon />}
+                label="Remover pergunta"
+                size="sm"
+                className="text-gray-300 opacity-0 group-hover/row:opacity-100 transition-opacity"
                 onClick={(e) => { e.stopPropagation(); removeRow(index) }}
-                className="p-1 rounded-full hover:bg-gray-100 text-gray-300 opacity-0 group-hover/row:opacity-100 transition-opacity"
-                title="Remover pergunta"
-              >
-                <CloseIcon />
-              </button>
+              />
             )}
           </div>
         ))}

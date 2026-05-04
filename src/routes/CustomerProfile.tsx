@@ -30,7 +30,7 @@ import {
 import { getReportsByCustomer } from '@/lib/api/report-api'
 import { revokeFormLink } from '@/lib/api/form-link-api'
 import { getAggregatedForms } from '@/lib/api/customer-forms-api'
-import { formatDateTime, calculateAge } from '@/lib/utils'
+import { formatDateTime, calculateAge, getNowIso } from '@/lib/utils'
 import { useCreateReport } from '@/lib/hooks/use-create-report'
 import { useError } from '@/contexts/ErrorContext'
 import NewReportModal from '@/components/NewReportModal'
@@ -191,7 +191,7 @@ export default function CustomerProfile() {
       const updated: Customer = {
         ...customer,
         data: { ...editData },
-        updatedAt: new Date().toISOString(),
+        updatedAt: getNowIso(),
       }
       await updateCustomer(updated)
       setCustomer(updated)
