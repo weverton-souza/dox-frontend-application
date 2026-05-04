@@ -15,6 +15,7 @@ import {
   sortableKeyboardCoordinates,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import Button from '@/components/ui/Button'
 
 interface SectionItem {
   id: string
@@ -33,7 +34,6 @@ interface SectionSidebarProps {
 
 interface SectionRowProps {
   section: SectionItem
-  index: number
   isActive: boolean
   isOnly: boolean
   onActivate: () => void
@@ -41,7 +41,7 @@ interface SectionRowProps {
   onRemove: () => void
 }
 
-function SectionRow({ section, index, isActive, isOnly, onActivate, onStartEdit, onRemove }: SectionRowProps) {
+function SectionRow({ section, isActive, isOnly, onActivate, onStartEdit, onRemove }: SectionRowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: section.id })
 
   const style = {
@@ -50,46 +50,29 @@ function SectionRow({ section, index, isActive, isOnly, onActivate, onStartEdit,
     opacity: isDragging ? 0.4 : 1,
   }
 
+  const label = section.title || 'Seção sem título'
+
   return (
-    <li
-      ref={setNodeRef}
-      style={style}
-      className={`group relative flex items-center gap-1 rounded-lg transition-colors ${
-        isActive ? 'bg-brand-50' : 'hover:bg-gray-50'
-      }`}
-    >
-      <button
-        type="button"
-        {...attributes}
-        {...listeners}
-        title="Arrastar para reordenar"
-        className="shrink-0 flex items-center justify-center w-5 h-8 cursor-grab active:cursor-grabbing text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity"
-      >
-        <svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor">
-          <circle cx="2" cy="2" r="1.2" />
-          <circle cx="8" cy="2" r="1.2" />
-          <circle cx="2" cy="7" r="1.2" />
-          <circle cx="8" cy="7" r="1.2" />
-          <circle cx="2" cy="12" r="1.2" />
-          <circle cx="8" cy="12" r="1.2" />
-        </svg>
-      </button>
+    <li ref={setNodeRef} style={style} className="relative group">
+      <span
+        aria-hidden="true"
+        className="absolute w-2 h-2 rounded-full border border-gray-400 bg-white pointer-events-none z-10"
+        style={{ left: '8px', top: '12px' }}
+      />
 
       <button
         type="button"
         onClick={onActivate}
         onDoubleClick={onStartEdit}
-        title="Duplo clique para renomear"
-        className={`flex-1 flex items-center gap-2 px-2 py-1.5 text-left text-sm transition-colors min-w-0 ${
-          isActive ? 'text-brand-700 font-medium' : 'text-gray-700'
+        title={`${label} — duplo clique para renomear`}
+        {...attributes}
+        {...listeners}
+        style={{ paddingLeft: '22px' }}
+        className={`relative w-full text-left pr-8 py-1.5 rounded-md text-sm leading-snug transition-colors cursor-grab active:cursor-grabbing ${
+          isActive ? 'bg-brand-50 text-brand-700 font-medium' : 'text-gray-700 hover:bg-gray-100'
         }`}
       >
-        <span className={`shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-semibold ${
-          isActive ? 'bg-brand-500 text-white' : 'bg-gray-200 text-gray-500'
-        }`}>
-          {index + 1}
-        </span>
-        <span className="truncate">{section.title || 'Seção sem título'}</span>
+        <span className="block truncate">{label}</span>
       </button>
 
       {!isOnly && (
@@ -97,7 +80,7 @@ function SectionRow({ section, index, isActive, isOnly, onActivate, onStartEdit,
           type="button"
           onClick={(e) => { e.stopPropagation(); onRemove() }}
           title="Excluir seção"
-          className="shrink-0 mr-1 flex items-center justify-center w-6 h-6 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
+          className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center justify-center w-6 h-6 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
         >
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="3 6 5 6 21 6" />
@@ -168,28 +151,25 @@ export default function SectionSidebar({
   const sectionIds = sections.map((s) => s.id)
 
   return (
-    <aside className="lg:w-56 lg:shrink-0 lg:sticky lg:top-24 lg:self-start">
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-2">
-        <div className="px-2 py-1.5 mb-1">
-          <h3 className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
-            Seções
-          </h3>
-        </div>
+    <aside className="w-full lg:w-72 lg:shrink-0 lg:flex lg:flex-col lg:self-start lg:sticky lg:top-24 lg:min-h-[600px] lg:max-h-[calc(100vh-7rem)] bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      <div className="px-3 pt-4 pb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
+        Seções
+      </div>
 
+      <nav className="flex-1 overflow-y-auto px-1 min-h-0">
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={sectionIds} strategy={verticalListSortingStrategy}>
-            <ul className="space-y-0.5">
-              {sections.map((section, idx) => {
+            <ul className="space-y-1">
+              {sections.map((section) => {
                 const isEditing = editingId === section.id
                 if (isEditing) {
                   return (
-                    <li
-                      key={section.id}
-                      className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-brand-50 ring-1 ring-brand-300"
-                    >
-                      <span className="shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-semibold bg-brand-500 text-white">
-                        {idx + 1}
-                      </span>
+                    <li key={section.id} className="relative">
+                      <span
+                        aria-hidden="true"
+                        className="absolute w-2 h-2 rounded-full border border-brand-500 bg-brand-500 pointer-events-none z-10"
+                        style={{ left: '8px', top: '12px' }}
+                      />
                       <input
                         ref={inputRef}
                         type="text"
@@ -205,7 +185,8 @@ export default function SectionSidebar({
                             cancelEdit()
                           }
                         }}
-                        className="flex-1 min-w-0 text-sm text-brand-700 font-medium bg-transparent border-none outline-none"
+                        style={{ paddingLeft: '22px' }}
+                        className="w-full pr-3 py-1.5 rounded-md text-sm leading-snug bg-brand-50 text-brand-700 font-medium border-none outline-none ring-1 ring-brand-300"
                       />
                     </li>
                   )
@@ -214,7 +195,6 @@ export default function SectionSidebar({
                   <SectionRow
                     key={section.id}
                     section={section}
-                    index={idx}
                     isActive={section.id === activeId}
                     isOnly={sections.length === 1}
                     onActivate={() => onActivate(section.id)}
@@ -226,20 +206,17 @@ export default function SectionSidebar({
             </ul>
           </SortableContext>
         </DndContext>
+      </nav>
 
-        <button
-          type="button"
+      <div className="px-2 py-3 border-t border-gray-200">
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={onAdd}
-          className="w-full mt-2 flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm text-gray-500 hover:text-brand-600 hover:bg-gray-50 transition-colors"
+          className="w-full border-2 border-dashed border-gray-300 hover:border-brand-400 hover:text-brand-700"
         >
-          <span className="shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-full border border-dashed border-gray-300 text-gray-400">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-          </span>
-          Nova seção
-        </button>
+          + Adicionar Seção
+        </Button>
       </div>
     </aside>
   )
