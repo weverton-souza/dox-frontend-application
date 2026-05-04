@@ -72,7 +72,7 @@ function SectionRow({ section, isActive, isOnly, onActivate, onStartEdit, onRemo
           isActive ? 'bg-brand-50 text-brand-700 font-medium' : 'text-gray-700 hover:bg-gray-100'
         }`}
       >
-        <span className="block truncate">{label}</span>
+        {label}
       </button>
 
       {!isOnly && (
