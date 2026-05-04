@@ -14,6 +14,12 @@ interface EditorPageHeaderProps {
    * horizontally with the center of the sidebar.
    */
   alignWithSidebar?: boolean
+  /**
+   * Reserve a w-12 spacer to the left of the sidebar column.
+   * Defaults to true. Set to false when the page below has no
+   * floating toolbar in that slot (e.g. FormBuilder, FormComparisonView).
+   */
+  withToolbarSpacer?: boolean
 }
 
 function BackButton({ onClick }: { onClick: () => void }) {
@@ -39,6 +45,7 @@ export default function EditorPageHeader({
   center,
   right,
   alignWithSidebar = false,
+  withToolbarSpacer = true,
 }: EditorPageHeaderProps) {
   const saveStatusNode = showSaveStatus && saveStatus ? (
     <SaveStatusIndicator status={saveStatus} showLabel={true} />
@@ -49,7 +56,9 @@ export default function EditorPageHeader({
       <div className="sticky top-12 z-30 bg-white/90 backdrop-blur-md shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
         <div className="w-full px-4 sm:px-6 lg:px-8 py-2 lg:py-2.5">
           <div className="flex items-center gap-4 lg:gap-8">
-            <div className="hidden lg:block lg:w-12 lg:shrink-0" aria-hidden="true" />
+            {withToolbarSpacer && (
+              <div className="hidden lg:block lg:w-12 lg:shrink-0" aria-hidden="true" />
+            )}
             <div className="flex items-center gap-2 lg:w-72 xl:w-80 lg:shrink-0 lg:justify-center">
               <BackButton onClick={onBack} />
               {saveStatusNode}

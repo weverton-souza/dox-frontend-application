@@ -252,6 +252,7 @@ export default function FormResponseList() {
           isOpen={showLinkModal}
           onClose={() => setShowLinkModal(false)}
           formId={id}
+          formFields={form?.fields}
         />
       )}
 

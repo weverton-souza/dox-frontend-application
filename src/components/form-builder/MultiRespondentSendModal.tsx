@@ -8,6 +8,7 @@ import { useError } from '@/contexts/ErrorContext'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import Select from '@/components/ui/Select'
+import CollectionModeNotice from '@/components/form-builder/CollectionModeNotice'
 import { getAvatarColor, getInitials } from '@/lib/avatar-utils'
 
 interface MultiRespondentSendModalProps {
@@ -406,6 +407,11 @@ function EnvelopeCard({
         onChange={onChangeForm}
         options={forms.map((f) => ({ value: f.id, label: f.title || '(sem título)' }))}
       />
+
+      {(() => {
+        const selectedForm = forms.find((f) => f.id === envelope.formId)
+        return selectedForm ? <CollectionModeNotice fields={selectedForm.fields} /> : null
+      })()}
 
       <div>
         <div className="flex items-center justify-between mb-2">

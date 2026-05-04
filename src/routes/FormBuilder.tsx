@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useClickOutside } from '@/lib/hooks/use-click-outside'
 import {
   DndContext,
   closestCenter,
@@ -38,6 +39,9 @@ import SectionReorderModal from '@/components/form-builder/SectionReorderModal'
 import GenerateFormLinkModal from '@/components/form-builder/GenerateFormLinkModal'
 import ScoringTab from '@/components/form-builder/ScoringTab'
 import SectionSidebar from '@/components/form-builder/SectionSidebar'
+import FormPrintModal from '@/components/form-builder/FormPrintModal'
+import { generateFormDocx } from '@/lib/docx-engine/form-generator'
+import { getProfessional } from '@/lib/api/professional-api'
 
 type ViewMode = 'editor' | 'preview' | 'mapping' | 'scoring'
 
@@ -79,6 +83,10 @@ export default function FormBuilder() {
   const [showLinkModal, setShowLinkModal] = useState(false)
   const [focusedFieldId, setFocusedFieldId] = useState<string | null>(null)
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null)
+  const [showMoreMenu, setShowMoreMenu] = useState(false)
+  const [showPrintModal, setShowPrintModal] = useState(false)
+  const moreMenuRef = useRef<HTMLDivElement>(null)
+  useClickOutside(moreMenuRef, () => setShowMoreMenu(false), showMoreMenu)
 
   const updateFormFn = useCallback((data: Form) => updateForm(data), [])
   const { saveStatus, scheduleSave, forceSave } = useAutoSave<Form>(updateFormFn)
@@ -117,6 +125,15 @@ export default function FormBuilder() {
     if (form) await forceSave(form)
     navigate('/forms')
   }, [form, navigate, forceSave])
+
+  const handleSetAllCollectionMode = useCallback((mode: 'online' | 'presencial') => {
+    if (!form) return
+    const fields = form.fields.map((f) =>
+      f.type === 'section-header' ? f : { ...f, collectionMode: mode },
+    )
+    updateFormState({ fields })
+    setShowMoreMenu(false)
+  }, [form, updateFormState])
 
   // DnD
   const sensors = useSensors(
@@ -449,6 +466,7 @@ export default function FormBuilder() {
           onBack={handleBack}
           showSaveStatus={false}
           alignWithSidebar
+          withToolbarSpacer={false}
           center={
             <SegmentedControl
               options={[
@@ -461,14 +479,59 @@ export default function FormBuilder() {
               size="sm"
             />
           }
+          right={
+            <div className="relative" ref={moreMenuRef}>
+              <button
+                type="button"
+                onClick={() => setShowMoreMenu((v) => !v)}
+                className="h-9 w-9 flex items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+                title="Mais opções"
+                aria-label="Mais opções"
+              >
+                <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <circle cx="4" cy="10" r="1.6" />
+                  <circle cx="10" cy="10" r="1.6" />
+                  <circle cx="16" cy="10" r="1.6" />
+                </svg>
+              </button>
+              {showMoreMenu && (
+                <div className="absolute right-0 top-full mt-1 w-72 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                  <div className="px-4 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+                    Modo de coleta
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleSetAllCollectionMode('online')}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                  >
+                    Marcar todas as perguntas como online
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSetAllCollectionMode('presencial')}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                  >
+                    Marcar todas as perguntas como presencial
+                  </button>
+                  <div className="border-t border-gray-100 my-1" />
+                  <div className="px-4 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+                    Impressão
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setShowPrintModal(true); setShowMoreMenu(false) }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                  >
+                    Imprimir formulário em branco
+                  </button>
+                </div>
+              )}
+            </div>
+          }
         />
         {/* Editor mode */}
         {viewMode === 'editor' && (
           <div className="px-4 sm:px-6 lg:px-8 flex flex-col lg:flex-row lg:items-start gap-4 lg:gap-8 pt-6 lg:pt-14">
-            {/* Spacer (lg+): alinha o menu na mesma posicao do menu do ReportEditor,
-                que tem uma toolbar lateral w-12 antes do summary */}
-            <div className="hidden lg:block lg:w-12 lg:shrink-0" aria-hidden="true" />
-
             {/* Sidebar (sections) — desktop sticky a esquerda, mobile stacked on top */}
             <SectionSidebar
               sections={sectionTabs}
@@ -489,13 +552,23 @@ export default function FormBuilder() {
                 <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden mb-3">
                   <div className="h-2.5 bg-brand-500 rounded-t-lg" />
                   <div className="px-6 py-5">
-                    <input
-                      type="text"
-                      value={form.title}
-                      onChange={(e) => updateFormState({ title: e.target.value })}
-                      placeholder="Formulário sem título"
-                      className="w-full text-2xl font-normal text-gray-900 bg-transparent border-none outline-none placeholder:text-gray-400"
-                    />
+                    <div className="flex items-start gap-3">
+                      <input
+                        type="text"
+                        value={form.title}
+                        onChange={(e) => updateFormState({ title: e.target.value })}
+                        placeholder="Formulário sem título"
+                        className="flex-1 min-w-0 text-2xl font-normal text-gray-900 bg-transparent border-none outline-none placeholder:text-gray-400"
+                      />
+                      {form.currentVersion != null && (
+                        <span
+                          className="shrink-0 inline-flex items-center text-[10px] font-medium uppercase tracking-wide bg-gray-100 text-gray-600 px-2 py-1 rounded-full mt-1"
+                          title={`Versão atual do formulário: v${form.currentVersion}`}
+                        >
+                          v{form.currentVersion}
+                        </span>
+                      )}
+                    </div>
                     <input
                       type="text"
                       value={form.description}
@@ -666,6 +739,26 @@ export default function FormBuilder() {
           isOpen={showLinkModal}
           onClose={() => setShowLinkModal(false)}
           formId={id}
+          formFields={form?.fields}
+        />
+      )}
+
+      {form && (
+        <FormPrintModal
+          isOpen={showPrintModal}
+          onClose={() => setShowPrintModal(false)}
+          fields={form.fields}
+          title="Imprimir formulário em branco"
+          onConfirm={async ({ selectedFieldIds, evaluators }) => {
+            const professional = await getProfessional().catch(() => null)
+            await generateFormDocx({
+              formTitle: form.title,
+              fields: form.fields,
+              selectedFieldIds,
+              header: { professional, customerName: null, date: new Date() },
+              evaluators,
+            })
+          }}
         />
       )}
     </>
