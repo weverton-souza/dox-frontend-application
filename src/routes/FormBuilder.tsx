@@ -38,7 +38,7 @@ import SectionDeleteModal from '@/components/ui/SectionDeleteModal'
 import SectionReorderModal from '@/components/form-builder/SectionReorderModal'
 import GenerateFormLinkModal from '@/components/form-builder/GenerateFormLinkModal'
 import ScoringTab from '@/components/form-builder/ScoringTab'
-import SectionTabs from '@/components/form-builder/SectionTabs'
+import SectionSidebar from '@/components/form-builder/SectionSidebar'
 
 type ViewMode = 'editor' | 'preview' | 'mapping' | 'scoring'
 
@@ -140,7 +140,6 @@ export default function FormBuilder() {
   )
 
   const activeChildren = activeGroup?.children ?? []
-  const activeSectionField = activeGroup?.sectionField ?? null
 
   /** Reconstroi form.fields preservando outras secoes e substituindo os children da ativa. */
   const replaceActiveChildren = useCallback(
@@ -410,12 +409,10 @@ export default function FormBuilder() {
     addFieldAfterFocused('section-header')
   }, [addFieldAfterFocused])
 
-  const handleRemoveActiveSection = useCallback(() => {
-    if (!activeSectionField) return
-    const sectionCount = sectionTabs.length
-    if (sectionCount <= 1) return
-    handleRemoveFieldOrSection(activeSectionField.id)
-  }, [activeSectionField, sectionTabs.length, handleRemoveFieldOrSection])
+  const handleRemoveSection = useCallback((sectionId: string) => {
+    if (sectionTabs.length <= 1) return
+    handleRemoveFieldOrSection(sectionId)
+  }, [sectionTabs.length, handleRemoveFieldOrSection])
 
   // Template link
   const handleTemplateSelect = useCallback((templateId: string | null) => {
@@ -501,131 +498,109 @@ export default function FormBuilder() {
         </div>
         {/* Editor mode */}
         {viewMode === 'editor' && (
-          <div className="max-w-[860px] mx-auto px-4 relative">
-            {/* Title card (always visible, always editable) */}
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden mb-3">
-              <div className="h-2.5 bg-brand-500 rounded-t-lg" />
-              <div className="px-6 py-5">
-                <input
-                  type="text"
-                  value={form.title}
-                  onChange={(e) => updateFormState({ title: e.target.value })}
-                  placeholder="Formulário sem título"
-                  className="w-full text-2xl font-normal text-gray-900 bg-transparent border-none outline-none placeholder:text-gray-400"
-                />
-                <input
-                  type="text"
-                  value={form.description}
-                  onChange={(e) => updateFormState({ description: e.target.value })}
-                  placeholder="Descrição do formulário"
-                  className="w-full text-sm text-gray-600 bg-transparent border-none outline-none mt-2 placeholder:text-gray-400"
-                />
-              </div>
-            </div>
-
-            {/* Section tabs */}
-            <div className="flex items-center gap-2 mb-3">
-              <SectionTabs
+          <div className="max-w-[1100px] mx-auto px-4 relative">
+            <div className="lg:flex lg:gap-6 lg:items-start">
+              {/* Sidebar (sections) — desktop sticky, mobile stacked on top */}
+              <SectionSidebar
                 sections={sectionTabs}
                 activeId={activeSectionId}
                 onActivate={(sid) => { setActiveSectionId(sid); setFocusedFieldId(null) }}
                 onRename={handleRenameSection}
                 onAdd={handleAddSection}
+                onRemove={handleRemoveSection}
+                onReorder={handleReorderSections}
               />
-              {sectionTabs.length > 1 && (
-                <div className="flex items-center gap-1 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => setShowSectionReorderModal(true)}
-                    title="Reorganizar seções"
-                    className="h-8 w-8 inline-flex items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 transition-colors"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="3" y1="6" x2="21" y2="6" />
-                      <line x1="3" y1="12" x2="21" y2="12" />
-                      <line x1="3" y1="18" x2="21" y2="18" />
-                    </svg>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleRemoveActiveSection}
-                    title="Excluir seção atual"
-                    className="h-8 w-8 inline-flex items-center justify-center rounded-full text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="3 6 5 6 21 6" />
-                      <path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6" />
-                    </svg>
-                  </button>
+
+              {/* Right column: title card + active section content */}
+              <div className="flex-1 min-w-0 mt-3 lg:mt-0">
+                {/* Title card (always visible, always editable) */}
+                <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden mb-3">
+                  <div className="h-2.5 bg-brand-500 rounded-t-lg" />
+                  <div className="px-6 py-5">
+                    <input
+                      type="text"
+                      value={form.title}
+                      onChange={(e) => updateFormState({ title: e.target.value })}
+                      placeholder="Formulário sem título"
+                      className="w-full text-2xl font-normal text-gray-900 bg-transparent border-none outline-none placeholder:text-gray-400"
+                    />
+                    <input
+                      type="text"
+                      value={form.description}
+                      onChange={(e) => updateFormState({ description: e.target.value })}
+                      placeholder="Descrição do formulário"
+                      className="w-full text-sm text-gray-600 bg-transparent border-none outline-none mt-2 placeholder:text-gray-400"
+                    />
+                  </div>
                 </div>
-              )}
-            </div>
 
-            {/* Question cards with DnD (active section only) */}
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleDragEnd}
-            >
-              <SortableContext items={activeChildIds} strategy={verticalListSortingStrategy}>
-                <div className="space-y-3">
-                  {activeChildren.map((field) => {
-                    const isFocused = focusedFieldId === field.id
+                {/* Question cards with DnD (active section only) */}
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext items={activeChildIds} strategy={verticalListSortingStrategy}>
+                    <div className="space-y-3">
+                      {activeChildren.map((field) => {
+                        const isFocused = focusedFieldId === field.id
 
-                    return (
-                      <div key={field.id} className="relative">
-                        <QuestionCard
-                          field={field}
-                          allFields={form?.fields ?? []}
-                          isFocused={isFocused}
-                          onFocus={() => setFocusedFieldId(field.id)}
-                          onUpdate={handleFieldUpdate}
-                          onDuplicate={() => handleDuplicateField(field.id)}
-                          onRemove={() => handleRemoveFieldOrSection(field.id)}
-                          onReorderSections={() => setShowSectionReorderModal(true)}
-                          onMergeUp={() => handleMergeUp(field.id)}
-                        />
-
-                        {/* Floating toolbar - positioned to the right of the focused card */}
-                        {isFocused && (
-                          <div className="absolute -right-14 top-1/2 -translate-y-1/2 hidden lg:block">
-                            <FloatingToolbar
-                              onAddQuestion={() => addFieldAfterFocused('single-choice')}
-                              onAddSection={() => addFieldAfterFocused('section-header')}
+                        return (
+                          <div key={field.id} className="relative">
+                            <QuestionCard
+                              field={field}
+                              allFields={form?.fields ?? []}
+                              isFocused={isFocused}
+                              onFocus={() => setFocusedFieldId(field.id)}
+                              onUpdate={handleFieldUpdate}
+                              onDuplicate={() => handleDuplicateField(field.id)}
+                              onRemove={() => handleRemoveFieldOrSection(field.id)}
+                              onReorderSections={() => setShowSectionReorderModal(true)}
+                              onMergeUp={() => handleMergeUp(field.id)}
                             />
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              </SortableContext>
-            </DndContext>
 
-            {/* Empty state for active section */}
-            {activeChildren.length === 0 && (
-              <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-12 text-center">
-                <p className="text-gray-400 text-sm mb-4">
-                  Esta seção ainda não tem perguntas
-                </p>
-                <div className="flex justify-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => addFieldAfterFocused('single-choice')}
-                    className="px-4 py-2 rounded-lg bg-brand-500 text-white text-sm font-medium hover:bg-brand-600 transition-colors"
-                  >
-                    Adicionar pergunta
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => addFieldAfterFocused('section-header')}
-                    className="px-4 py-2 rounded-lg border border-gray-300 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors"
-                  >
-                    Nova seção
-                  </button>
-                </div>
+                            {/* Floating toolbar - positioned to the right of the focused card */}
+                            {isFocused && (
+                              <div className="absolute -right-14 top-1/2 -translate-y-1/2 hidden xl:block">
+                                <FloatingToolbar
+                                  onAddQuestion={() => addFieldAfterFocused('single-choice')}
+                                  onAddSection={() => addFieldAfterFocused('section-header')}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </SortableContext>
+                </DndContext>
+
+                {/* Empty state for active section */}
+                {activeChildren.length === 0 && (
+                  <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-12 text-center">
+                    <p className="text-gray-400 text-sm mb-4">
+                      Esta seção ainda não tem perguntas
+                    </p>
+                    <div className="flex justify-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => addFieldAfterFocused('single-choice')}
+                        className="px-4 py-2 rounded-lg bg-brand-500 text-white text-sm font-medium hover:bg-brand-600 transition-colors"
+                      >
+                        Adicionar pergunta
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => addFieldAfterFocused('section-header')}
+                        className="px-4 py-2 rounded-lg border border-gray-300 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors"
+                      >
+                        Nova seção
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
 
             {/* Mobile floating action buttons (visible on smaller screens) */}
             <div className="fixed bottom-6 right-6 flex flex-col gap-2 lg:hidden z-20">
