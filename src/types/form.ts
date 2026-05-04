@@ -158,6 +158,7 @@ export interface Form {
   fieldMappings: FormFieldMapping[]
   scoringConfig: ScoringConfig
   isDefault?: boolean
+  currentVersion?: number
 }
 
 export type FormResponseStatus = 'em_andamento' | 'concluido'
@@ -172,6 +173,15 @@ export const FORM_RESPONSE_STATUS_COLORS: Record<FormResponseStatus, { bg: strin
   concluido: { bg: 'bg-green-100', text: 'text-green-700' },
 }
 
+export interface ProfessionalFieldAnswer {
+  value?: string
+  selectedOptionIds?: string[]
+  scaleValue?: number | null
+  likertAnswers?: Record<string, number>
+  answeredAt?: string
+  note?: string
+}
+
 export interface FormFieldAnswer {
   fieldId: string
   value: string               // para short-text, long-text, date, yes-no ("sim"/"não")
@@ -180,6 +190,12 @@ export interface FormFieldAnswer {
   likertAnswers: Record<string, number>  // para likert-matrix: rowId → valor selecionado
   patientAnsweredAt?: string         // ISO timestamp da última interação do paciente
   patientInteractionMs?: number      // tempo entre primeira e última interação do paciente (ms, descontando aba oculta)
+  professional?: ProfessionalFieldAnswer  // resposta/observação do profissional na coleta presencial
+}
+
+export interface AdditionalEvaluator {
+  name: string
+  council: string
 }
 
 export interface FormResponse {
@@ -190,6 +206,8 @@ export interface FormResponse {
   customerName: string          // sempre armazenado (pode não estar no cadastro)
   status: FormResponseStatus
   answers: FormFieldAnswer[]
+  additionalEvaluators?: AdditionalEvaluator[]
+  pageDurationsMs?: Record<string, number>
   createdAt: string
   updatedAt: string
   generatedReportId: string | null  // preenchido após IA gerar o relatório
@@ -367,6 +385,7 @@ export interface FormVersionSummary {
 
 export interface AggregatedRespondent {
   linkId: string
+  responseId: string | null
   respondentType: RespondentType
   respondentName: string | null
   customerContactId: string | null
@@ -394,6 +413,7 @@ export interface ScoreResult {
 
 export interface ComparisonRespondent {
   linkId: string
+  responseId: string | null
   respondentType: RespondentType
   respondentName: string | null
   customerContactId: string | null
