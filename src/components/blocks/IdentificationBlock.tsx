@@ -370,7 +370,7 @@ export default function IdentificationBlock({ data, onChange, customers, onCusto
             <p className="text-xs text-gray-400 italic">Nenhuma filiação cadastrada.</p>
           ) : (
             (data.customer.parents ?? []).map((parent, index) => (
-              <div key={index} className="flex items-center gap-2 group/p">
+              <div key={`parent-${index}-${parent}`} className="flex items-center gap-2 group/p">
                 <span className="text-xs text-gray-400 shrink-0 w-20">Filiação {index + 1}</span>
                 <Input
                   value={parent}
@@ -412,7 +412,7 @@ export default function IdentificationBlock({ data, onChange, customers, onCusto
             <p className="text-xs text-gray-400 italic">Nenhum responsável legal cadastrado.</p>
           ) : (
             (data.customer.guardians ?? []).map((guardian, index) => (
-              <div key={index} className="grid grid-cols-[1fr_180px_auto] gap-2 items-center group/g">
+              <div key={`guardian-${index}-${guardian.name}`} className="grid grid-cols-[1fr_180px_auto] gap-2 items-center group/g">
                 <Input
                   value={guardian.name}
                   onChange={(e) => updateGuardian(index, { name: e.target.value })}

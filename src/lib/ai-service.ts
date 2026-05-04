@@ -1,30 +1,18 @@
 import type {
   Form,
-  FormResponse,
   FormFieldAnswer,
   Block,
   ReportTemplate,
-  Professional,
   TextBlockData,
   InfoBoxData,
+  ReportGenerationRequest,
+  ReportGenerationResult,
 } from '@/types'
 import { FORM_FIELD_TYPE_LABELS } from '@/types'
 import { BLOCK_TYPE_LABELS, getBlockTitle } from '@/lib/block-constants'
 import { resolveAnswerDisplay } from '@/lib/variable-service'
 
-// ========== Interfaces (contratos para o backend) ==========
-
-export interface ReportGenerationRequest {
-  form: Form
-  response: FormResponse
-  template: ReportTemplate
-  professional: Professional
-}
-
-export interface ReportGenerationResult {
-  blocks: Block[]
-  customerName: string
-}
+export type { ReportGenerationRequest, ReportGenerationResult }
 
 // ========== Prompt Builder ==========
 

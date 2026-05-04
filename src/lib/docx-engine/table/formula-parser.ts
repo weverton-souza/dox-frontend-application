@@ -500,7 +500,10 @@ class Parser {
     // Number
     if (token.type === 'NUMBER') {
       this.advance()
-      node = { type: 'number', value: token.numValue! }
+      if (token.numValue === undefined) {
+        throw new FormulaError('PARSE_ERROR', `Token NUMBER sem valor numérico em "${token.value}"`)
+      }
+      node = { type: 'number', value: token.numValue }
     }
 
     // String
@@ -512,13 +515,19 @@ class Parser {
     // Cell reference (A1, B3)
     else if (token.type === 'CELL_REF') {
       this.advance()
-      node = { type: 'cellRef', col: token.value, row: token.numValue! }
+      if (token.numValue === undefined) {
+        throw new FormulaError('PARSE_ERROR', `Token CELL_REF sem linha em "${token.value}"`)
+      }
+      node = { type: 'cellRef', col: token.value, row: token.numValue }
     }
 
     // Cell range (A1:A4, B2:C5)
     else if (token.type === 'CELL_RANGE') {
       this.advance()
-      node = { type: 'cellRange', startCol: token.value, startRow: token.numValue!, endCol: token.endCol!, endRow: token.endRow! }
+      if (token.numValue === undefined || token.endCol === undefined || token.endRow === undefined) {
+        throw new FormulaError('PARSE_ERROR', `Token CELL_RANGE incompleto em "${token.value}"`)
+      }
+      node = { type: 'cellRange', startCol: token.value, startRow: token.numValue, endCol: token.endCol, endRow: token.endRow }
     }
 
     // Column range (A:A, B:B)

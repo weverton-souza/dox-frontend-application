@@ -34,13 +34,13 @@ export default function PaymentHistoryTable({
           <table className="w-full text-sm">
             <thead className="border-b border-gray-200 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
               <tr>
-                <th className="px-4 py-3 text-left font-semibold">
+                <th scope="col" className="px-4 py-3 text-left font-semibold">
                   Vencimento
                 </th>
-                <th className="px-4 py-3 text-left font-semibold">Descrição</th>
-                <th className="px-4 py-3 text-left font-semibold">Método</th>
-                <th className="px-4 py-3 text-right font-semibold">Valor</th>
-                <th className="px-4 py-3 text-left font-semibold">Status</th>
+                <th scope="col" className="px-4 py-3 text-left font-semibold">Descrição</th>
+                <th scope="col" className="px-4 py-3 text-left font-semibold">Método</th>
+                <th scope="col" className="px-4 py-3 text-right font-semibold">Valor</th>
+                <th scope="col" className="px-4 py-3 text-left font-semibold">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">

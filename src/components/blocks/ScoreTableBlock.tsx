@@ -883,7 +883,7 @@ export default function ScoreTableBlock({ data, onChange, readOnly = false }: Sc
                     <div className="flex items-center gap-1.5">
                       <div
                         className="w-5 h-5 rounded border border-gray-300"
-                        style={{ backgroundColor: adjustedColor! }}
+                        style={{ backgroundColor: adjustedColor ?? '#000' }}
                       />
                       <span className="text-[10px] font-mono text-gray-500">{adjustedColor}</span>
                     </div>
@@ -920,11 +920,12 @@ export default function ScoreTableBlock({ data, onChange, readOnly = false }: Sc
                   <button
                     type="button"
                     className="w-full mt-2 px-3 py-1.5 text-xs font-medium text-white rounded-lg transition-colors hover:opacity-90"
-                    style={{ backgroundColor: adjustedColor! }}
+                    style={{ backgroundColor: adjustedColor ?? '#000' }}
                     onMouseDown={(e) => {
                       e.preventDefault()
+                      if (!adjustedColor) return
                       const isEditingExisting = cpEditIndex !== null
-                      handleColorSelect(adjustedColor!)
+                      handleColorSelect(adjustedColor)
                       if (isEditingExisting) {
                         const currentLightness = cpBaseHsl[2]
                         const others = findAllTableColors(editingCellId ?? undefined)
@@ -998,9 +999,10 @@ export default function ScoreTableBlock({ data, onChange, readOnly = false }: Sc
               {/* Letter row (A, B, C...) */}
               <tr className="bg-gray-100 border-b border-gray-200">
                 {/* Empty corner for row numbers */}
-                <th className="w-10 px-1 py-1 border-r border-gray-200" />
+                <th scope="col" className="w-10 px-1 py-1 border-r border-gray-200" />
                 {data.columns.map((_col, idx) => (
                   <th
+                    scope="col"
                     key={`letter-${idx}`}
                     className="px-3 py-1 text-center text-[10px] font-semibold text-gray-500"
                     style={{ width: columnWidths[data.columns[idx]?.id] }}
@@ -1008,8 +1010,8 @@ export default function ScoreTableBlock({ data, onChange, readOnly = false }: Sc
                     {indexToLetter(idx)}
                   </th>
                 ))}
-                <th className="w-12" />
-                <th className="w-8" />
+                <th scope="col" className="w-12" />
+                <th scope="col" className="w-8" />
               </tr>
               {/* Column names row */}
               <tr className="bg-brand-700">

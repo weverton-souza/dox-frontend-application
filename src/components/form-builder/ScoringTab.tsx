@@ -223,7 +223,7 @@ function FormulaCard({ formula, scorableFields, fieldsById, onUpdate, onRemove }
               <span></span>
             </div>
             {formula.classification.map((range, index) => (
-              <div key={index} className="grid grid-cols-[64px_auto_64px_auto_1fr_auto] gap-2 items-center group/r">
+              <div key={`range-${index}-${range.label}`} className="grid grid-cols-[64px_auto_64px_auto_1fr_auto] gap-2 items-center group/r">
                 <input
                   type="number"
                   value={range.min}

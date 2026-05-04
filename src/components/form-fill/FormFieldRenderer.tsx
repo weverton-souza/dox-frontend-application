@@ -18,6 +18,7 @@ export default function FormFieldRenderer({ field, answer, onChange, readOnly = 
       return (
         <input
           type="text"
+          aria-label={field.label}
           value={answer.value}
           onChange={(e) => update({ value: e.target.value })}
           placeholder={field.placeholder || 'Sua resposta'}
@@ -28,6 +29,7 @@ export default function FormFieldRenderer({ field, answer, onChange, readOnly = 
     case 'long-text':
       return (
         <textarea
+          aria-label={field.label}
           value={answer.value}
           onChange={(e) => update({ value: e.target.value })}
           placeholder={field.placeholder || 'Sua resposta'}
@@ -175,6 +177,7 @@ export default function FormFieldRenderer({ field, answer, onChange, readOnly = 
       return (
         <input
           type="date"
+          aria-label={field.label}
           value={answer.value}
           onChange={(e) => update({ value: e.target.value })}
           className="border-0 border-b border-gray-300 bg-transparent px-0 py-2 text-sm text-gray-900 focus:border-brand-500 focus:ring-0 focus:outline-none transition-colors"
