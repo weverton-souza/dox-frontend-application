@@ -25,7 +25,6 @@ import { useAutoSave } from '@/lib/hooks/use-auto-save'
 import { useSortedFields } from '@/lib/hooks/use-sorted-fields'
 import { getAllTemplates } from '@/lib/default-templates'
 import { getReportTemplates } from '@/lib/api/template-api'
-import Button from '@/components/ui/Button'
 import Spinner from '@/components/ui/Spinner'
 import SaveStatusIndicator from '@/components/ui/SaveStatusIndicator'
 import SegmentedControl from '@/components/ui/SegmentedControl'
@@ -465,12 +464,8 @@ export default function FormBuilder() {
                 <SaveStatusIndicator status={saveStatus} showLabel={false} />
               </div>
 
-              {/* Center: nome do form */}
-              <div className="flex items-center gap-2 min-w-0 justify-center flex-1">
-                <span className="text-sm font-medium text-gray-700 truncate max-w-xs">
-                  {form.title || 'Formulário sem título'}
-                </span>
-              </div>
+              {/* Center: empty (apenas spacer) */}
+              <div className="flex-1" />
 
               {/* Right: actions */}
               <div className="flex items-center gap-2 shrink-0">
@@ -484,27 +479,6 @@ export default function FormBuilder() {
                   onChange={(v) => setViewMode(v as ViewMode)}
                   size="sm"
                 />
-
-                <button
-                  type="button"
-                  onClick={() => setShowLinkModal(true)}
-                  className="hidden sm:flex h-8 w-8 items-center justify-center rounded-full text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors shrink-0"
-                  title="Gerar Link"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-                  </svg>
-                </button>
-
-                <Button
-                  variant={form.linkedTemplateId ? 'secondary' : 'ghost'}
-                  size="sm"
-                  onClick={() => setShowTemplateLinkModal(true)}
-                  className="hidden sm:inline-flex rounded-full"
-                >
-                  {form.linkedTemplateId ? linkedTemplate?.name ?? 'Template' : 'Vincular Template'}
-                </Button>
               </div>
             </div>
           </div>
@@ -530,7 +504,7 @@ export default function FormBuilder() {
             {/* Content column: ocupa o restante, limita largura mas sem centralizar
                 — mesmo padrao do SectionEditor no ReportEditor (cola apos o gap da sidebar) */}
             <div className="flex-1 min-w-0">
-              <div className="max-w-4xl">
+              <div className="max-w-5xl">
                 {/* Title card (always visible, always editable) */}
                 <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden mb-3">
                   <div className="h-2.5 bg-brand-500 rounded-t-lg" />
