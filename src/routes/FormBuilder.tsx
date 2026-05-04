@@ -438,7 +438,7 @@ export default function FormBuilder() {
   return (
     <>
       <main
-        className="min-h-screen bg-gray-100 pb-6"
+        className="min-h-[calc(100vh-3rem)] bg-gray-100 pb-6"
         onClick={handleContainerClick}
         style={{
           backgroundImage: 'radial-gradient(circle, rgba(0,0,0,0.10) 1px, transparent 1px)',
