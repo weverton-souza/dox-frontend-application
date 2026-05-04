@@ -178,6 +178,8 @@ export interface FormFieldAnswer {
   selectedOptionIds: string[]  // para single-choice (1 item), multiple-choice (N items), inventory-item (1 item)
   scaleValue: number | null    // para scale
   likertAnswers: Record<string, number>  // para likert-matrix: rowId → valor selecionado
+  patientAnsweredAt?: string         // ISO timestamp da última interação do paciente
+  patientInteractionMs?: number      // tempo entre primeira e última interação do paciente (ms, descontando aba oculta)
 }
 
 export interface FormResponse {

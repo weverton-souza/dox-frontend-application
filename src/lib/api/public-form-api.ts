@@ -25,8 +25,12 @@ export async function getPublicForm(token: string): Promise<PublicFormData> {
 export async function submitPublicForm(
   token: string,
   answers: FormFieldAnswer[],
+  pageDurationsMs?: Record<string, number>,
 ): Promise<void> {
-  await publicApi.post(`/public/forms/${token}/submit`, { answers })
+  await publicApi.post(`/public/forms/${token}/submit`, {
+    answers,
+    pageDurationsMs: pageDurationsMs ?? {},
+  })
 }
 
 export interface PublicFormDraft {

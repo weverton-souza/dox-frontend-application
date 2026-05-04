@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import type { PublicFormData, FormFieldAnswer, FormField } from '@/types'
 import { createEmptyFormFieldAnswer } from '@/types'
@@ -9,6 +9,7 @@ import { useFormDraft } from '@/lib/hooks/use-form-draft'
 import { useSortedFields } from '@/lib/hooks/use-sorted-fields'
 import { useFieldVisibility } from '@/lib/hooks/use-field-visibility'
 import { useAutoCalculatedFields } from '@/lib/hooks/use-auto-calculated-fields'
+import { useFormParadata } from '@/lib/hooks/use-form-paradata'
 import FormSectionFields from '@/components/form-fill/FormSectionFields'
 
 interface DraftPayload extends Record<string, unknown> {
@@ -60,6 +61,9 @@ export default function PublicFormFill() {
 
   const { initialDraft, draftLoaded, status: draftStatus, lastSavedAt } =
     useFormDraft<DraftPayload>(token, draftPayload, pageState === 'form')
+
+  const paradata = useFormParadata()
+  const pageDurationsMsRef = useRef<Record<string, number>>({})
 
   useEffect(() => {
     if (!token) return
@@ -120,6 +124,7 @@ export default function PublicFormFill() {
   )
 
   const handleAnswerChange = useCallback((answer: FormFieldAnswer) => {
+    paradata.recordFieldInteraction(answer.fieldId)
     setAnswers((prev) => {
       const exists = prev.find((a) => a.fieldId === answer.fieldId)
       if (exists) return prev.map((a) => (a.fieldId === answer.fieldId ? answer : a))
@@ -132,7 +137,7 @@ export default function PublicFormFill() {
       next.delete(answer.fieldId)
       return next
     })
-  }, [clearFieldError])
+  }, [clearFieldError, paradata])
 
   const { sectionGroups } = useSortedFields(visibleFields)
 
@@ -148,6 +153,19 @@ export default function PublicFormFill() {
   const safePage = Math.min(currentPage, Math.max(0, totalPages - 1))
   const currentSection = pages[safePage]
   const currentSectionGroups = currentSection ? [currentSection] : []
+  const currentSectionId = currentSection?.sectionFieldId
+
+  useEffect(() => {
+    if (pageState !== 'form' || !currentSectionId) return
+    paradata.startPage()
+    return () => {
+      const ms = paradata.endPage()
+      if (ms > 0) {
+        pageDurationsMsRef.current[currentSectionId] =
+          (pageDurationsMsRef.current[currentSectionId] ?? 0) + ms
+      }
+    }
+  }, [currentSectionId, pageState, paradata, pageDurationsMsRef])
 
   const validatePageFields = useCallback((fields: FormField[]): Set<string> => {
     const errors = new Set<string>()
@@ -183,7 +201,20 @@ export default function PublicFormFill() {
 
     setSubmitting(true)
     try {
-      await submitPublicForm(token, answers)
+      if (currentSectionId) {
+        const ms = paradata.endPage()
+        if (ms > 0) {
+          pageDurationsMsRef.current[currentSectionId] =
+            (pageDurationsMsRef.current[currentSectionId] ?? 0) + ms
+        }
+      }
+      const enrichedAnswers: FormFieldAnswer[] = answers.map((a) => ({
+        ...a,
+        patientAnsweredAt: paradata.getFieldLastInteractionAt(a.fieldId) ?? a.patientAnsweredAt,
+        patientInteractionMs:
+          paradata.computeFieldInteractionMs(a.fieldId) ?? a.patientInteractionMs,
+      }))
+      await submitPublicForm(token, enrichedAnswers, { ...pageDurationsMsRef.current })
       setPageState('success')
     } catch (err: unknown) {
       const parsed = parseError(err)
@@ -192,7 +223,7 @@ export default function PublicFormFill() {
     } finally {
       setSubmitting(false)
     }
-  }, [validate, token, formData, answers, submitting])
+  }, [validate, token, formData, answers, submitting, paradata, currentSectionId, pageDurationsMsRef])
 
   const getAnswer = useCallback((fieldId: string): FormFieldAnswer => {
     return answers.find((a) => a.fieldId === fieldId)
