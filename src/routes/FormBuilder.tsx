@@ -25,7 +25,6 @@ import { useAutoSave } from '@/lib/hooks/use-auto-save'
 import { useSortedFields } from '@/lib/hooks/use-sorted-fields'
 import { getAllTemplates } from '@/lib/default-templates'
 import { getReportTemplates } from '@/lib/api/template-api'
-import Button from '@/components/ui/Button'
 import Spinner from '@/components/ui/Spinner'
 import SaveStatusIndicator from '@/components/ui/SaveStatusIndicator'
 import SegmentedControl from '@/components/ui/SegmentedControl'
@@ -38,8 +37,36 @@ import SectionDeleteModal from '@/components/ui/SectionDeleteModal'
 import SectionReorderModal from '@/components/form-builder/SectionReorderModal'
 import GenerateFormLinkModal from '@/components/form-builder/GenerateFormLinkModal'
 import ScoringTab from '@/components/form-builder/ScoringTab'
+import SectionSidebar from '@/components/form-builder/SectionSidebar'
 
 type ViewMode = 'editor' | 'preview' | 'mapping' | 'scoring'
+
+/**
+ * Garante que o form sempre comece com section-header.
+ * Forms antigos sem secao ou com orfas (campos antes do primeiro
+ * section-header) ganham uma secao 'Geral' no inicio que absorve
+ * essas orfas.
+ */
+function ensureSectionsAtStart(form: Form): { form: Form; migrated: boolean } {
+  const sorted = [...form.fields].sort((a, b) => a.order - b.order)
+
+  if (sorted.length === 0) {
+    const section = createEmptyFormField('section-header', 0)
+    section.label = 'Seção 1'
+    return { form: { ...form, fields: [section] }, migrated: true }
+  }
+
+  if (sorted[0].type === 'section-header') {
+    return { form, migrated: false }
+  }
+
+  const newSection = createEmptyFormField('section-header', 0)
+  const hasAnySection = sorted.some((f) => f.type === 'section-header')
+  newSection.label = hasAnySection ? 'Geral' : 'Seção 1'
+
+  const reordered = [newSection, ...sorted].map((f, i) => ({ ...f, order: i }))
+  return { form: { ...form, fields: reordered }, migrated: true }
+}
 
 export default function FormBuilder() {
   const { id } = useParams<{ id: string }>()
@@ -51,6 +78,7 @@ export default function FormBuilder() {
   const [showSectionReorderModal, setShowSectionReorderModal] = useState(false)
   const [showLinkModal, setShowLinkModal] = useState(false)
   const [focusedFieldId, setFocusedFieldId] = useState<string | null>(null)
+  const [activeSectionId, setActiveSectionId] = useState<string | null>(null)
 
   const updateFormFn = useCallback((data: Form) => updateForm(data), [])
   const { saveStatus, scheduleSave, forceSave } = useAutoSave<Form>(updateFormFn)
@@ -61,12 +89,19 @@ export default function FormBuilder() {
     if (!id) return
     Promise.all([getFormById(id), getReportTemplates()])
       .then(([raw, customTemplates]) => {
-        if (raw) setForm(raw)
-        else navigate('/forms')
+        if (raw) {
+          const { form: normalized, migrated } = ensureSectionsAtStart(raw)
+          setForm(normalized)
+          if (migrated) scheduleSave(normalized)
+          const firstSection = normalized.fields.find((f) => f.type === 'section-header')
+          if (firstSection) setActiveSectionId(firstSection.id)
+        } else {
+          navigate('/forms')
+        }
         setTemplates(getAllTemplates(customTemplates))
       })
       .catch(() => navigate('/forms'))
-  }, [id, navigate])
+  }, [id, navigate, scheduleSave])
 
   const updateFormState = useCallback((patch: Partial<Form>) => {
     setForm((prev) => {
@@ -89,44 +124,89 @@ export default function FormBuilder() {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
 
+  const { sortedFields, sectionGroups } = useSortedFields(form?.fields)
+
+  const sectionTabs = useMemo(
+    () => sectionGroups
+      .filter((g) => g.sectionField)
+      .map((g) => ({ id: g.sectionFieldId, title: g.sectionTitle })),
+    [sectionGroups],
+  )
+
+  const activeGroup = useMemo(
+    () => sectionGroups.find((g) => g.sectionFieldId === activeSectionId) ?? null,
+    [sectionGroups, activeSectionId],
+  )
+
+  const activeChildren = activeGroup?.children ?? []
+
+  /** Reconstroi form.fields preservando outras secoes e substituindo os children da ativa. */
+  const replaceActiveChildren = useCallback(
+    (newChildren: FormField[]): FormField[] => {
+      const out: FormField[] = []
+      for (const group of sectionGroups) {
+        if (group.sectionField) out.push(group.sectionField)
+        if (group.sectionFieldId === activeSectionId) {
+          out.push(...newChildren)
+        } else {
+          out.push(...group.children)
+        }
+      }
+      return out.map((f, i) => ({ ...f, order: i }))
+    },
+    [sectionGroups, activeSectionId],
+  )
+
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event
-    if (!over || active.id === over.id || !form) return
+    if (!over || active.id === over.id || !form || !activeGroup) return
 
-    const fields = [...form.fields]
-    const oldIndex = fields.findIndex((f) => f.id === active.id)
-    const newIndex = fields.findIndex((f) => f.id === over.id)
+    const oldIndex = activeGroup.children.findIndex((f) => f.id === active.id)
+    const newIndex = activeGroup.children.findIndex((f) => f.id === over.id)
     if (oldIndex < 0 || newIndex < 0) return
 
-    const [moved] = fields.splice(oldIndex, 1)
-    fields.splice(newIndex, 0, moved)
+    const newChildren = [...activeGroup.children]
+    const [moved] = newChildren.splice(oldIndex, 1)
+    newChildren.splice(newIndex, 0, moved)
 
-    const reordered = fields.map((f, i) => ({ ...f, order: i }))
-    updateFormState({ fields: reordered })
-  }, [form, updateFormState])
+    updateFormState({ fields: replaceActiveChildren(newChildren) })
+  }, [form, activeGroup, replaceActiveChildren, updateFormState])
 
   // ─── Field CRUD ───────────────────────────────────────
 
   const addFieldAfterFocused = useCallback((type: FormFieldType) => {
     if (!form) return
-    const sorted = [...form.fields].sort((a, b) => a.order - b.order)
-    let insertOrder = sorted.length
 
-    if (focusedFieldId) {
-      const idx = sorted.findIndex((f) => f.id === focusedFieldId)
-      if (idx >= 0) insertOrder = idx + 1
+    if (type === 'section-header') {
+      const sorted = [...form.fields].sort((a, b) => a.order - b.order)
+      const sectionCount = sorted.filter((f) => f.type === 'section-header').length
+      const section = createEmptyFormField('section-header', sorted.length)
+      section.label = `Seção ${sectionCount + 1}`
+      const reordered = [...sorted, section].map((f, i) => ({ ...f, order: i }))
+      updateFormState({ fields: reordered })
+      setActiveSectionId(section.id)
+      setFocusedFieldId(null)
+      return
     }
 
-    const field = createEmptyFormField(type, insertOrder)
-    if (type === 'section-header') field.label = 'Seção sem título'
+    if (!activeGroup) return
 
-    const updated = [...sorted]
-    updated.splice(insertOrder, 0, field)
-    const reordered = updated.map((f, i) => ({ ...f, order: i }))
+    const newField = createEmptyFormField(type, 0)
+    const focusedInActive = focusedFieldId
+      ? activeGroup.children.some((c) => c.id === focusedFieldId)
+      : false
 
-    updateFormState({ fields: reordered })
-    setFocusedFieldId(field.id)
-  }, [form, focusedFieldId, updateFormState])
+    const newChildren = [...activeGroup.children]
+    if (focusedInActive) {
+      const idx = newChildren.findIndex((c) => c.id === focusedFieldId)
+      newChildren.splice(idx + 1, 0, newField)
+    } else {
+      newChildren.push(newField)
+    }
+
+    updateFormState({ fields: replaceActiveChildren(newChildren) })
+    setFocusedFieldId(newField.id)
+  }, [form, activeGroup, focusedFieldId, replaceActiveChildren, updateFormState])
 
   const handleFieldUpdate = useCallback((updatedField: FormField) => {
     if (!form) return
@@ -166,7 +246,11 @@ export default function FormBuilder() {
     const fieldMappings = form.fieldMappings.filter((m) => m.fieldId !== fieldId)
     updateFormState({ fields, fieldMappings })
     if (focusedFieldId === fieldId) setFocusedFieldId(null)
-  }, [form, updateFormState, focusedFieldId])
+    if (activeSectionId === fieldId) {
+      const remainingSections = fields.filter((f) => f.type === 'section-header')
+      setActiveSectionId(remainingSections[0]?.id ?? null)
+    }
+  }, [form, updateFormState, focusedFieldId, activeSectionId])
 
   // ─── Section delete with modal ────────────────────────
 
@@ -175,8 +259,6 @@ export default function FormBuilder() {
     sectionTitle: string
     childFieldIds: string[]
   } | null>(null)
-
-  const { sortedFields, sectionGroups } = useSortedFields(form?.fields)
 
   const handleRemoveFieldOrSection = useCallback((fieldId: string) => {
     if (!form) return
@@ -300,17 +382,36 @@ export default function FormBuilder() {
     [form, templates]
   )
 
-  const fieldIds = useMemo(() => sortedFields.map((f) => f.id), [sortedFields])
+  const activeChildIds = useMemo(() => activeChildren.map((f) => f.id), [activeChildren])
 
-  // Section numbering for section-header cards
-  const sectionNumbers = useMemo(() => {
-    const sectionFields = sortedFields.filter((f) => f.type === 'section-header')
-    const map = new Map<string, { index: number; total: number }>()
-    sectionFields.forEach((f, i) => {
-      map.set(f.id, { index: i + 1, total: sectionFields.length })
-    })
-    return map
-  }, [sortedFields])
+  /** Reativa primeira secao se a ativa some (apos delete em cascata, merge, etc). */
+  useEffect(() => {
+    if (!form) return
+    const sections = form.fields.filter((f) => f.type === 'section-header')
+    if (sections.length === 0) return
+    if (!activeSectionId || !sections.some((s) => s.id === activeSectionId)) {
+      setActiveSectionId(sections[0].id)
+    }
+  }, [form, activeSectionId])
+
+  // ─── Section actions (tabs) ──────────────────────────
+
+  const handleRenameSection = useCallback((sectionId: string, newTitle: string) => {
+    if (!form) return
+    const fields = form.fields.map((f) =>
+      f.id === sectionId ? { ...f, label: newTitle } : f
+    )
+    updateFormState({ fields })
+  }, [form, updateFormState])
+
+  const handleAddSection = useCallback(() => {
+    addFieldAfterFocused('section-header')
+  }, [addFieldAfterFocused])
+
+  const handleRemoveSection = useCallback((sectionId: string) => {
+    if (sectionTabs.length <= 1) return
+    handleRemoveFieldOrSection(sectionId)
+  }, [sectionTabs.length, handleRemoveFieldOrSection])
 
   // Template link
   const handleTemplateSelect = useCallback((templateId: string | null) => {
@@ -336,156 +437,162 @@ export default function FormBuilder() {
   return (
     <>
       <main
-        className="min-h-screen bg-gray-100 pb-6"
+        className="min-h-[calc(100vh-3rem)] bg-gray-100 pb-6"
         onClick={handleContainerClick}
         style={{
           backgroundImage: 'radial-gradient(circle, rgba(0,0,0,0.10) 1px, transparent 1px)',
           backgroundSize: '22px 22px',
+          backgroundAttachment: 'fixed',
         }}
       >
-        {/* Toolbar dentro do main para o dot pattern chegar ao topo */}
-        <div className="max-w-[860px] mx-auto px-3 sm:px-4 pt-4 pb-6">
-          <div className="flex items-center justify-between bg-white rounded-full px-3 py-1.5 shadow-card">
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={handleBack}
-                className="h-11 w-11 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors shrink-0"
-              >
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
-                </svg>
-              </button>
-              <SaveStatusIndicator status={saveStatus} />
-            </div>
+        {/* Header — sticky logo abaixo da GlobalTopBar (h-12) */}
+        <div className="sticky top-12 z-30 bg-white/90 backdrop-blur-md shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
+          <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-2 lg:py-2.5">
+            <div className="flex items-center justify-between">
+              {/* Left: back + save status */}
+              <div className="flex items-center gap-2 w-40 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleBack}
+                  className="h-9 w-9 flex items-center justify-center rounded-full hover:bg-white/80 text-gray-500 hover:text-gray-700 transition-colors"
+                  title="Voltar"
+                >
+                  <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z" clipRule="evenodd" />
+                  </svg>
+                </button>
+                <SaveStatusIndicator status={saveStatus} showLabel={false} />
+              </div>
 
-            <div className="flex items-center gap-2">
-              <SegmentedControl
-                options={[
-                  { value: 'editor', label: 'Perguntas' },
-                  { value: 'scoring', label: 'Pontuação' },
-                  { value: 'preview', label: 'Preview' },
-                ]}
-                value={viewMode}
-                onChange={(v) => setViewMode(v as ViewMode)}
-                size="sm"
-              />
+              {/* Center: empty (apenas spacer) */}
+              <div className="flex-1" />
 
-              <button
-                type="button"
-                onClick={() => setShowLinkModal(true)}
-                className="hidden sm:flex h-11 w-11 items-center justify-center rounded-full bg-gray-200 text-gray-600 hover:bg-gray-300 transition-colors shadow-sm shrink-0"
-                title="Gerar Link"
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-                  <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-                </svg>
-              </button>
-
-              <Button
-                variant={form.linkedTemplateId ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setShowTemplateLinkModal(true)}
-                className="hidden sm:inline-flex rounded-full"
-              >
-                {form.linkedTemplateId ? linkedTemplate?.name ?? 'Template' : 'Vincular Template'}
-              </Button>
+              {/* Right: actions */}
+              <div className="flex items-center gap-2 shrink-0">
+                <SegmentedControl
+                  options={[
+                    { value: 'editor', label: 'Perguntas' },
+                    { value: 'scoring', label: 'Pontuação' },
+                    { value: 'preview', label: 'Preview' },
+                  ]}
+                  value={viewMode}
+                  onChange={(v) => setViewMode(v as ViewMode)}
+                  size="sm"
+                />
+              </div>
             </div>
           </div>
         </div>
         {/* Editor mode */}
         {viewMode === 'editor' && (
-          <div className="max-w-[860px] mx-auto px-4 relative">
-            {/* Title card (always visible, always editable) */}
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden mb-3">
-              <div className="h-2.5 bg-brand-500 rounded-t-lg" />
-              <div className="px-6 py-5">
-                <input
-                  type="text"
-                  value={form.title}
-                  onChange={(e) => updateFormState({ title: e.target.value })}
-                  placeholder="Formulário sem título"
-                  className="w-full text-2xl font-normal text-gray-900 bg-transparent border-none outline-none placeholder:text-gray-400"
-                />
-                <input
-                  type="text"
-                  value={form.description}
-                  onChange={(e) => updateFormState({ description: e.target.value })}
-                  placeholder="Descrição do formulário"
-                  className="w-full text-sm text-gray-600 bg-transparent border-none outline-none mt-2 placeholder:text-gray-400"
-                />
+          <div className="px-4 sm:px-6 lg:px-8 flex flex-col lg:flex-row lg:items-start gap-4 lg:gap-8 pt-6 lg:pt-14">
+            {/* Spacer (lg+): alinha o menu na mesma posicao do menu do ReportEditor,
+                que tem uma toolbar lateral w-12 antes do summary */}
+            <div className="hidden lg:block lg:w-12 lg:shrink-0" aria-hidden="true" />
+
+            {/* Sidebar (sections) — desktop sticky a esquerda, mobile stacked on top */}
+            <SectionSidebar
+              sections={sectionTabs}
+              activeId={activeSectionId}
+              onActivate={(sid) => { setActiveSectionId(sid); setFocusedFieldId(null) }}
+              onRename={handleRenameSection}
+              onAdd={handleAddSection}
+              onRemove={handleRemoveSection}
+              onReorder={handleReorderSections}
+            />
+
+            {/* Content column: ocupa o restante, limita largura mas sem centralizar
+                — mesmo padrao do SectionEditor no ReportEditor (cola apos o gap da sidebar) */}
+            <div className="flex-1 min-w-0">
+              <div className="max-w-5xl">
+                {/* Title card (always visible, always editable) */}
+                <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden mb-3">
+                  <div className="h-2.5 bg-brand-500 rounded-t-lg" />
+                  <div className="px-6 py-5">
+                    <input
+                      type="text"
+                      value={form.title}
+                      onChange={(e) => updateFormState({ title: e.target.value })}
+                      placeholder="Formulário sem título"
+                      className="w-full text-2xl font-normal text-gray-900 bg-transparent border-none outline-none placeholder:text-gray-400"
+                    />
+                    <input
+                      type="text"
+                      value={form.description}
+                      onChange={(e) => updateFormState({ description: e.target.value })}
+                      placeholder="Descrição do formulário"
+                      className="w-full text-sm text-gray-600 bg-transparent border-none outline-none mt-2 placeholder:text-gray-400"
+                    />
+                  </div>
+                </div>
+
+                {/* Question cards with DnD (active section only) */}
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext items={activeChildIds} strategy={verticalListSortingStrategy}>
+                    <div className="space-y-3">
+                      {activeChildren.map((field) => {
+                        const isFocused = focusedFieldId === field.id
+
+                        return (
+                          <div key={field.id} className="relative">
+                            <QuestionCard
+                              field={field}
+                              allFields={form?.fields ?? []}
+                              isFocused={isFocused}
+                              onFocus={() => setFocusedFieldId(field.id)}
+                              onUpdate={handleFieldUpdate}
+                              onDuplicate={() => handleDuplicateField(field.id)}
+                              onRemove={() => handleRemoveFieldOrSection(field.id)}
+                              onReorderSections={() => setShowSectionReorderModal(true)}
+                              onMergeUp={() => handleMergeUp(field.id)}
+                            />
+
+                            {/* Floating toolbar - positioned to the right of the focused card */}
+                            {isFocused && (
+                              <div className="absolute -right-14 top-1/2 -translate-y-1/2 hidden xl:block">
+                                <FloatingToolbar
+                                  onAddQuestion={() => addFieldAfterFocused('single-choice')}
+                                  onAddSection={() => addFieldAfterFocused('section-header')}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </SortableContext>
+                </DndContext>
+
+                {/* Empty state for active section */}
+                {activeChildren.length === 0 && (
+                  <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-12 text-center">
+                    <p className="text-gray-400 text-sm mb-4">
+                      Esta seção ainda não tem perguntas
+                    </p>
+                    <div className="flex justify-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => addFieldAfterFocused('single-choice')}
+                        className="px-4 py-2 rounded-lg bg-brand-500 text-white text-sm font-medium hover:bg-brand-600 transition-colors"
+                      >
+                        Adicionar pergunta
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => addFieldAfterFocused('section-header')}
+                        className="px-4 py-2 rounded-lg border border-gray-300 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors"
+                      >
+                        Nova seção
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
-
-            {/* Question cards with DnD */}
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleDragEnd}
-            >
-              <SortableContext items={fieldIds} strategy={verticalListSortingStrategy}>
-                <div className="space-y-3">
-                  {sortedFields.map((field) => {
-                    const sn = sectionNumbers.get(field.id)
-                    const isFocused = focusedFieldId === field.id
-
-                    return (
-                      <div key={field.id} className="relative">
-                        <QuestionCard
-                          field={field}
-                          allFields={form?.fields ?? []}
-                          isFocused={isFocused}
-                          onFocus={() => setFocusedFieldId(field.id)}
-                          onUpdate={handleFieldUpdate}
-                          onDuplicate={() => handleDuplicateField(field.id)}
-                          onRemove={() => handleRemoveFieldOrSection(field.id)}
-                          onReorderSections={() => setShowSectionReorderModal(true)}
-                          onMergeUp={() => handleMergeUp(field.id)}
-                          sectionIndex={sn?.index}
-                          totalSections={sn?.total}
-                        />
-
-                        {/* Floating toolbar - positioned to the right of the focused card */}
-                        {isFocused && (
-                          <div className="absolute -right-14 top-1/2 -translate-y-1/2 hidden lg:block">
-                            <FloatingToolbar
-                              onAddQuestion={() => addFieldAfterFocused('single-choice')}
-                              onAddSection={() => addFieldAfterFocused('section-header')}
-                            />
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              </SortableContext>
-            </DndContext>
-
-            {/* Empty state */}
-            {sortedFields.length === 0 && (
-              <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-12 text-center">
-                <p className="text-gray-400 text-sm mb-4">
-                  Nenhuma pergunta adicionada ainda
-                </p>
-                <div className="flex justify-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => addFieldAfterFocused('single-choice')}
-                    className="px-4 py-2 rounded-lg bg-brand-500 text-white text-sm font-medium hover:bg-brand-600 transition-colors"
-                  >
-                    Adicionar pergunta
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => addFieldAfterFocused('section-header')}
-                    className="px-4 py-2 rounded-lg border border-gray-300 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors"
-                  >
-                    Adicionar seção
-                  </button>
-                </div>
-              </div>
-            )}
 
             {/* Mobile floating action buttons (visible on smaller screens) */}
             <div className="fixed bottom-6 right-6 flex flex-col gap-2 lg:hidden z-20">
