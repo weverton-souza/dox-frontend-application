@@ -499,6 +499,10 @@ export default function FormBuilder() {
         {/* Editor mode */}
         {viewMode === 'editor' && (
           <div className="px-4 sm:px-6 lg:px-8 flex flex-col lg:flex-row gap-4 lg:gap-8">
+            {/* Spacer (lg+): alinha o menu na mesma posicao do menu do ReportEditor,
+                que tem uma toolbar lateral w-12 antes do summary */}
+            <div className="hidden lg:block lg:w-12 lg:shrink-0" aria-hidden="true" />
+
             {/* Sidebar (sections) — desktop sticky a esquerda, mobile stacked on top */}
             <SectionSidebar
               sections={sectionTabs}
