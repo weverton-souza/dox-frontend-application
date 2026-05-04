@@ -24,7 +24,7 @@ import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
 import Input from '@/components/ui/Input'
 import EditorFloatingToolbar from '@/components/editor/EditorFloatingToolbar'
-import SaveStatusIndicator from '@/components/ui/SaveStatusIndicator'
+import EditorPageHeader from '@/components/editor/EditorPageHeader'
 import { useAiGeneration } from '@/lib/hooks/use-ai-generation'
 import { countFillableBlocks } from '@/lib/ai-context-builder'
 import AiSparkleIcon from '@/components/ai/AiSparkleIcon'
@@ -801,101 +801,85 @@ export default function ReportEditor() {
         backgroundAttachment: 'fixed',
       }}
     >
-      {/* Header — Figma-style centered */}
-      <div className="sticky top-12 z-30 bg-white/90 backdrop-blur-md shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-2 lg:py-2.5">
-          <div className="flex items-center justify-between">
-            {/* Left: back + save status */}
-            <div className="flex items-center gap-2 w-40 shrink-0">
+      <EditorPageHeader
+        onBack={() => {
+          handleForceSave()
+          navigate('/')
+        }}
+        showSaveStatus={false}
+        alignWithSidebar
+        center={
+          <div className="flex items-center gap-2 min-w-0">
+            {templateName && (
+              <>
+                <span className="text-xs text-gray-400 truncate hidden sm:inline">{templateName}</span>
+                <span className="text-gray-300 hidden sm:inline">—</span>
+              </>
+            )}
+            <input
+              type="text"
+              value={report.customerName || ''}
+              onChange={(e) => handleUpdateReport({ customerName: e.target.value })}
+              placeholder="Nome do cliente"
+              readOnly={!canEdit}
+              title={canEdit ? undefined : reasonText ?? undefined}
+              className={`text-sm font-medium bg-transparent border-0 focus:outline-none focus:ring-0 text-center min-w-0 max-w-xs truncate placeholder:text-gray-400 ${canEdit ? 'text-gray-700' : 'text-gray-500'}`}
+            />
+            <span className="text-gray-300">·</span>
+            <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${REPORT_STATUS_COLORS[report.status].bg} ${REPORT_STATUS_COLORS[report.status].text}`}>
+              {REPORT_STATUS_LABELS[report.status]}
+            </span>
+          </div>
+        }
+        right={
+          <>
+            {showAiButton && fillableCount > 0 && (
               <button
                 type="button"
-                onClick={() => {
-                  handleForceSave()
-                  navigate('/')
-                }}
-                className="h-9 w-9 flex items-center justify-center rounded-full hover:bg-white/80 text-gray-500 hover:text-gray-700 transition-colors"
-                title="Voltar"
+                onClick={handleGenerateFullReport}
+                disabled={ai.isGenerating}
+                className="h-8 flex items-center gap-1.5 px-3 rounded-full bg-brand-50 text-brand-700 hover:bg-brand-100 transition-colors text-xs font-medium disabled:opacity-50"
+                title="Redigir com Assistente"
               >
-                <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z" clipRule="evenodd" />
-                </svg>
+                {ai.isGenerating ? (
+                  <svg className="animate-spin" width={14} height={14} viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="32" strokeLinecap="round" />
+                  </svg>
+                ) : (
+                  <AiSparkleIcon size={14} />
+                )}
+                Assistente
               </button>
-              <SaveStatusIndicator status={saveStatus} showLabel={false} />
-            </div>
+            )}
 
-            {/* Center: template name · client name · status badge */}
-            <div className="flex items-center gap-2 min-w-0 justify-center flex-1">
-              {templateName && (
-                <>
-                  <span className="text-xs text-gray-400 truncate hidden sm:inline">{templateName}</span>
-                  <span className="text-gray-300 hidden sm:inline">—</span>
-                </>
-              )}
-              <input
-                type="text"
-                value={report.customerName || ''}
-                onChange={(e) => handleUpdateReport({ customerName: e.target.value })}
-                placeholder="Nome do cliente"
-                readOnly={!canEdit}
-                title={canEdit ? undefined : reasonText ?? undefined}
-                className={`text-sm font-medium bg-transparent border-0 focus:outline-none focus:ring-0 text-center min-w-0 max-w-xs truncate placeholder:text-gray-400 ${canEdit ? 'text-gray-700' : 'text-gray-500'}`}
-              />
-              <span className="text-gray-300">·</span>
-              <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${REPORT_STATUS_COLORS[report.status].bg} ${REPORT_STATUS_COLORS[report.status].text}`}>
-                {REPORT_STATUS_LABELS[report.status]}
-              </span>
-            </div>
-
-            {/* Right: actions */}
-            <div className="flex items-center gap-2 shrink-0">
-              {showAiButton && fillableCount > 0 && (
-                <button
-                  type="button"
-                  onClick={handleGenerateFullReport}
-                  disabled={ai.isGenerating}
-                  className="h-8 flex items-center gap-1.5 px-3 rounded-full bg-brand-50 text-brand-700 hover:bg-brand-100 transition-colors text-xs font-medium disabled:opacity-50"
-                  title="Redigir com Assistente"
-                >
-                  {ai.isGenerating ? (
-                    <svg className="animate-spin" width={14} height={14} viewBox="0 0 24 24" fill="none">
-                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="32" strokeLinecap="round" />
-                    </svg>
-                  ) : (
-                    <AiSparkleIcon size={14} />
-                  )}
-                  Assistente
-                </button>
-              )}
-
-              {report.status === 'finalizado' ? (
-                <button
-                  type="button"
-                  onClick={handleGenerateDocx}
-                  className="h-8 flex items-center gap-1.5 px-3 rounded-full bg-brand-700 text-white hover:bg-brand-800 transition-colors text-xs font-medium"
-                  title="Baixar .docx"
-                >
-                  <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M10.75 2.75a.75.75 0 00-1.5 0v8.614L6.295 8.235a.75.75 0 10-1.09 1.03l4.25 4.5a.75.75 0 001.09 0l4.25-4.5a.75.75 0 00-1.09-1.03l-2.955 3.129V2.75z" />
-                    <path d="M3.5 12.75a.75.75 0 00-1.5 0v2.5A2.75 2.75 0 004.75 18h10.5A2.75 2.75 0 0018 15.25v-2.5a.75.75 0 00-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5z" />
-                  </svg>
-                  Baixar
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => handleStatusChange('finalizado')}
-                  className="h-8 flex items-center gap-1.5 px-3 rounded-full bg-green-600 text-white hover:bg-green-700 transition-colors text-xs font-medium"
-                >
-                  <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
-                  </svg>
-                  Finalizar
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
+            {report.status === 'finalizado' ? (
+              <button
+                type="button"
+                onClick={handleGenerateDocx}
+                className="h-8 flex items-center gap-1.5 px-3 rounded-full bg-brand-700 text-white hover:bg-brand-800 transition-colors text-xs font-medium"
+                title="Baixar .docx"
+              >
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M10.75 2.75a.75.75 0 00-1.5 0v8.614L6.295 8.235a.75.75 0 10-1.09 1.03l4.25 4.5a.75.75 0 001.09 0l4.25-4.5a.75.75 0 00-1.09-1.03l-2.955 3.129V2.75z" />
+                  <path d="M3.5 12.75a.75.75 0 00-1.5 0v2.5A2.75 2.75 0 004.75 18h10.5A2.75 2.75 0 0018 15.25v-2.5a.75.75 0 00-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5z" />
+                </svg>
+                Baixar
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => handleStatusChange('finalizado')}
+                className="h-8 flex items-center gap-1.5 px-3 rounded-full bg-green-600 text-white hover:bg-green-700 transition-colors text-xs font-medium"
+              >
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+                </svg>
+                Finalizar
+              </button>
+            )}
+          </>
+        }
+      />
 
       {/* Main content area */}
       <div className="flex-1 flex gap-4 lg:gap-8 w-full px-4 sm:px-6 lg:px-8 pt-6 lg:pt-14">
@@ -983,6 +967,7 @@ export default function ReportEditor() {
                 onRequestAddSection={handleAddTextSection}
                 onReorder={handleReorderBlocks}
                 locked={report.isStructureLocked || !canEdit}
+                saveStatus={saveStatus}
               />
               <SectionEditor
                 blocks={report.blocks}

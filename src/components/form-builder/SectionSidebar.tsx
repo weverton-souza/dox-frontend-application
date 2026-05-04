@@ -16,6 +16,8 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import Button from '@/components/ui/Button'
+import SaveStatusIndicator from '@/components/ui/SaveStatusIndicator'
+import type { SaveStatus } from '@/lib/hooks/use-auto-save'
 
 interface SectionItem {
   id: string
@@ -30,6 +32,7 @@ interface SectionSidebarProps {
   onAdd: () => void
   onRemove: (id: string) => void
   onReorder: (orderedIds: string[]) => void
+  saveStatus?: SaveStatus
 }
 
 interface SectionRowProps {
@@ -100,6 +103,7 @@ export default function SectionSidebar({
   onAdd,
   onRemove,
   onReorder,
+  saveStatus,
 }: SectionSidebarProps) {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [draftTitle, setDraftTitle] = useState('')
@@ -152,8 +156,9 @@ export default function SectionSidebar({
 
   return (
     <aside className="w-full lg:w-72 xl:w-80 lg:shrink-0 flex flex-col lg:self-start lg:sticky lg:top-[160px] lg:min-h-[400px] lg:max-h-[calc(100vh-176px)] bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-      <div className="px-3 pt-4 pb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
-        Seções
+      <div className="px-3 pt-4 pb-2 flex items-center justify-between gap-2">
+        <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Seções</span>
+        {saveStatus && <SaveStatusIndicator status={saveStatus} showLabel={true} />}
       </div>
 
       <nav className="flex-1 overflow-y-auto px-1 pb-3 min-h-0">
