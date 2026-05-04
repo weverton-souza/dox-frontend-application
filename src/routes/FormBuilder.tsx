@@ -510,7 +510,7 @@ export default function FormBuilder() {
         </div>
         {/* Editor mode */}
         {viewMode === 'editor' && (
-          <div className="pt-4 lg:pt-6 px-4 sm:px-6 lg:px-8 flex flex-col lg:flex-row gap-4 lg:gap-8">
+          <div className="pt-10 lg:pt-14 px-4 sm:px-6 lg:px-8 flex flex-col lg:flex-row gap-4 lg:gap-8">
             {/* Spacer (lg+): alinha o menu na mesma posicao do menu do ReportEditor,
                 que tem uma toolbar lateral w-12 antes do summary */}
             <div className="hidden lg:block lg:w-12 lg:shrink-0" aria-hidden="true" />
