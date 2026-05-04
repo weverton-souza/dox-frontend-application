@@ -511,7 +511,7 @@ export default function FormBuilder() {
         </div>
         {/* Editor mode */}
         {viewMode === 'editor' && (
-          <div className="px-4 sm:px-6 lg:px-8 flex flex-col lg:flex-row lg:items-start gap-4 lg:gap-8 pt-4 lg:pt-6">
+          <div className="px-4 sm:px-6 lg:px-8 flex flex-col lg:flex-row lg:items-start gap-4 lg:gap-8 pt-6 lg:pt-14">
             {/* Spacer (lg+): alinha o menu na mesma posicao do menu do ReportEditor,
                 que tem uma toolbar lateral w-12 antes do summary */}
             <div className="hidden lg:block lg:w-12 lg:shrink-0" aria-hidden="true" />
@@ -529,7 +529,7 @@ export default function FormBuilder() {
 
             {/* Content column: ocupa o restante, limita largura mas sem centralizar
                 — mesmo padrao do SectionEditor no ReportEditor (cola apos o gap da sidebar) */}
-            <div className="flex-1 min-w-0 lg:pt-8">
+            <div className="flex-1 min-w-0">
               <div className="max-w-4xl">
                 {/* Title card (always visible, always editable) */}
                 <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden mb-3">
