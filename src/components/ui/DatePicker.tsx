@@ -29,19 +29,12 @@ interface DropdownPosition {
   left: number
 }
 
-const DROPDOWN_ESTIMATED_HEIGHT = 320
-const DROPDOWN_ESTIMATED_WIDTH = 260
+const DROPDOWN_ESTIMATED_HEIGHT = 360
+const DROPDOWN_ESTIMATED_WIDTH = 320
 const DROPDOWN_GAP = 4
 const VIEWPORT_PADDING = 8
 
-const COMPACT_RDP_VARS: React.CSSProperties = {
-  '--rdp-day-height': '32px',
-  '--rdp-day-width': '32px',
-  '--rdp-day_button-height': '30px',
-  '--rdp-day_button-width': '30px',
-  '--rdp-nav-height': '28px',
-  '--rdp-nav_button-height': '24px',
-  '--rdp-nav_button-width': '24px',
+const RDP_THEME_VARS: React.CSSProperties = {
   '--rdp-accent-color': '#007AFF',
   '--rdp-accent-background-color': '#E5F0FF',
 } as React.CSSProperties
@@ -155,8 +148,6 @@ export default function DatePicker({
 
   const calendarClassNames = {
     root: `${defaultClassNames.root} ${styles.calendarText}`,
-    month_caption: `${defaultClassNames.month_caption} text-sm font-semibold text-gray-900`,
-    weekday: `${defaultClassNames.weekday} text-[10px] uppercase tracking-wide text-gray-400 font-normal`,
     today: 'font-bold text-brand-600',
     selected: 'font-semibold',
     chevron: `${defaultClassNames.chevron} fill-brand-600`,
@@ -182,7 +173,7 @@ export default function DatePicker({
         left: position.left,
         zIndex: 9999,
       }}
-      className="bg-white rounded-xl shadow-dropdown border border-gray-200 p-2 w-fit"
+      className="bg-white rounded-xl shadow-dropdown border border-gray-200 p-3 w-fit"
     >
       <DayPicker
         mode="single"
@@ -200,15 +191,15 @@ export default function DatePicker({
           if (maxDate) matchers.push({ after: maxDate })
           return matchers.length > 0 ? matchers : undefined
         })()}
-        style={COMPACT_RDP_VARS}
+        style={RDP_THEME_VARS}
         classNames={calendarClassNames}
       />
       {value && (
-        <div className="border-t border-gray-100 mt-1.5 pt-1.5 flex justify-end">
+        <div className="border-t border-gray-100 mt-2 pt-2 flex justify-end">
           <button
             type="button"
             onClick={() => { onChange(''); setOpen(false) }}
-            className="text-xs text-gray-500 hover:text-gray-700 font-medium px-1.5 py-0.5 rounded hover:bg-gray-100"
+            className="text-xs text-gray-500 hover:text-gray-700 font-medium"
           >
             Limpar
           </button>
