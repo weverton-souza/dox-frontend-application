@@ -1,4 +1,5 @@
 import type { FormField, FormFieldAnswer } from '@/types'
+import DatePicker from '@/components/ui/DatePicker'
 
 interface FormFieldRendererProps {
   field: FormField
@@ -175,12 +176,11 @@ export default function FormFieldRenderer({ field, answer, onChange, readOnly = 
 
     case 'date':
       return (
-        <input
-          type="date"
-          aria-label={field.label}
+        <DatePicker
           value={answer.value}
-          onChange={(e) => update({ value: e.target.value })}
-          className="border-0 border-b border-gray-300 bg-transparent px-0 py-2 text-sm text-gray-900 focus:border-brand-500 focus:ring-0 focus:outline-none transition-colors"
+          onChange={(value) => update({ value })}
+          placeholder={field.placeholder || 'Selecionar data'}
+          disabled={readOnly}
         />
       )
 

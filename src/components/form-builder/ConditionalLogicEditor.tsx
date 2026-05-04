@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import type { ConditionalOperator, ConditionalRule, FormField } from '@/types'
 import { CONDITIONAL_OPERATOR_LABELS } from '@/types'
 import { TrashIcon } from '@/components/icons'
+import DatePicker from '@/components/ui/DatePicker'
 
 interface ConditionalLogicEditorProps {
   field: FormField
@@ -82,11 +83,12 @@ function ValueEditor({
       )
     case 'date':
       return (
-        <input
-          type="date"
-          className={cls}
+        <DatePicker
+          size="sm"
+          className="flex-1 min-w-0"
           value={String(value ?? '')}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(v) => onChange(v)}
+          placeholder="Data"
         />
       )
     default:

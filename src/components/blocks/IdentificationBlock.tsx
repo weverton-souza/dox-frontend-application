@@ -3,6 +3,7 @@ import type { IdentificationData, IdentificationCustomerSnapshot, GuardianEntry,
 import Input from '@/components/ui/Input'
 import Toggle from '@/components/ui/Toggle'
 import Select from '@/components/ui/Select'
+import DatePicker from '@/components/ui/DatePicker'
 import { CloseIcon } from '@/components/icons'
 
 interface IdentificationBlockProps {
@@ -327,11 +328,10 @@ export default function IdentificationBlock({ data, onChange, customers, onCusto
             onChange={(e) => updateCustomer('cpf', e.target.value)}
             placeholder="000.000.000-00"
           />
-          <Input
+          <DatePicker
             label="Data de Nascimento"
-            type="date"
             value={data.customer.birthDate}
-            onChange={(e) => updateCustomer('birthDate', e.target.value)}
+            onChange={(value) => updateCustomer('birthDate', value)}
           />
           <Input
             label="Idade"
@@ -441,11 +441,10 @@ export default function IdentificationBlock({ data, onChange, customers, onCusto
       <section>
         <h3 className={sectionHeaderClass}>Dados do Relatório</h3>
         <div className="grid grid-cols-2 gap-4">
-          <Input
+          <DatePicker
             label="Data do Relatório"
-            type="date"
             value={data.date}
-            onChange={(e) => updateField('date', e.target.value)}
+            onChange={(value) => updateField('date', value)}
           />
           <Input
             label="Local"
