@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useClickOutside } from '@/lib/hooks/use-click-outside'
 import {
   DndContext,
   closestCenter,
@@ -79,6 +80,9 @@ export default function FormBuilder() {
   const [showLinkModal, setShowLinkModal] = useState(false)
   const [focusedFieldId, setFocusedFieldId] = useState<string | null>(null)
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null)
+  const [showMoreMenu, setShowMoreMenu] = useState(false)
+  const moreMenuRef = useRef<HTMLDivElement>(null)
+  useClickOutside(moreMenuRef, () => setShowMoreMenu(false), showMoreMenu)
 
   const updateFormFn = useCallback((data: Form) => updateForm(data), [])
   const { saveStatus, scheduleSave, forceSave } = useAutoSave<Form>(updateFormFn)
@@ -117,6 +121,15 @@ export default function FormBuilder() {
     if (form) await forceSave(form)
     navigate('/forms')
   }, [form, navigate, forceSave])
+
+  const handleSetAllCollectionMode = useCallback((mode: 'online' | 'presencial') => {
+    if (!form) return
+    const fields = form.fields.map((f) =>
+      f.type === 'section-header' ? f : { ...f, collectionMode: mode },
+    )
+    updateFormState({ fields })
+    setShowMoreMenu(false)
+  }, [form, updateFormState])
 
   // DnD
   const sensors = useSensors(
@@ -460,6 +473,44 @@ export default function FormBuilder() {
               onChange={(v) => setViewMode(v as ViewMode)}
               size="sm"
             />
+          }
+          right={
+            <div className="relative" ref={moreMenuRef}>
+              <button
+                type="button"
+                onClick={() => setShowMoreMenu((v) => !v)}
+                className="h-9 w-9 flex items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+                title="Mais opções"
+                aria-label="Mais opções"
+              >
+                <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <circle cx="4" cy="10" r="1.6" />
+                  <circle cx="10" cy="10" r="1.6" />
+                  <circle cx="16" cy="10" r="1.6" />
+                </svg>
+              </button>
+              {showMoreMenu && (
+                <div className="absolute right-0 top-full mt-1 w-72 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                  <div className="px-4 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+                    Modo de coleta
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleSetAllCollectionMode('online')}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                  >
+                    Marcar todas as perguntas como online
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSetAllCollectionMode('presencial')}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                  >
+                    Marcar todas as perguntas como presencial
+                  </button>
+                </div>
+              )}
+            </div>
           }
         />
         {/* Editor mode */}

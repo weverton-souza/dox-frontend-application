@@ -306,10 +306,17 @@ export default function QuestionCard({
       >
         <div className="px-6 py-5">
           {/* Question label */}
-          <p className="text-sm text-gray-900">
-            {field.label || 'Pergunta'}
-            {field.required && <span className="text-red-500 ml-0.5">*</span>}
-          </p>
+          <div className="flex items-start justify-between gap-3">
+            <p className="text-sm text-gray-900 flex-1 min-w-0">
+              {field.label || 'Pergunta'}
+              {field.required && <span className="text-red-500 ml-0.5">*</span>}
+            </p>
+            {field.collectionMode === 'presencial' && (
+              <span className="shrink-0 inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-wide bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full">
+                Presencial
+              </span>
+            )}
+          </div>
 
           {/* Compact preview by type */}
           <div className="mt-3">
@@ -433,6 +440,31 @@ export default function QuestionCard({
               label="Excluir"
               onClick={(e) => { e.stopPropagation(); onRemove() }}
             />
+
+            {/* Vertical separator */}
+            <div className="w-px h-6 bg-gray-200 mx-2" />
+
+            {/* Collection mode toggle (online | presencial) */}
+            <span className="text-sm text-gray-600 mr-1">Presencial</span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={field.collectionMode === 'presencial'}
+              title="Marcar como coleta presencial (cliente não vê)"
+              onClick={(e) => {
+                e.stopPropagation()
+                update({ collectionMode: field.collectionMode === 'presencial' ? 'online' : 'presencial' })
+              }}
+              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                field.collectionMode === 'presencial' ? 'bg-amber-500' : 'bg-gray-300'
+              }`}
+            >
+              <span
+                className={`absolute h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
+                  field.collectionMode === 'presencial' ? 'translate-x-4' : 'translate-x-0.5'
+                }`}
+              />
+            </button>
 
             {/* Vertical separator */}
             <div className="w-px h-6 bg-gray-200 mx-2" />

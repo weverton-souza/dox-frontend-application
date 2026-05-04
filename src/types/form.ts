@@ -85,6 +85,13 @@ export interface ConditionalRule {
   combinator?: 'AND' | 'OR'
 }
 
+export type CollectionMode = 'online' | 'presencial'
+
+export const COLLECTION_MODE_LABELS: Record<CollectionMode, string> = {
+  online: 'Online',
+  presencial: 'Presencial',
+}
+
 export interface FormField {
   id: string
   type: FormFieldType
@@ -103,6 +110,7 @@ export interface FormField {
   likertScale: LikertScalePoint[]
   likertRows: LikertRow[]
   showWhen?: ConditionalRule[]
+  collectionMode?: CollectionMode
 }
 
 export interface FormFieldMapping {
@@ -252,6 +260,7 @@ export function createEmptyFormField(type: FormFieldType = 'short-text', order: 
     reverseScored: false,
     likertScale: type === 'likert-matrix' ? createDefaultLikertScale() : [],
     likertRows: type === 'likert-matrix' ? [createEmptyLikertRow()] : [],
+    collectionMode: 'online',
   }
 }
 
