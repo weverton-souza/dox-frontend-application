@@ -26,8 +26,8 @@ import { useSortedFields } from '@/lib/hooks/use-sorted-fields'
 import { getAllTemplates } from '@/lib/default-templates'
 import { getReportTemplates } from '@/lib/api/template-api'
 import Spinner from '@/components/ui/Spinner'
-import SaveStatusIndicator from '@/components/ui/SaveStatusIndicator'
 import SegmentedControl from '@/components/ui/SegmentedControl'
+import EditorPageHeader from '@/components/editor/EditorPageHeader'
 import QuestionCard from '@/components/form-builder/QuestionCard'
 import FloatingToolbar from '@/components/form-builder/FloatingToolbar'
 import TemplateLinkModal from '@/components/form-builder/TemplateLinkModal'
@@ -445,44 +445,23 @@ export default function FormBuilder() {
           backgroundAttachment: 'fixed',
         }}
       >
-        {/* Header — sticky logo abaixo da GlobalTopBar (h-12) */}
-        <div className="sticky top-12 z-30 bg-white/90 backdrop-blur-md shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
-          <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-2 lg:py-2.5">
-            <div className="flex items-center justify-between">
-              {/* Left: back + save status */}
-              <div className="flex items-center gap-2 w-40 shrink-0">
-                <button
-                  type="button"
-                  onClick={handleBack}
-                  className="h-9 w-9 flex items-center justify-center rounded-full hover:bg-white/80 text-gray-500 hover:text-gray-700 transition-colors"
-                  title="Voltar"
-                >
-                  <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z" clipRule="evenodd" />
-                  </svg>
-                </button>
-                <SaveStatusIndicator status={saveStatus} showLabel={false} />
-              </div>
-
-              {/* Center: empty (apenas spacer) */}
-              <div className="flex-1" />
-
-              {/* Right: actions */}
-              <div className="flex items-center gap-2 shrink-0">
-                <SegmentedControl
-                  options={[
-                    { value: 'editor', label: 'Perguntas' },
-                    { value: 'scoring', label: 'Pontuação' },
-                    { value: 'preview', label: 'Preview' },
-                  ]}
-                  value={viewMode}
-                  onChange={(v) => setViewMode(v as ViewMode)}
-                  size="sm"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
+        <EditorPageHeader
+          onBack={handleBack}
+          showSaveStatus={false}
+          alignWithSidebar
+          center={
+            <SegmentedControl
+              options={[
+                { value: 'editor', label: 'Perguntas' },
+                { value: 'scoring', label: 'Pontuação' },
+                { value: 'preview', label: 'Preview' },
+              ]}
+              value={viewMode}
+              onChange={(v) => setViewMode(v as ViewMode)}
+              size="sm"
+            />
+          }
+        />
         {/* Editor mode */}
         {viewMode === 'editor' && (
           <div className="px-4 sm:px-6 lg:px-8 flex flex-col lg:flex-row lg:items-start gap-4 lg:gap-8 pt-6 lg:pt-14">
@@ -499,6 +478,7 @@ export default function FormBuilder() {
               onAdd={handleAddSection}
               onRemove={handleRemoveSection}
               onReorder={handleReorderSections}
+              saveStatus={saveStatus}
             />
 
             {/* Content column: ocupa o restante, limita largura mas sem centralizar
@@ -624,13 +604,11 @@ export default function FormBuilder() {
 
         {/* Preview mode */}
         {viewMode === 'preview' && (
-          <div className="max-w-[860px] mx-auto px-4">
-            <FormPreview
-              title={form.title}
-              description={form.description}
-              fields={sortedFields}
-            />
-          </div>
+          <FormPreview
+            title={form.title}
+            description={form.description}
+            fields={sortedFields}
+          />
         )}
 
         {/* Scoring mode */}

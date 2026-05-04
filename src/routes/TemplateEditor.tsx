@@ -18,7 +18,7 @@ import BlockSelector from '@/components/editor/BlockSelector'
 import BlockEditModal from '@/components/editor/BlockEditModal'
 import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
-import SaveStatusIndicator from '@/components/ui/SaveStatusIndicator'
+import EditorPageHeader from '@/components/editor/EditorPageHeader'
 import Spinner from '@/components/ui/Spinner'
 
 // ========== Conversions: TemplateBlock <-> Block ==========
@@ -361,39 +361,28 @@ export default function TemplateEditor() {
         backgroundSize: '22px 22px',
       }}
     >
-      {/* Header pill */}
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 pt-2 lg:pt-3 pb-2 lg:pb-3 w-full">
-        <div className="flex items-center justify-between bg-white rounded-full px-3 lg:px-4 py-2 lg:py-2.5 shadow-card">
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <button
-              type="button"
-              onClick={() => {
-                if (!isMaster && (saveStatus === 'unsaved' || (isDirty && !isSaved))) {
-                  setShowLeaveConfirm(true)
-                  return
-                }
-                navigate('/', { state: { activeTab: 'templates', templateFilter: 'custom' } })
-              }}
-              className="h-9 w-9 lg:h-11 lg:w-11 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors shrink-0"
-              title="Voltar"
-            >
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z" clipRule="evenodd" />
-              </svg>
-            </button>
-            {!isMaster && <SaveStatusIndicator status={isDirty && !isSaved ? 'unsaved' : saveStatus} showLabel={false} />}
-
-            <input
-              type="text"
-              value={template.name}
-              onChange={(e) => handleNameChange(e.target.value)}
-              placeholder="Template sem título"
-              disabled={isMaster}
-              className="text-sm font-medium text-gray-700 bg-transparent border-0 focus:outline-none focus:ring-0 flex-1 min-w-0 truncate placeholder:text-gray-400 disabled:cursor-default"
-            />
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0">
+      <EditorPageHeader
+        onBack={() => {
+          if (!isMaster && (saveStatus === 'unsaved' || (isDirty && !isSaved))) {
+            setShowLeaveConfirm(true)
+            return
+          }
+          navigate('/', { state: { activeTab: 'templates', templateFilter: 'custom' } })
+        }}
+        saveStatus={isDirty && !isSaved ? 'unsaved' : saveStatus}
+        showSaveStatus={!isMaster}
+        center={
+          <input
+            type="text"
+            value={template.name}
+            onChange={(e) => handleNameChange(e.target.value)}
+            placeholder="Template sem título"
+            disabled={isMaster}
+            className="text-sm font-medium text-gray-700 bg-transparent border-0 focus:outline-none focus:ring-0 text-center min-w-0 max-w-xs truncate placeholder:text-gray-400 disabled:cursor-default"
+          />
+        }
+        right={
+          <>
             {isMaster && (
               <span className="text-[10px] font-medium uppercase bg-amber-50 text-amber-600 px-2.5 py-1 rounded-full flex items-center gap-1">
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -412,9 +401,9 @@ export default function TemplateEditor() {
                 Salvar
               </button>
             )}
-          </div>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {/* Content */}
       <div className="flex-1 max-w-3xl mx-auto w-full px-2 sm:px-4">

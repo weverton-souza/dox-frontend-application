@@ -24,7 +24,7 @@ export default function SaveStatusIndicator({ status, showLabel = true }: SaveSt
         <span className={`relative inline-flex w-2 h-2 rounded-full ${config.dot}`} />
       </span>
       {showLabel && (
-        <span className="text-gray-500 hidden sm:inline">{config.label}</span>
+        <span className="text-gray-500">{config.label}</span>
       )}
     </div>
   )

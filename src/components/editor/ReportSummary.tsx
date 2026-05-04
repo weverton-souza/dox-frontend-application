@@ -29,6 +29,8 @@ import {
   type ReorderTarget,
 } from '@/lib/utils-reorder'
 import Button from '@/components/ui/Button'
+import SaveStatusIndicator from '@/components/ui/SaveStatusIndicator'
+import type { SaveStatus } from '@/lib/hooks/use-auto-save'
 
 interface ReportSummaryProps {
   blocks: Block[]
@@ -37,6 +39,7 @@ interface ReportSummaryProps {
   onRequestAddSection: () => void
   onReorder?: (blocks: Block[]) => void
   locked?: boolean
+  saveStatus?: SaveStatus
 }
 
 interface SummaryItem {
@@ -297,6 +300,7 @@ export default function ReportSummary({
   onRequestAddSection,
   onReorder,
   locked = false,
+  saveStatus,
 }: ReportSummaryProps) {
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
   const [draggedId, setDraggedId] = useState<string | null>(null)
@@ -494,8 +498,9 @@ export default function ReportSummary({
 
   return (
     <aside className="w-72 lg:w-80 shrink-0 flex flex-col self-start sticky top-[160px] min-h-[400px] max-h-[calc(100vh-176px)] bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-      <div className="px-3 pt-4 pb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
-        Sumário
+      <div className="px-3 pt-4 pb-2 flex items-center justify-between gap-2">
+        <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Sumário</span>
+        {saveStatus && <SaveStatusIndicator status={saveStatus} showLabel={true} />}
       </div>
 
       <nav className="flex-1 overflow-y-auto px-1 pb-3 min-h-0">
