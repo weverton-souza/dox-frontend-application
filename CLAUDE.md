@@ -318,3 +318,4 @@ Antes de modificar regra de negócio, contrato ou comportamento de uma feature *
 - Nunca usar dark mode (foi experimentado e revertido)
 - Nunca adicionar dependências sem perguntar primeiro
 - Nunca criar arquivos de documentação (.md) sem ser solicitado
+- Nunca usar `<input type="date">` direto (nem via `<Input type="date">`) em formulários internos — usar `DatePicker` de `@/components/ui/DatePicker` (ou `DateFilter` para range start/end). Exceção: `FormFieldRenderer` do form público usa `<input type="date">` nativo de propósito (UX mobile do paciente abre o teclado de data nativo)

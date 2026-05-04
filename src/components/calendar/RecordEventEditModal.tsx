@@ -4,6 +4,7 @@ import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import TextArea from '@/components/ui/TextArea'
+import DatePicker from '@/components/ui/DatePicker'
 import TagPicker from '@/components/calendar/TagPicker'
 
 interface RecordEventEditModalProps {
@@ -92,11 +93,10 @@ export default function RecordEventEditModal({ record, tags, onClose, onSave, on
         />
 
         <div className="grid grid-cols-2 gap-3">
-          <Input
+          <DatePicker
             label="Data"
-            type="date"
             value={date}
-            onChange={(e) => setDate(e.target.value)}
+            onChange={setDate}
           />
           <Input
             label="Hora"

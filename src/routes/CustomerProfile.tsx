@@ -36,6 +36,7 @@ import { useError } from '@/contexts/ErrorContext'
 import NewReportModal from '@/components/NewReportModal'
 import MultiRespondentSendModal from '@/components/form-builder/MultiRespondentSendModal'
 import Input from '@/components/ui/Input'
+import DatePicker from '@/components/ui/DatePicker'
 import TextArea from '@/components/ui/TextArea'
 import Button from '@/components/ui/Button'
 import Spinner from '@/components/ui/Spinner'
@@ -362,7 +363,7 @@ export default function CustomerProfile() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input label="Nome completo" value={editData!.name} onChange={(e) => updateField('name', e.target.value)} />
             <Input label="CPF" value={editData!.cpf} onChange={(e) => updateField('cpf', e.target.value)} mask="cpf" />
-            <Input label="Data de Nascimento" type="date" value={editData!.birthDate} onChange={(e) => { updateField('birthDate', e.target.value); updateField('age', calculateAge(e.target.value)) }} />
+            <DatePicker label="Data de Nascimento" value={editData!.birthDate} onChange={(value) => { updateField('birthDate', value); updateField('age', calculateAge(value)) }} />
             <Input label="Idade" value={editData!.age} onChange={(e) => updateField('age', e.target.value)} placeholder="Ex: 32 anos e 4 meses" readOnly />
             <Input label="Escolaridade" value={editData!.education} onChange={(e) => updateField('education', e.target.value)} />
             <Input label="Profissão" value={editData!.profession} onChange={(e) => updateField('profession', e.target.value)} />

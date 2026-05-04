@@ -5,6 +5,7 @@ import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import TextArea from '@/components/ui/TextArea'
 import Toggle from '@/components/ui/Toggle'
+import DatePicker from '@/components/ui/DatePicker'
 import { useCustomerSearch } from '@/lib/hooks/use-customer-search'
 import TagPicker from '@/components/calendar/TagPicker'
 
@@ -227,13 +228,12 @@ export default function CreateEventModal({ isOpen, onClose, onSave, onDelete, ta
         <Toggle label="Dia inteiro" checked={form.allDay} onChange={(v) => updateForm({ allDay: v })} />
 
         <div className="grid grid-cols-2 gap-3">
-          <Input
+          <DatePicker
             label="Data início"
-            type="date"
             value={form.startDate}
-            onChange={(e) => {
-              updateForm({ startDate: e.target.value })
-              if (!form.endDate || e.target.value > form.endDate) updateForm({ endDate: e.target.value })
+            onChange={(value) => {
+              updateForm({ startDate: value })
+              if (!form.endDate || value > form.endDate) updateForm({ endDate: value })
             }}
           />
           {!form.allDay && (
@@ -247,11 +247,11 @@ export default function CreateEventModal({ isOpen, onClose, onSave, onDelete, ta
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <Input
+          <DatePicker
             label="Data fim"
-            type="date"
             value={form.endDate}
-            onChange={(e) => updateForm({ endDate: e.target.value })}
+            min={form.startDate}
+            onChange={(value) => updateForm({ endDate: value })}
           />
           {!form.allDay && (
             <Input

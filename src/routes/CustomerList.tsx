@@ -13,6 +13,7 @@ import NewReportModal from '@/components/NewReportModal'
 import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
 import Input from '@/components/ui/Input'
+import DatePicker from '@/components/ui/DatePicker'
 import Pagination from '@/components/ui/Pagination'
 import ConfirmDeleteModal from '@/components/ui/ConfirmDeleteModal'
 import EmptyState from '@/components/ui/EmptyState'
@@ -332,11 +333,10 @@ export default function CustomerList() {
                 onChange={(e) => updateEditingField('cpf', e.target.value)}
                 mask="cpf"
               />
-              <Input
+              <DatePicker
                 label="Data de Nascimento"
-                type="date"
                 value={editingCustomer.data.birthDate}
-                onChange={(e) => { updateEditingField('birthDate', e.target.value); updateEditingField('age', calculateAge(e.target.value)) }}
+                onChange={(value) => { updateEditingField('birthDate', value); updateEditingField('age', calculateAge(value)) }}
               />
               <Input
                 label="Idade"
