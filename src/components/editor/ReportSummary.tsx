@@ -493,12 +493,12 @@ export default function ReportSummary({
   )
 
   return (
-    <aside className="w-72 lg:w-80 shrink-0 flex flex-col self-start sticky top-[104px] min-h-[400px] max-h-[calc(100vh-120px)] bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+    <aside className="w-72 lg:w-80 shrink-0 flex flex-col self-start sticky top-24 min-h-[600px] max-h-[calc(100vh-7rem)] bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
       <div className="px-3 pt-4 pb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
         Sumário
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-1 pb-3 min-h-0">
+      <nav className="flex-1 overflow-y-auto px-1 min-h-0">
         {isReorderEnabled ? (
           <DndContext
             sensors={sensors}

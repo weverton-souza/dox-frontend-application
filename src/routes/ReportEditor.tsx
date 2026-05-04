@@ -795,15 +795,14 @@ export default function ReportEditor() {
 
   return (
     <div
-      className="min-h-[calc(100vh-3rem)] bg-gray-100 flex flex-col"
+      className="min-h-[calc(100vh)] bg-gray-100 flex flex-col"
       style={{
         backgroundImage: 'radial-gradient(circle, rgba(0,0,0,0.10) 1px, transparent 1px)',
         backgroundSize: '22px 22px',
-        backgroundAttachment: 'fixed',
       }}
     >
       {/* Header — Figma-style centered */}
-      <div className="sticky top-12 z-30 bg-white/90 backdrop-blur-md shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
+      <div className="sticky top-0 z-30 bg-white/90 backdrop-blur-md shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
         <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-2 lg:py-2.5">
           <div className="flex items-center justify-between">
             {/* Left: back + save status */}
@@ -899,9 +898,9 @@ export default function ReportEditor() {
       </div>
 
       {/* Main content area */}
-      <div className="flex-1 flex lg:items-start gap-4 lg:gap-8 w-full px-4 sm:px-6 lg:px-8">
+      <div className="flex-1 flex gap-4 lg:gap-8 w-full px-4 sm:px-6 lg:px-8">
         {/* Floating toolbar — left column */}
-        <div className="hidden lg:flex shrink-0 w-12 pt-14">
+        <div className="hidden lg:flex shrink-0 w-12 pt-12">
           <div className="sticky top-28 h-fit z-30">
             <EditorFloatingToolbar
               onSaveVersion={async () => {
