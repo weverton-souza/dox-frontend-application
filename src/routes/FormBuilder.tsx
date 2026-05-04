@@ -717,6 +717,7 @@ export default function FormBuilder() {
           isOpen={showLinkModal}
           onClose={() => setShowLinkModal(false)}
           formId={id}
+          formFields={form?.fields}
         />
       )}
     </>

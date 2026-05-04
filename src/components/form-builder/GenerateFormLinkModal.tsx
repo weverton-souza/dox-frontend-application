@@ -1,19 +1,21 @@
 import { useState, useCallback } from 'react'
-import type { Customer } from '@/types'
+import type { Customer, FormField } from '@/types'
 import { createFormLink } from '@/lib/api/form-link-api'
 import { useCustomerSearch } from '@/lib/hooks/use-customer-search'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
+import CollectionModeNotice from '@/components/form-builder/CollectionModeNotice'
 
 interface GenerateFormLinkModalProps {
   isOpen: boolean
   onClose: () => void
   formId: string
+  formFields?: FormField[]
 }
 
 type ModalState = 'select-customer' | 'loading' | 'success' | 'error'
 
-export default function GenerateFormLinkModal({ isOpen, onClose, formId }: GenerateFormLinkModalProps) {
+export default function GenerateFormLinkModal({ isOpen, onClose, formId, formFields }: GenerateFormLinkModalProps) {
   const [state, setState] = useState<ModalState>('select-customer')
   const { search, setSearch, customers, loading: searchLoading, reset: resetSearch } = useCustomerSearch(isOpen)
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
@@ -81,6 +83,8 @@ export default function GenerateFormLinkModal({ isOpen, onClose, formId }: Gener
             <p className="text-sm text-gray-500">
               Selecione o cliente que receberá o link para preencher este formulário.
             </p>
+
+            {formFields && <CollectionModeNotice fields={formFields} />}
 
             <input
               type="text"
