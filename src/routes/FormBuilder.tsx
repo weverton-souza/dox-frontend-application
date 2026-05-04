@@ -445,8 +445,8 @@ export default function FormBuilder() {
           backgroundSize: '22px 22px',
         }}
       >
-        {/* Header — Figma-style centered (mesmo padrao do ReportEditor) */}
-        <div className="sticky top-0 z-30 bg-white/90 backdrop-blur-md shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
+        {/* Header — sticky logo abaixo da GlobalTopBar (h-12) */}
+        <div className="sticky top-12 z-30 bg-white/90 backdrop-blur-md shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
           <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-2 lg:py-2.5">
             <div className="flex items-center justify-between">
               {/* Left: back + save status */}
