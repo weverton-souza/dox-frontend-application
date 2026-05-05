@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import type { ConditionalRule, FormField, FormFieldType, LikertScalePoint, LikertRow } from '@/types'
+import type { AddressSubfieldKey, ConditionalRule, FormField, FormFieldType, LikertScalePoint, LikertRow } from '@/types'
 import {
+  ADDRESS_SUBFIELD_KEYS,
+  ADDRESS_SUBFIELD_LABELS,
+  createDefaultAddressSubfields,
   createEmptyFormFieldOption,
   createEmptyInventoryOption,
   createEmptyLikertRow,
@@ -47,6 +50,7 @@ const questionTypes: { type: FormFieldType; label: string }[] = [
   { type: 'scale', label: 'Escala linear' },
   { type: 'yes-no', label: 'Sim/Não' },
   { type: 'date', label: 'Data' },
+  { type: 'address', label: 'Endereço' },
   { type: 'inventory-item', label: 'Inventário (pontuável)' },
   { type: 'likert-matrix', label: 'Matriz Likert (pontuável)' },
 ]
@@ -129,6 +133,9 @@ export default function QuestionCard({
     if (newType === 'likert-matrix') {
       if (field.likertScale.length === 0) updated.likertScale = createDefaultLikertScale()
       if (field.likertRows.length === 0) updated.likertRows = [createEmptyLikertRow()]
+    }
+    if (newType === 'address' && !field.addressSubfields) {
+      updated.addressSubfields = createDefaultAddressSubfields()
     }
     update(updated)
   }
@@ -384,6 +391,27 @@ export default function QuestionCard({
           removeOption,
           update,
         })}
+
+        {/* Validation (only for short-text) */}
+        {field.type === 'short-text' && (
+          <div className="mt-4 flex items-center gap-2">
+            <span className="text-xs text-gray-400 shrink-0">Validação:</span>
+            <select
+              value={field.validation ?? ''}
+              onChange={(e) => {
+                const v = e.target.value
+                update({ validation: v === '' ? undefined : (v as FormField['validation']) })
+              }}
+              className="text-sm bg-white border border-gray-300 rounded px-2 py-1 text-gray-700 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none cursor-pointer"
+            >
+              <option value="">Nenhuma</option>
+              <option value="cpf">CPF</option>
+              <option value="phone-br">Telefone (BR)</option>
+              <option value="email">Email</option>
+              <option value="cep">CEP</option>
+            </select>
+          </div>
+        )}
 
         {/* Description (toggleable) */}
         {showDescription && (
@@ -676,6 +704,30 @@ function renderCompactPreview(field: FormField) {
         </div>
       )
 
+    case 'address': {
+      const stored = field.addressSubfields
+      const isValidCfg = stored != null && ADDRESS_SUBFIELD_KEYS.every((k) => stored[k] !== undefined)
+      const cfg = isValidCfg && stored ? stored : createDefaultAddressSubfields()
+      const enabled = ADDRESS_SUBFIELD_KEYS.filter((k) => cfg[k].enabled)
+      return (
+        <div className="flex flex-wrap gap-1.5">
+          {enabled.length === 0 ? (
+            <span className="text-xs text-gray-400">Nenhum subcampo habilitado</span>
+          ) : (
+            enabled.map((k) => (
+              <span
+                key={k}
+                className="inline-flex items-center gap-1 text-xs text-gray-500 bg-gray-50 border border-gray-200 px-2 py-0.5 rounded"
+              >
+                {ADDRESS_SUBFIELD_LABELS[k]}
+                {cfg[k].required && <span className="text-red-500">*</span>}
+              </span>
+            ))
+          )}
+        </div>
+      )
+    }
+
     default:
       return null
   }
@@ -736,6 +788,9 @@ function renderFocusedContent(field: FormField, h: ContentHelpers) {
 
     case 'likert-matrix':
       return <LikertMatrixEditor field={field} update={h.update} />
+
+    case 'address':
+      return <AddressEditor field={field} update={h.update} />
 
     default:
       return null
@@ -1064,6 +1119,75 @@ function LikertMatrixEditor({
           Adicionar opção
         </button>
       </div>
+    </div>
+  )
+}
+
+// ─── Address editor ───────────────────────────────────────
+
+function AddressEditor({
+  field,
+  update,
+}: {
+  field: FormField
+  update: (patch: Partial<FormField>) => void
+}) {
+  const stored = field.addressSubfields
+  const isValid = stored != null && ADDRESS_SUBFIELD_KEYS.every((k) => stored[k] !== undefined)
+  const cfg = isValid && stored ? stored : createDefaultAddressSubfields()
+
+  const updateSubfield = (
+    key: AddressSubfieldKey,
+    patch: Partial<{ enabled: boolean; required: boolean }>,
+  ) => {
+    update({
+      addressSubfields: {
+        ...cfg,
+        [key]: { ...cfg[key], ...patch },
+      },
+    })
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="grid grid-cols-[auto_1fr_auto] items-center gap-x-3 gap-y-1.5 text-xs text-gray-400 pb-1 border-b border-gray-100">
+        <span className="w-6" />
+        <span>Subcampo</span>
+        <span className="text-right">Obrigatório</span>
+      </div>
+      {ADDRESS_SUBFIELD_KEYS.map((key) => {
+        const sub = cfg[key]
+        return (
+          <div key={key} className="grid grid-cols-[auto_1fr_auto] items-center gap-x-3 group/addr">
+            <label className="flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={sub.enabled}
+                onChange={(e) => {
+                  const enabled = e.target.checked
+                  updateSubfield(key, enabled ? { enabled } : { enabled, required: false })
+                }}
+                className="w-4 h-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
+              />
+            </label>
+            <span className={`text-sm ${sub.enabled ? 'text-gray-700' : 'text-gray-400'}`}>
+              {ADDRESS_SUBFIELD_LABELS[key]}
+            </span>
+            <label className="flex items-center justify-end cursor-pointer">
+              <input
+                type="checkbox"
+                checked={sub.required}
+                disabled={!sub.enabled}
+                onChange={(e) => updateSubfield(key, { required: e.target.checked })}
+                className="w-4 h-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500 disabled:opacity-40"
+              />
+            </label>
+          </div>
+        )
+      })}
+      <p className="text-xs text-gray-400 pt-2">
+        Preenche automaticamente Logradouro, Bairro, Cidade e UF ao digitar o CEP.
+      </p>
     </div>
   )
 }

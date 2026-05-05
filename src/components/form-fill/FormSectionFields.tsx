@@ -5,7 +5,7 @@ interface FormSectionFieldsProps {
   sectionGroups: FormSectionGroup[]
   getAnswer: (fieldId: string) => FormFieldAnswer
   onAnswerChange: (answer: FormFieldAnswer) => void
-  validationErrors: Set<string>
+  validationErrors: Map<string, string>
   readOnly?: boolean
 }
 
@@ -37,7 +37,8 @@ export default function FormSectionFields({
           )}
 
           {group.children.map((field) => {
-            const hasError = validationErrors.has(field.id)
+            const errorMessage = validationErrors.get(field.id) ?? null
+            const hasError = errorMessage !== null
 
             return (
               <div
@@ -51,9 +52,11 @@ export default function FormSectionFields({
                 {field.label ? (
                   <label className="block text-sm text-gray-900 mb-3">
                     {field.label}
-                    {field.required && <span className="text-red-500 ml-0.5">*</span>}
+                    {field.required && field.type !== 'address' && (
+                      <span className="text-red-500 ml-0.5">*</span>
+                    )}
                   </label>
-                ) : field.required ? (
+                ) : field.required && field.type !== 'address' ? (
                   <div className="text-sm text-red-500 mb-3" aria-label="Obrigatório">*</div>
                 ) : null}
                 {field.description && (
@@ -72,7 +75,7 @@ export default function FormSectionFields({
                     <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
                       <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zm0 10a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
                     </svg>
-                    Este campo é obrigatório
+                    {errorMessage}
                   </p>
                 )}
               </div>

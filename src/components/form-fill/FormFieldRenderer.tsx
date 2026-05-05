@@ -1,5 +1,8 @@
-import type { FormField, FormFieldAnswer } from '@/types'
+import { useRef } from 'react'
+import type { AddressAnswer, AddressSubfieldKey, FormField, FormFieldAnswer } from '@/types'
+import { ADDRESS_SUBFIELD_KEYS, ADDRESS_SUBFIELD_LABELS, createDefaultAddressSubfields, createEmptyAddressAnswer } from '@/types'
 import DatePicker from '@/components/ui/DatePicker'
+import { applyMask, fetchAddressByCep, formatCep, isValidCep } from '@/lib/validators'
 
 interface FormFieldRendererProps {
   field: FormField
@@ -9,19 +12,32 @@ interface FormFieldRendererProps {
 }
 
 export default function FormFieldRenderer({ field, answer, onChange, readOnly = false }: FormFieldRendererProps) {
+  const lastFetchedZipCodeRef = useRef<string | null>(null)
+
   const update = (patch: Partial<FormFieldAnswer>) => {
     if (readOnly) return
     onChange({ ...answer, ...patch })
+  }
+
+  const handleShortTextChange = (raw: string) => {
+    update({ value: applyMask(field.validation, raw) })
+  }
+
+  const inputModeFor = (validation: FormField['validation']): 'text' | 'numeric' | 'email' => {
+    if (validation === 'email') return 'email'
+    if (validation === 'cpf' || validation === 'phone-br' || validation === 'cep') return 'numeric'
+    return 'text'
   }
 
   switch (field.type) {
     case 'short-text':
       return (
         <input
-          type="text"
+          type={field.validation === 'email' ? 'email' : 'text'}
+          inputMode={inputModeFor(field.validation)}
           aria-label={field.label}
           value={answer.value}
-          onChange={(e) => update({ value: e.target.value })}
+          onChange={(e) => handleShortTextChange(e.target.value)}
           placeholder={field.placeholder || 'Sua resposta'}
           className="w-full border-0 border-b border-gray-300 bg-transparent px-0 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-500 focus:ring-0 focus:outline-none transition-colors"
         />
@@ -269,6 +285,132 @@ export default function FormFieldRenderer({ field, answer, onChange, readOnly = 
               })}
             </tbody>
           </table>
+        </div>
+      )
+    }
+
+    case 'address': {
+      const stored = field.addressSubfields
+      const isValidCfg = stored != null && ADDRESS_SUBFIELD_KEYS.every((k) => stored[k] !== undefined)
+      const cfg = isValidCfg && stored ? stored : createDefaultAddressSubfields()
+      const enabledKeys: AddressSubfieldKey[] = ADDRESS_SUBFIELD_KEYS.filter((k) => cfg[k].enabled)
+      const address: AddressAnswer = answer.addressAnswer ?? createEmptyAddressAnswer()
+
+      const setSubfield = (key: AddressSubfieldKey, value: string) => {
+        update({
+          addressAnswer: {
+            ...address,
+            [key]: key === 'zipCode' ? formatCep(value) : value,
+          },
+        })
+      }
+
+      const handleZipCodeChange = (rawValue: string) => {
+        if (readOnly) return
+        const formatted = formatCep(rawValue)
+        const baseAddress: AddressAnswer = { ...address, zipCode: formatted }
+        update({ addressAnswer: baseAddress })
+
+        if (!isValidCep(formatted)) {
+          lastFetchedZipCodeRef.current = null
+          return
+        }
+        if (lastFetchedZipCodeRef.current === formatted) return
+        lastFetchedZipCodeRef.current = formatted
+
+        void fetchAddressByCep(formatted).then((lookup) => {
+          if (!lookup) return
+          if (lastFetchedZipCodeRef.current !== formatted) return
+          const next: AddressAnswer = { ...baseAddress }
+          if (cfg.street.enabled && lookup.street) next.street = lookup.street
+          if (cfg.neighborhood.enabled && lookup.neighborhood) next.neighborhood = lookup.neighborhood
+          if (cfg.city.enabled && lookup.city) next.city = lookup.city
+          if (cfg.state.enabled && lookup.state) next.state = lookup.state
+          update({ addressAnswer: next })
+        })
+      }
+
+      const subfieldClasses = 'w-full border-0 border-b border-gray-300 bg-transparent px-0 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-500 focus:ring-0 focus:outline-none transition-colors'
+
+      const renderSubfield = (key: AddressSubfieldKey) => {
+        const sub = cfg[key]
+        const labelEl = (
+          <span className="block text-[11px] uppercase tracking-wide text-gray-400 mb-0.5">
+            {ADDRESS_SUBFIELD_LABELS[key]}
+            {sub.required && <span className="text-red-500 ml-0.5">*</span>}
+          </span>
+        )
+
+        if (key === 'zipCode') {
+          return (
+            <div>
+              {labelEl}
+              <input
+                type="text"
+                inputMode="numeric"
+                aria-label={ADDRESS_SUBFIELD_LABELS[key]}
+                value={address.zipCode}
+                onChange={(e) => handleZipCodeChange(e.target.value)}
+                placeholder="00000-000"
+                className={subfieldClasses}
+                readOnly={readOnly}
+              />
+            </div>
+          )
+        }
+
+        if (key === 'state') {
+          return (
+            <div>
+              {labelEl}
+              <input
+                type="text"
+                aria-label={ADDRESS_SUBFIELD_LABELS[key]}
+                value={address.state}
+                onChange={(e) => setSubfield('state', e.target.value.toUpperCase().slice(0, 2))}
+                placeholder="UF"
+                maxLength={2}
+                className={subfieldClasses}
+                readOnly={readOnly}
+              />
+            </div>
+          )
+        }
+
+        return (
+          <div>
+            {labelEl}
+            <input
+              type="text"
+              aria-label={ADDRESS_SUBFIELD_LABELS[key]}
+              value={address[key]}
+              onChange={(e) => setSubfield(key, e.target.value)}
+              className={subfieldClasses}
+              readOnly={readOnly}
+            />
+          </div>
+        )
+      }
+
+      const widthFor = (key: AddressSubfieldKey): string => {
+        switch (key) {
+          case 'zipCode': return 'sm:col-span-2'
+          case 'street': return 'sm:col-span-4'
+          case 'number': return 'sm:col-span-2'
+          case 'complement': return 'sm:col-span-4'
+          case 'neighborhood': return 'sm:col-span-3'
+          case 'city': return 'sm:col-span-2'
+          case 'state': return 'sm:col-span-1'
+        }
+      }
+
+      return (
+        <div className="grid grid-cols-1 sm:grid-cols-6 gap-x-4 gap-y-3">
+          {enabledKeys.map((key) => (
+            <div key={key} className={widthFor(key)}>
+              {renderSubfield(key)}
+            </div>
+          ))}
         </div>
       )
     }
