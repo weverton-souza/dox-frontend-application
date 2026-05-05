@@ -311,9 +311,13 @@ export default function QuestionCard({
               {field.label || 'Pergunta'}
               {field.required && <span className="text-red-500 ml-0.5">*</span>}
             </p>
-            {field.collectionMode === 'presencial' && (
+            {field.collectionMode === 'presencial' ? (
               <span className="shrink-0 inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-wide bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full">
                 Presencial
+              </span>
+            ) : (
+              <span className="shrink-0 inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-wide bg-sky-50 text-sky-700 px-2 py-0.5 rounded-full">
+                Online
               </span>
             )}
           </div>
@@ -356,7 +360,7 @@ export default function QuestionCard({
             type="text"
             value={field.label}
             onChange={(e) => update({ label: e.target.value })}
-            placeholder="Pergunta"
+            placeholder={field.type === 'likert-matrix' ? 'Enunciado' : 'Pergunta'}
             className="flex-1 text-base text-gray-900 bg-gray-50 border-b border-gray-300 px-2 py-2 focus:border-brand-500 focus:outline-none placeholder:text-gray-400"
           />
 
@@ -1021,7 +1025,7 @@ function LikertMatrixEditor({
 
       {/* Rows */}
       <div className="space-y-2">
-        <span className="text-xs text-gray-400">Perguntas (linhas)</span>
+        <span className="text-xs text-gray-400">Opções</span>
         {field.likertRows.map((row, index) => (
           <div key={row.id} className="flex items-center gap-2 group/row">
             <span className="text-xs text-gray-400 w-6 shrink-0">{index + 1}.</span>
@@ -1029,7 +1033,7 @@ function LikertMatrixEditor({
               type="text"
               value={row.label}
               onChange={(e) => updateRow(index, { label: e.target.value })}
-              placeholder={`Pergunta ${index + 1}`}
+              placeholder={`Opção ${index + 1}`}
               className="flex-1 text-sm text-gray-700 bg-transparent border-b border-transparent hover:border-gray-200 focus:border-gray-300 px-1 py-1 focus:outline-none placeholder:text-gray-400 transition-colors"
             />
             <label className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer">
@@ -1044,7 +1048,7 @@ function LikertMatrixEditor({
             {field.likertRows.length > 1 && (
               <IconButton
                 icon={<CloseIcon />}
-                label="Remover pergunta"
+                label="Remover opção"
                 size="sm"
                 className="text-gray-300 opacity-0 group-hover/row:opacity-100 transition-opacity"
                 onClick={(e) => { e.stopPropagation(); removeRow(index) }}
@@ -1057,7 +1061,7 @@ function LikertMatrixEditor({
           onClick={(e) => { e.stopPropagation(); addRow() }}
           className="text-sm text-gray-400 hover:text-gray-600 transition-colors px-1 py-1"
         >
-          Adicionar pergunta
+          Adicionar opção
         </button>
       </div>
     </div>
