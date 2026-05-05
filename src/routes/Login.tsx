@@ -1,10 +1,10 @@
 import { useActionState, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { useError } from '@/contexts/ErrorContext'
 import Input from '@/components/ui/Input'
 import SubmitButton from '@/components/ui/SubmitButton'
-import { EyeIcon, EyeOffIcon } from '@/components/icons'
+import { CheckIcon, EyeIcon, EyeOffIcon } from '@/components/icons'
 import logoDox from '@/assets/logo-dox.svg'
 import loginBg from '@/assets/login_background.svg'
 
@@ -15,9 +15,12 @@ export default function Login() {
   const { login } = useAuth()
   const { showError } = useError()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
 
   const [showPassword, setShowPassword] = useState(false)
   const [rememberMe, setRememberMe] = useState(true)
+
+  const confirmed = searchParams.get('confirmed')
 
   const [, formAction] = useActionState(
     async (_prev: LoginFormState, formData: FormData): Promise<LoginFormState> => {
@@ -57,6 +60,23 @@ export default function Login() {
         <div className="w-full max-w-[380px] bg-white backdrop-blur-2xl border border-gray-200/30 rounded-3xl px-6 sm:px-8 py-6 sm:py-8"
             style={{ boxShadow: '0 8px 30px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06)' }}>
           <img src={logoDox} alt="Dox" className="h-10 mx-auto mb-6" />
+
+          {confirmed === 'true' && (
+            <div className="mb-4 rounded-xl bg-green-50 border border-green-200 px-3.5 py-2.5 flex items-start gap-2">
+              <span className="text-green-600 mt-0.5 shrink-0"><CheckIcon size={14} /></span>
+              <p className="text-xs text-green-800 leading-relaxed">
+                Email confirmado. Faça login para começar.
+              </p>
+            </div>
+          )}
+          {confirmed === 'already' && (
+            <div className="mb-4 rounded-xl bg-blue-50 border border-blue-200 px-3.5 py-2.5 flex items-start gap-2">
+              <span className="text-blue-600 mt-0.5 shrink-0"><CheckIcon size={14} /></span>
+              <p className="text-xs text-blue-800 leading-relaxed">
+                Este email já estava confirmado. Pode entrar normalmente.
+              </p>
+            </div>
+          )}
 
           <form action={formAction} className="space-y-3.5">
             <Input
