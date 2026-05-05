@@ -299,7 +299,12 @@ export default function FormComparisonView() {
         byFormId.set(g.form.id, g)
       } else if (!existing) {
         byFormId.set(g.form.id, g)
-      } else if (existing.form.id !== formId && g.version.version > existing.version.version) {
+      } else if (
+        existing.form.id !== formId &&
+        (g.version.versionMajor > existing.version.versionMajor ||
+          (g.version.versionMajor === existing.version.versionMajor &&
+            g.version.versionMinor > existing.version.versionMinor))
+      ) {
         byFormId.set(g.form.id, g)
       }
     }
@@ -420,7 +425,7 @@ export default function FormComparisonView() {
                                 `/customers/${customerId}/forms/${g.form.id}/comparison?versionId=${g.version.id}`,
                               )
                         }
-                        title={`${g.form.title} · v${g.version.version} · ${sentDate} · ${answered}/${total} respondentes`}
+                        title={`${g.form.title} · v${g.version.versionLabel} · ${sentDate} · ${answered}/${total} respondentes`}
                         className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
                           isActive
                             ? 'bg-brand-50 text-brand-700 font-medium cursor-default'
@@ -434,7 +439,7 @@ export default function FormComparisonView() {
                               isActive ? 'text-brand-400' : 'text-gray-400'
                             }`}
                           >
-                            · v{g.version.version}
+                            · v{g.version.versionLabel}
                           </span>
                         </span>
                       </button>

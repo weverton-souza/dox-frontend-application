@@ -498,7 +498,7 @@ export default function CustomerProfile() {
                         {group.form.title}
                       </p>
                       <p className="text-xs text-gray-400">
-                        v{group.version.version} · enviado em {formatDateTime(group.sentAt)}
+                        v{group.version.versionLabel} · enviado em {formatDateTime(group.sentAt)}
                       </p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">

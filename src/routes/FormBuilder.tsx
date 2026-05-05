@@ -21,8 +21,8 @@ import type {
   FormFieldType,
 } from '@/types'
 import { createEmptyFormField } from '@/types'
-import { getFormById, updateForm } from '@/lib/api/form-api'
-import { useAutoSave } from '@/lib/hooks/use-auto-save'
+import { getFormById } from '@/lib/api/form-api'
+import { useFormBuilderDraft } from '@/lib/hooks/use-form-builder-draft'
 import { useSortedFields } from '@/lib/hooks/use-sorted-fields'
 import { getAllTemplates } from '@/lib/default-templates'
 import { getReportTemplates } from '@/lib/api/template-api'
@@ -35,6 +35,7 @@ import TemplateLinkModal from '@/components/form-builder/TemplateLinkModal'
 import FieldMappingEditor from '@/components/form-builder/FieldMappingEditor'
 import FormPreview from '@/components/form-builder/FormPreview'
 import SectionDeleteModal from '@/components/ui/SectionDeleteModal'
+import ConfirmModal from '@/components/ui/ConfirmModal'
 import SectionReorderModal from '@/components/form-builder/SectionReorderModal'
 import GenerateFormLinkModal from '@/components/form-builder/GenerateFormLinkModal'
 import ScoringTab from '@/components/form-builder/ScoringTab'
@@ -42,6 +43,7 @@ import SectionSidebar from '@/components/form-builder/SectionSidebar'
 import FormPrintModal from '@/components/form-builder/FormPrintModal'
 import { generateFormDocx } from '@/lib/docx-engine/form-generator'
 import { getProfessional } from '@/lib/api/professional-api'
+import { useError } from '@/contexts/ErrorContext'
 
 type ViewMode = 'editor' | 'preview' | 'mapping' | 'scoring'
 
@@ -75,8 +77,11 @@ function ensureSectionsAtStart(form: Form): { form: Form; migrated: boolean } {
 export default function FormBuilder() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { showError } = useError()
 
-  const [form, setForm] = useState<Form | null>(null)
+  const draft = useFormBuilderDraft()
+  const { form, isDirty, status, hydrate, update, publish, discard } = draft
+
   const [viewMode, setViewMode] = useState<ViewMode>('editor')
   const [showTemplateLinkModal, setShowTemplateLinkModal] = useState(false)
   const [showSectionReorderModal, setShowSectionReorderModal] = useState(false)
@@ -85,11 +90,12 @@ export default function FormBuilder() {
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null)
   const [showMoreMenu, setShowMoreMenu] = useState(false)
   const [showPrintModal, setShowPrintModal] = useState(false)
+  const [toast, setToast] = useState<string | null>(null)
+  const [confirmDiscard, setConfirmDiscard] = useState(false)
+  const [pendingNavigation, setPendingNavigation] = useState<string | null>(null)
   const moreMenuRef = useRef<HTMLDivElement>(null)
   useClickOutside(moreMenuRef, () => setShowMoreMenu(false), showMoreMenu)
 
-  const updateFormFn = useCallback((data: Form) => updateForm(data), [])
-  const { saveStatus, scheduleSave, forceSave } = useAutoSave<Form>(updateFormFn)
   const [templates, setTemplates] = useState(() => getAllTemplates([]))
 
   // Load form and templates
@@ -99,8 +105,7 @@ export default function FormBuilder() {
       .then(([raw, customTemplates]) => {
         if (raw) {
           const { form: normalized, migrated } = ensureSectionsAtStart(raw)
-          setForm(normalized)
-          if (migrated) scheduleSave(normalized)
+          hydrate(normalized, { markDirty: migrated })
           const firstSection = normalized.fields.find((f) => f.type === 'section-header')
           if (firstSection) setActiveSectionId(firstSection.id)
         } else {
@@ -109,22 +114,57 @@ export default function FormBuilder() {
         setTemplates(getAllTemplates(customTemplates))
       })
       .catch(() => navigate('/forms'))
-  }, [id, navigate, scheduleSave])
+  }, [id, navigate, hydrate])
 
   const updateFormState = useCallback((patch: Partial<Form>) => {
-    setForm((prev) => {
-      if (!prev) return prev
-      const updated = { ...prev, ...patch }
-      scheduleSave(updated)
-      return updated
-    })
-  }, [scheduleSave])
+    update(patch)
+  }, [update])
 
-  // Force save on navigation
-  const handleBack = useCallback(async () => {
-    if (form) await forceSave(form)
+  const showToast = useCallback((message: string) => {
+    setToast(message)
+    window.setTimeout(() => setToast(null), 3500)
+  }, [])
+
+  const handlePublish = useCallback(async () => {
+    if (!form || !isDirty || status === 'publishing') return
+    const previousLabel = form.currentVersionLabel ?? null
+    try {
+      const saved = await publish()
+      if (!saved) return
+      const newLabel = saved.currentVersionLabel ?? null
+      if (newLabel && newLabel !== previousLabel) {
+        showToast(`Salvo como v${newLabel}`)
+      } else {
+        showToast('Sem alterações para salvar')
+      }
+    } catch (err) {
+      showError(err)
+    }
+  }, [form, isDirty, status, publish, showError, showToast])
+
+  const handleDiscard = useCallback(() => {
+    if (!isDirty) return
+    setConfirmDiscard(true)
+  }, [isDirty])
+
+  const confirmDiscardChanges = useCallback(() => {
+    discard()
+    setConfirmDiscard(false)
+  }, [discard])
+
+  const handleBack = useCallback(() => {
+    if (isDirty) {
+      setPendingNavigation('/forms')
+      return
+    }
     navigate('/forms')
-  }, [form, navigate, forceSave])
+  }, [isDirty, navigate])
+
+  const confirmLeave = useCallback(() => {
+    const target = pendingNavigation
+    setPendingNavigation(null)
+    if (target) navigate(target)
+  }, [pendingNavigation, navigate])
 
   const handleSetAllCollectionMode = useCallback((mode: 'online' | 'presencial') => {
     if (!form) return
@@ -411,6 +451,20 @@ export default function FormBuilder() {
     }
   }, [form, activeSectionId])
 
+  /** Desfoca pergunta ao clicar fora de qualquer card. */
+  useEffect(() => {
+    if (!focusedFieldId) return
+    const handler = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null
+      if (!target) return
+      if (!target.closest('[data-question-wrap]')) {
+        setFocusedFieldId(null)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [focusedFieldId])
+
   // ─── Section actions (tabs) ──────────────────────────
 
   const handleRenameSection = useCallback((sectionId: string, newTitle: string) => {
@@ -443,6 +497,12 @@ export default function FormBuilder() {
     }
   }, [])
 
+  const sidebarSaveStatus = status === 'publishing'
+    ? 'saving' as const
+    : isDirty
+      ? 'unsaved' as const
+      : 'saved' as const
+
   if (!form) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -468,64 +528,108 @@ export default function FormBuilder() {
           alignWithSidebar
           withToolbarSpacer={false}
           center={
-            <SegmentedControl
-              options={[
-                { value: 'editor', label: 'Perguntas' },
-                { value: 'scoring', label: 'Pontuação' },
-                { value: 'preview', label: 'Preview' },
-              ]}
-              value={viewMode}
-              onChange={(v) => setViewMode(v as ViewMode)}
-              size="sm"
-            />
+            <div className="flex items-center gap-4">
+              <SegmentedControl
+                options={[
+                  { value: 'editor', label: 'Perguntas' },
+                  { value: 'scoring', label: 'Pontuação' },
+                  { value: 'preview', label: 'Preview' },
+                ]}
+                value={viewMode}
+                onChange={(v) => setViewMode(v as ViewMode)}
+                size="sm"
+              />
+              <div className="inline-flex items-center h-9 px-3 bg-white border border-gray-200 rounded-full text-sm shadow-xs">
+                {status === 'publishing' ? (
+                  <>
+                    <span className="relative inline-flex w-2 h-2 mr-2" aria-hidden="true">
+                      <span className="absolute inline-flex w-full h-full rounded-full bg-yellow-400 opacity-75 animate-ping" />
+                      <span className="relative inline-flex w-2 h-2 rounded-full bg-yellow-500" />
+                    </span>
+                    <span className="text-gray-600">Salvando…</span>
+                  </>
+                ) : isDirty ? (
+                  <>
+                    <span className="relative inline-flex w-2 h-2 mr-2" aria-hidden="true">
+                      <span className="absolute inline-flex w-full h-full rounded-full bg-orange-400 opacity-75 animate-ping" />
+                      <span className="relative inline-flex w-2 h-2 rounded-full bg-orange-500" />
+                    </span>
+                    <span className="text-gray-700">Não salvo</span>
+                    <span className="mx-2 text-gray-300" aria-hidden="true">·</span>
+                    <button
+                      type="button"
+                      onClick={handleDiscard}
+                      className="text-gray-500 hover:text-gray-800 transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                    <span className="mx-2 text-gray-300" aria-hidden="true">·</span>
+                    <button
+                      type="button"
+                      onClick={handlePublish}
+                      className="text-brand-600 font-medium hover:text-brand-700 transition-colors"
+                    >
+                      Salvar
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <span className="inline-flex w-2 h-2 mr-2 rounded-full bg-green-500" aria-hidden="true" />
+                    <span className="text-gray-600">Salvo</span>
+                  </>
+                )}
+              </div>
+            </div>
           }
           right={
-            <div className="relative" ref={moreMenuRef}>
-              <button
-                type="button"
-                onClick={() => setShowMoreMenu((v) => !v)}
-                className="h-9 w-9 flex items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-900 transition-colors"
-                title="Mais opções"
-                aria-label="Mais opções"
-              >
-                <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                  <circle cx="4" cy="10" r="1.6" />
-                  <circle cx="10" cy="10" r="1.6" />
-                  <circle cx="16" cy="10" r="1.6" />
-                </svg>
-              </button>
-              {showMoreMenu && (
-                <div className="absolute right-0 top-full mt-1 w-72 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-                  <div className="px-4 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
-                    Modo de coleta
+            <div className="flex items-center gap-2">
+              <div className="relative" ref={moreMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setShowMoreMenu((v) => !v)}
+                  className="h-9 w-9 flex items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+                  title="Mais opções"
+                  aria-label="Mais opções"
+                >
+                  <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <circle cx="4" cy="10" r="1.6" />
+                    <circle cx="10" cy="10" r="1.6" />
+                    <circle cx="16" cy="10" r="1.6" />
+                  </svg>
+                </button>
+                {showMoreMenu && (
+                  <div className="absolute right-0 top-full mt-1 w-72 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                    <div className="px-4 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+                      Modo de coleta
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleSetAllCollectionMode('online')}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                    >
+                      Marcar todas as perguntas como online
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSetAllCollectionMode('presencial')}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                    >
+                      Marcar todas as perguntas como presencial
+                    </button>
+                    <div className="border-t border-gray-100 my-1" />
+                    <div className="px-4 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+                      Impressão
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setShowPrintModal(true); setShowMoreMenu(false) }}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                    >
+                      Imprimir formulário em branco
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => handleSetAllCollectionMode('online')}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                  >
-                    Marcar todas as perguntas como online
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleSetAllCollectionMode('presencial')}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                  >
-                    Marcar todas as perguntas como presencial
-                  </button>
-                  <div className="border-t border-gray-100 my-1" />
-                  <div className="px-4 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
-                    Impressão
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => { setShowPrintModal(true); setShowMoreMenu(false) }}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                  >
-                    Imprimir formulário em branco
-                  </button>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           }
         />
@@ -541,7 +645,7 @@ export default function FormBuilder() {
               onAdd={handleAddSection}
               onRemove={handleRemoveSection}
               onReorder={handleReorderSections}
-              saveStatus={saveStatus}
+              saveStatus={sidebarSaveStatus}
             />
 
             {/* Content column: ocupa o restante, limita largura mas sem centralizar
@@ -560,12 +664,12 @@ export default function FormBuilder() {
                         placeholder="Formulário sem título"
                         className="flex-1 min-w-0 text-2xl font-normal text-gray-900 bg-transparent border-none outline-none placeholder:text-gray-400"
                       />
-                      {form.currentVersion != null && (
+                      {form.currentVersionLabel && (
                         <span
                           className="shrink-0 inline-flex items-center text-[10px] font-medium uppercase tracking-wide bg-gray-100 text-gray-600 px-2 py-1 rounded-full mt-1"
-                          title={`Versão atual do formulário: v${form.currentVersion}`}
+                          title={`Versão atual do formulário: v${form.currentVersionLabel}`}
                         >
-                          v{form.currentVersion}
+                          v{form.currentVersionLabel}
                         </span>
                       )}
                     </div>
@@ -591,7 +695,7 @@ export default function FormBuilder() {
                         const isFocused = focusedFieldId === field.id
 
                         return (
-                          <div key={field.id} className="relative">
+                          <div key={field.id} data-question-wrap className="relative">
                             <QuestionCard
                               field={field}
                               allFields={form?.fields ?? []}
@@ -708,7 +812,35 @@ export default function FormBuilder() {
         )}
       </main>
 
+      {/* Toast */}
+      {toast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 bg-gray-900 text-white text-sm rounded-lg shadow-lg">
+          {toast}
+        </div>
+      )}
+
       {/* Modals */}
+      <ConfirmModal
+        isOpen={confirmDiscard}
+        onClose={() => setConfirmDiscard(false)}
+        onConfirm={confirmDiscardChanges}
+        title="Cancelar alterações"
+        message="Tem certeza que quer cancelar todas as alterações não salvas? Esta ação não pode ser desfeita."
+        confirmLabel="Cancelar alterações"
+        cancelLabel="Voltar"
+        variant="soft-danger"
+      />
+
+      <ConfirmModal
+        isOpen={pendingNavigation !== null}
+        onClose={() => setPendingNavigation(null)}
+        onConfirm={confirmLeave}
+        title="Sair sem salvar?"
+        message="Você tem alterações não salvas. Se sair agora, elas ficarão guardadas neste navegador até você voltar e salvar."
+        confirmLabel="Sair mesmo assim"
+        cancelLabel="Continuar editando"
+      />
+
       <TemplateLinkModal
         isOpen={showTemplateLinkModal}
         onClose={() => setShowTemplateLinkModal(false)}

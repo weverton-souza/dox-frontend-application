@@ -158,7 +158,9 @@ export interface Form {
   fieldMappings: FormFieldMapping[]
   scoringConfig: ScoringConfig
   isDefault?: boolean
-  currentVersion?: number
+  currentMajor?: number
+  currentMinor?: number
+  currentVersionLabel?: string
 }
 
 export type FormResponseStatus = 'em_andamento' | 'concluido'
@@ -379,7 +381,9 @@ export interface FormSummary {
 
 export interface FormVersionSummary {
   id: string
-  version: number
+  versionMajor: number
+  versionMinor: number
+  versionLabel: string
   title: string
 }
 
