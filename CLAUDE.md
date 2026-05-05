@@ -85,17 +85,21 @@
 - Dados do cliente são copiados para o relatório (não vinculados — edição no relatório não altera o cadastro)
 
 ### Formulários (Forms)
-- Construtor de formulários com 8 tipos de campo: short-text, long-text, single-choice, multiple-choice, scale, yes-no, date, section-header
+- Construtor de formulários com 11 tipos de campo: short-text, long-text, single-choice, multiple-choice, scale, yes-no, date, section-header, inventory-item, likert-matrix, address
 - 3 formulários padrão: Adulto (32 campos), Infantil (29 campos), Breve (7 campos)
 - Drag-and-drop para reordenação de campos
 - Preview do formulário como o usuário final vê
-- Mapeamento de campos para seções de template de relatório (FieldMappingEditor)
-- Vínculo com template de relatório (TemplateLinkModal)
+- Modo manual de salvamento via `useFormBuilderDraft` (rascunho em localStorage por form, pill de status no header `Salvo` / `Não salvo · Cancelar · Salvar` / `Salvando…`, toast pós-save com a versão criada)
+- Versionamento SemVer (`current_major`/`current_minor` no domain): in-place enquanto sem respostas; após a primeira, classifica diff em cosmetic (minor++) ou structural (major++ minor=0) ou no-op
+- Validações inline em short-text via dropdown: CPF, Telefone (BR), Email, CEP. Máscaras em tempo real e mensagens específicas no submit
+- Tipo `address`: bloco com 7 subcampos (zipCode/street/number/complement/neighborhood/city/state); cada subcampo com checkbox `enabled` e `required` (analogia da Matriz Likert). Auto-preenchimento via `GET /public/address/lookup/{cep}` (Spring Cloud OpenFeign + ViaCEP no backend) ao 8º dígito do CEP. Labels exibidas em PT-BR; chaves internas em inglês
+- Likert-matrix: enunciado opcional, rótulos contextuais no editor (`Enunciado` em vez de `Pergunta`, `Opções` em vez de `Perguntas (linhas)`)
 - Duplicação de formulários
 
 ### Preenchimento de Formulários
 - Interface de preenchimento com renderização por tipo de campo (FormFieldRenderer)
-- Validação de campos obrigatórios
+- Validação de campos obrigatórios via `useFormValidation` com `Map<id, mensagem>`; `getFieldError` retorna mensagem específica por tipo
+- Asterisco vermelho ao lado do label nos required; asterisco solto na posição do label quando label vazio (likert sem enunciado); no `address`, só os subcampos required exibem asterisco (label principal sem)
 - Auto-save com debounce
 - Status: em_andamento → concluído
 - Suporte a pré-preenchimento via cliente
@@ -215,7 +219,7 @@ src/
   lib/block-constants.tsx  → labels, cores, ícones e getBlockTitle()
   lib/report-utils.ts      → criação de relatórios (createEmptyReport, createReportFromCustomer)
   lib/theme/               → sistema de paletas (palettes, registry, preference, palette-morph)
-  lib/hooks/               → custom hooks reutilizáveis (useAutoSave, useConfirmDelete, usePagination, useClickOutside, useActivePalette)
+  lib/hooks/               → custom hooks reutilizáveis (useAutoSave, useFormBuilderDraft, useConfirmDelete, usePagination, useClickOutside, useActivePalette)
   components/blocks/       → um componente por tipo de bloco
   components/editor/       → componentes do editor (BlockList, BlockSelector, OutlineTree, AddRootBlockModal)
   components/ui/           → componentes reutilizáveis (Button, Input, Modal, Select, ColorPicker, ThemeSelector)
@@ -242,7 +246,7 @@ src/
 - `resolveAnswerDisplay()` fica em `variable-service.ts` — fonte única para exibição de respostas
 - API calls: usar os serviços em `lib/api/*-api.ts` — nunca chamar axios diretamente
 - Criação de relatórios: usar `createEmptyReport()` e `createReportFromCustomer()` de `report-utils.ts` (async)
-- Custom hooks reutilizáveis em `lib/hooks/`: `useAutoSave`, `useConfirmDelete`, `usePagination`, `useClickOutside`
+- Custom hooks reutilizáveis em `lib/hooks/`: `useAutoSave`, `useFormBuilderDraft` (rascunho local + publish manual no FormBuilder), `useConfirmDelete`, `usePagination`, `useClickOutside`
 - Error handling: usar `useError()` de `ErrorContext` — nunca `alert()` para erros de API
 
 ### Componentes React
