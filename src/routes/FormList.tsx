@@ -3,8 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import type { Form } from '@/types'
 import { createEmptyForm } from '@/types'
 import { getForms, createForm, deleteForm, listFormResponses } from '@/lib/api/form-api'
-import { getAllTemplates } from '@/lib/default-templates'
-import { getReportTemplates } from '@/lib/api/template-api'
 import { formatDateTime } from '@/lib/utils'
 import { useConfirmDelete } from '@/lib/hooks/use-confirm-delete'
 import { usePagination } from '@/lib/hooks/use-pagination'
@@ -23,19 +21,14 @@ export default function FormList() {
 
   const [forms, setForms] = useState<Form[]>([])
   const [responseCounts, setResponseCounts] = useState<Record<string, number>>({})
-  const [templates, setTemplates] = useState(() => getAllTemplates([]))
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [filtersOpen, setFiltersOpen] = useState(false)
 
   const loadData = useCallback(async () => {
     try {
-      const [loadedForms, customTemplates] = await Promise.all([
-        getForms(),
-        getReportTemplates(),
-      ])
+      const loadedForms = await getForms()
       setForms(loadedForms)
-      setTemplates(getAllTemplates(customTemplates))
 
       // Count responses per form
       const counts: Record<string, number> = {}
@@ -90,7 +83,6 @@ export default function FormList() {
         id: crypto.randomUUID(),
         options: f.options.map(o => ({ ...o, id: crypto.randomUUID() })),
       }))
-      dup.linkedTemplateId = form.linkedTemplateId
       dup.fieldMappings = form.fieldMappings.map(m => ({ ...m }))
       await createForm(dup)
       await loadData()
@@ -98,11 +90,6 @@ export default function FormList() {
       showError(err)
     }
   }, [loadData, showError])
-
-  const getTemplateName = (templateId: string | null): string | null => {
-    if (!templateId) return null
-    return templates.find(t => t.id === templateId)?.name ?? null
-  }
 
   const filteredForms = forms.filter((form) => {
     if (startDate && form.updatedAt < startDate) return false
@@ -177,7 +164,6 @@ export default function FormList() {
           <>
             <div className="space-y-3">
               {paginatedPage.content.map((form) => {
-                const templateName = getTemplateName(form.linkedTemplateId)
                 const responseCount = responseCounts[form.id] ?? 0
                 const isDefault = !!form.isDefault
 
@@ -203,11 +189,6 @@ export default function FormList() {
                       <>
                         {!isDefault && <ListCardPill>{formatDateTime(form.updatedAt)}</ListCardPill>}
                         <ListCardPill>{questionCount} {questionCount === 1 ? 'pergunta' : 'perguntas'}</ListCardPill>
-                        {templateName && (
-                          <span className="text-[10px] font-medium uppercase bg-brand-100 text-brand-700 px-1.5 py-0.5 rounded">
-                            {templateName}
-                          </span>
-                        )}
                       </>
                     }
                     badges={

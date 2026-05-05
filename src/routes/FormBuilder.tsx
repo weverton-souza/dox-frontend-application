@@ -24,15 +24,11 @@ import { createEmptyFormField } from '@/types'
 import { getFormById } from '@/lib/api/form-api'
 import { useFormBuilderDraft } from '@/lib/hooks/use-form-builder-draft'
 import { useSortedFields } from '@/lib/hooks/use-sorted-fields'
-import { getAllTemplates } from '@/lib/default-templates'
-import { getReportTemplates } from '@/lib/api/template-api'
 import Spinner from '@/components/ui/Spinner'
 import SegmentedControl from '@/components/ui/SegmentedControl'
 import EditorPageHeader from '@/components/editor/EditorPageHeader'
 import QuestionCard from '@/components/form-builder/QuestionCard'
 import FloatingToolbar from '@/components/form-builder/FloatingToolbar'
-import TemplateLinkModal from '@/components/form-builder/TemplateLinkModal'
-import FieldMappingEditor from '@/components/form-builder/FieldMappingEditor'
 import FormPreview from '@/components/form-builder/FormPreview'
 import SectionDeleteModal from '@/components/ui/SectionDeleteModal'
 import ConfirmModal from '@/components/ui/ConfirmModal'
@@ -45,7 +41,7 @@ import { generateFormDocx } from '@/lib/docx-engine/form-generator'
 import { getProfessional } from '@/lib/api/professional-api'
 import { useError } from '@/contexts/ErrorContext'
 
-type ViewMode = 'editor' | 'preview' | 'mapping' | 'scoring'
+type ViewMode = 'editor' | 'preview' | 'scoring'
 
 /**
  * Garante que o form sempre comece com section-header.
@@ -83,7 +79,6 @@ export default function FormBuilder() {
   const { form, isDirty, status, hydrate, update, publish, discard } = draft
 
   const [viewMode, setViewMode] = useState<ViewMode>('editor')
-  const [showTemplateLinkModal, setShowTemplateLinkModal] = useState(false)
   const [showSectionReorderModal, setShowSectionReorderModal] = useState(false)
   const [showLinkModal, setShowLinkModal] = useState(false)
   const [focusedFieldId, setFocusedFieldId] = useState<string | null>(null)
@@ -96,13 +91,11 @@ export default function FormBuilder() {
   const moreMenuRef = useRef<HTMLDivElement>(null)
   useClickOutside(moreMenuRef, () => setShowMoreMenu(false), showMoreMenu)
 
-  const [templates, setTemplates] = useState(() => getAllTemplates([]))
-
-  // Load form and templates
+  // Load form
   useEffect(() => {
     if (!id) return
-    Promise.all([getFormById(id), getReportTemplates()])
-      .then(([raw, customTemplates]) => {
+    getFormById(id)
+      .then((raw) => {
         if (raw) {
           const { form: normalized, migrated } = ensureSectionsAtStart(raw)
           hydrate(normalized, { markDirty: migrated })
@@ -111,7 +104,6 @@ export default function FormBuilder() {
         } else {
           navigate('/forms')
         }
-        setTemplates(getAllTemplates(customTemplates))
       })
       .catch(() => navigate('/forms'))
   }, [id, navigate, hydrate])
@@ -434,11 +426,6 @@ export default function FormBuilder() {
 
   // ─── Derived ──────────────────────────────────────────
 
-  const linkedTemplate = useMemo(
-    () => form?.linkedTemplateId ? templates.find((t) => t.id === form.linkedTemplateId) ?? null : null,
-    [form, templates]
-  )
-
   const activeChildIds = useMemo(() => activeChildren.map((f) => f.id), [activeChildren])
 
   /** Reativa primeira secao se a ativa some (apos delete em cascata, merge, etc). */
@@ -483,11 +470,6 @@ export default function FormBuilder() {
     if (sectionTabs.length <= 1) return
     handleRemoveFieldOrSection(sectionId)
   }, [sectionTabs.length, handleRemoveFieldOrSection])
-
-  // Template link
-  const handleTemplateSelect = useCallback((templateId: string | null) => {
-    updateFormState({ linkedTemplateId: templateId })
-  }, [updateFormState])
 
   // Click outside cards to unfocus
   const handleContainerClick = useCallback((e: React.MouseEvent) => {
@@ -799,17 +781,6 @@ export default function FormBuilder() {
           </div>
         )}
 
-        {/* Mapping mode */}
-        {viewMode === 'mapping' && (
-          <div className="max-w-[860px] mx-auto px-4">
-            <FieldMappingEditor
-              fields={sortedFields}
-              mappings={form.fieldMappings}
-              template={linkedTemplate}
-              onChange={(mappings) => updateFormState({ fieldMappings: mappings })}
-            />
-          </div>
-        )}
       </main>
 
       {/* Toast */}
@@ -839,14 +810,6 @@ export default function FormBuilder() {
         message="Você tem alterações não salvas. Se sair agora, elas ficarão guardadas neste navegador até você voltar e salvar."
         confirmLabel="Sair mesmo assim"
         cancelLabel="Continuar editando"
-      />
-
-      <TemplateLinkModal
-        isOpen={showTemplateLinkModal}
-        onClose={() => setShowTemplateLinkModal(false)}
-        templates={templates}
-        currentTemplateId={form.linkedTemplateId}
-        onSelect={handleTemplateSelect}
       />
 
       <SectionDeleteModal
