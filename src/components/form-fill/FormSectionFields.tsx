@@ -48,10 +48,14 @@ export default function FormSectionFields({
                     : 'hover:shadow-md'
                 }`}
               >
-                <label className="block text-sm text-gray-900 mb-3">
-                  {field.label || '(pergunta não definida)'}
-                  {field.required && <span className="text-red-500 ml-0.5">*</span>}
-                </label>
+                {field.label ? (
+                  <label className="block text-sm text-gray-900 mb-3">
+                    {field.label}
+                    {field.required && <span className="text-red-500 ml-0.5">*</span>}
+                  </label>
+                ) : field.required ? (
+                  <div className="text-sm text-red-500 mb-3" aria-label="Obrigatório">*</div>
+                ) : null}
                 {field.description && (
                   <p className="text-xs text-gray-400 mb-4 leading-relaxed">{field.description}</p>
                 )}
