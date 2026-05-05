@@ -11,6 +11,7 @@ export type FormFieldType =
   | 'section-header'
   | 'inventory-item'
   | 'likert-matrix'
+  | 'address'
 
 export const FORM_FIELD_TYPE_LABELS: Record<FormFieldType, string> = {
   'short-text': 'Texto Curto',
@@ -23,6 +24,7 @@ export const FORM_FIELD_TYPE_LABELS: Record<FormFieldType, string> = {
   'section-header': 'Cabeçalho de Seção',
   'inventory-item': 'Inventário',
   'likert-matrix': 'Matriz Likert',
+  'address': 'Endereço',
 }
 
 export const FORM_FIELD_TYPE_DESCRIPTIONS: Record<FormFieldType, string> = {
@@ -36,6 +38,7 @@ export const FORM_FIELD_TYPE_DESCRIPTIONS: Record<FormFieldType, string> = {
   'section-header': 'Título de seção para organizar o formulário',
   'inventory-item': 'Lista de opções com valor próprio (ex: BDI, BAI)',
   'likert-matrix': 'Tabela com escala compartilhada (ex: SRS-2, PSS-10)',
+  'address': 'Bloco de endereço com auto-preenchimento via CEP',
 }
 
 export const SCORABLE_FIELD_TYPES: FormFieldType[] = ['inventory-item', 'likert-matrix', 'scale']
@@ -92,6 +95,53 @@ export const COLLECTION_MODE_LABELS: Record<CollectionMode, string> = {
   presencial: 'Presencial',
 }
 
+export type FieldValidation = 'cpf' | 'phone-br' | 'email' | 'cep'
+
+export const FIELD_VALIDATION_LABELS: Record<FieldValidation, string> = {
+  cpf: 'CPF',
+  'phone-br': 'Telefone (BR)',
+  email: 'Email',
+  cep: 'CEP',
+}
+
+export type AddressSubfieldKey =
+  | 'zipCode'
+  | 'street'
+  | 'number'
+  | 'complement'
+  | 'neighborhood'
+  | 'city'
+  | 'state'
+
+export const ADDRESS_SUBFIELD_KEYS: AddressSubfieldKey[] = [
+  'zipCode',
+  'street',
+  'number',
+  'complement',
+  'neighborhood',
+  'city',
+  'state',
+]
+
+export const ADDRESS_SUBFIELD_LABELS: Record<AddressSubfieldKey, string> = {
+  zipCode: 'CEP',
+  street: 'Logradouro',
+  number: 'Número',
+  complement: 'Complemento',
+  neighborhood: 'Bairro',
+  city: 'Cidade',
+  state: 'UF',
+}
+
+export interface AddressSubfieldConfig {
+  enabled: boolean
+  required: boolean
+}
+
+export type AddressSubfields = Record<AddressSubfieldKey, AddressSubfieldConfig>
+
+export type AddressAnswer = Record<AddressSubfieldKey, string>
+
 export interface FormField {
   id: string
   type: FormFieldType
@@ -111,6 +161,8 @@ export interface FormField {
   likertRows: LikertRow[]
   showWhen?: ConditionalRule[]
   collectionMode?: CollectionMode
+  validation?: FieldValidation
+  addressSubfields?: AddressSubfields
 }
 
 export interface FormFieldMapping {
@@ -189,6 +241,7 @@ export interface FormFieldAnswer {
   selectedOptionIds: string[]  // para single-choice (1 item), multiple-choice (N items), inventory-item (1 item)
   scaleValue: number | null    // para scale
   likertAnswers: Record<string, number>  // para likert-matrix: rowId → valor selecionado
+  addressAnswer?: AddressAnswer            // para address
   patientAnsweredAt?: string         // ISO timestamp da última interação do paciente
   patientInteractionMs?: number      // tempo entre primeira e última interação do paciente (ms, descontando aba oculta)
   professional?: ProfessionalFieldAnswer  // resposta/observação do profissional na coleta presencial
@@ -228,6 +281,30 @@ export function createEmptyInventoryOption(value: number = 0): FormFieldOption {
     id: crypto.randomUUID(),
     label: '',
     value,
+  }
+}
+
+export function createDefaultAddressSubfields(): AddressSubfields {
+  return {
+    zipCode:      { enabled: true, required: true },
+    street:       { enabled: true, required: true },
+    number:       { enabled: true, required: false },
+    complement:   { enabled: true, required: false },
+    neighborhood: { enabled: true, required: false },
+    city:         { enabled: true, required: true },
+    state:        { enabled: true, required: true },
+  }
+}
+
+export function createEmptyAddressAnswer(): AddressAnswer {
+  return {
+    zipCode: '',
+    street: '',
+    number: '',
+    complement: '',
+    neighborhood: '',
+    city: '',
+    state: '',
   }
 }
 
@@ -282,6 +359,7 @@ export function createEmptyFormField(type: FormFieldType = 'short-text', order: 
     likertScale: type === 'likert-matrix' ? createDefaultLikertScale() : [],
     likertRows: type === 'likert-matrix' ? [createEmptyLikertRow()] : [],
     collectionMode: 'online',
+    addressSubfields: type === 'address' ? createDefaultAddressSubfields() : undefined,
   }
 }
 

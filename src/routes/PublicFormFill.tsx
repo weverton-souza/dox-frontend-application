@@ -231,8 +231,10 @@ export default function PublicFormFill() {
   }, [answers])
 
   const combinedErrors = useMemo(() => {
-    const merged = new Set(validationErrors)
-    pageErrors.forEach((id) => merged.add(id))
+    const merged = new Map(validationErrors)
+    pageErrors.forEach((id) => {
+      if (!merged.has(id)) merged.set(id, 'Este campo é obrigatório')
+    })
     return merged
   }, [validationErrors, pageErrors])
 
