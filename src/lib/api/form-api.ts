@@ -47,16 +47,11 @@ export async function getFormById(id: string): Promise<Form> {
   return normalizeForm(data)
 }
 
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-
 function buildFormPayload(form: Partial<Form>) {
   return {
     title: form.title,
     description: form.description,
     fields: form.fields ?? [],
-    linkedTemplateId: form.linkedTemplateId && UUID_REGEX.test(form.linkedTemplateId)
-      ? form.linkedTemplateId
-      : null,
     fieldMappings: form.fieldMappings ?? [],
     scoringConfig: form.scoringConfig ?? { formulas: [] },
   }

@@ -1,10 +1,8 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import type { Form, FormResponse, ReportTemplate } from '@/types'
+import type { Form, FormResponse } from '@/types'
 import { FORM_RESPONSE_STATUS_LABELS, FORM_RESPONSE_STATUS_COLORS } from '@/types'
 import { getFormById, listFormResponses, deleteFormResponse } from '@/lib/api/form-api'
-import { getAllTemplates } from '@/lib/default-templates'
-import { getReportTemplates } from '@/lib/api/template-api'
 import { useError } from '@/contexts/ErrorContext'
 import { formatDateTime } from '@/lib/utils'
 import { useConfirmDelete } from '@/lib/hooks/use-confirm-delete'
@@ -33,20 +31,13 @@ export default function FormResponseList() {
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [filtersOpen, setFiltersOpen] = useState(false)
-  const [allTemplates, setAllTemplates] = useState(() => getAllTemplates([]))
-
-  const linkedTemplate = useMemo((): ReportTemplate | null => {
-    if (!form?.linkedTemplateId) return null
-    return allTemplates.find((t) => t.id === form.linkedTemplateId) ?? null
-  }, [form, allTemplates])
 
   const loadData = useCallback(async () => {
     if (!id) return
     try {
-      const [loadedForm, loadedResponses, customTemplates] = await Promise.all([
+      const [loadedForm, loadedResponses] = await Promise.all([
         getFormById(id),
         listFormResponses(id),
-        getReportTemplates(),
       ])
       if (!loadedForm) {
         navigate('/forms')
@@ -54,7 +45,6 @@ export default function FormResponseList() {
       }
       setForm(loadedForm)
       setResponses(loadedResponses)
-      setAllTemplates(getAllTemplates(customTemplates))
     } catch (err) {
       showError(err)
     }
@@ -262,7 +252,7 @@ export default function FormResponseList() {
         onClose={() => setGenerateForResponse(null)}
         form={form}
         response={generateForResponse}
-        template={linkedTemplate}
+        template={null}
         onReportGenerated={(reportId) => {
           setGenerateForResponse(null)
           navigate(`/reports/${reportId}`)

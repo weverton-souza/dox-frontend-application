@@ -154,7 +154,6 @@ export interface Form {
   createdAt: string
   updatedAt: string
   fields: FormField[]
-  linkedTemplateId: string | null  // link para ReportTemplate.id
   fieldMappings: FormFieldMapping[]
   scoringConfig: ScoringConfig
   isDefault?: boolean
@@ -310,7 +309,6 @@ export function createEmptyForm(): Form {
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     fields: [initialSection],
-    linkedTemplateId: null,
     fieldMappings: [],
     scoringConfig: createEmptyScoringConfig(),
   }
