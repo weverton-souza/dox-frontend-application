@@ -36,6 +36,7 @@ import { useCreateReport } from '@/lib/hooks/use-create-report'
 import { useError } from '@/contexts/ErrorContext'
 import NewReportModal from '@/components/NewReportModal'
 import MultiRespondentSendModal from '@/components/form-builder/MultiRespondentSendModal'
+import FormLinkHistoryModal from '@/components/form-builder/FormLinkHistoryModal'
 import Input from '@/components/ui/Input'
 import DatePicker from '@/components/ui/DatePicker'
 import TextArea from '@/components/ui/TextArea'
@@ -318,6 +319,7 @@ export default function CustomerProfile() {
   )
 
   const [resendingLinkId, setResendingLinkId] = useState<string | null>(null)
+  const [historyTarget, setHistoryTarget] = useState<{ linkId: string; respondentName: string | null } | null>(null)
 
   const handleResendInvite = useCallback(
     async (linkId: string) => {
@@ -556,6 +558,17 @@ export default function CustomerProfile() {
                             </p>
                           </div>
                           <FormLinkStatusPill status={r.status} />
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setHistoryTarget({ linkId: r.linkId, respondentName: r.respondentName })
+                            }}
+                            className="text-xs text-gray-400 hover:text-brand-600 px-2 py-1 rounded transition-colors"
+                            title="Ver histórico de emails"
+                          >
+                            Histórico
+                          </button>
                           {r.status === 'pending' && r.recipientEmail && r.manualResendCount < MAX_MANUAL_RESENDS && (
                             <button
                               type="button"
@@ -933,6 +946,13 @@ export default function CustomerProfile() {
           customer={customer}
         />
       )}
+
+      <FormLinkHistoryModal
+        isOpen={historyTarget !== null}
+        onClose={() => setHistoryTarget(null)}
+        linkId={historyTarget?.linkId ?? null}
+        respondentName={historyTarget?.respondentName ?? null}
+      />
     </div>
   )
 }

@@ -1,5 +1,5 @@
 import { api } from './api-client'
-import type { FormLink, MultiSendRecipient } from '@/types'
+import type { FormLink, FormLinkEmailHistoryItem, MultiSendRecipient } from '@/types'
 
 export async function createFormLink(
   formId: string,
@@ -38,5 +38,10 @@ export async function revokeFormLink(id: string): Promise<void> {
 
 export async function resendFormLinkInvite(id: string): Promise<FormLink> {
   const { data } = await api.post<FormLink>(`/form-links/${id}/resend-invite`)
+  return data
+}
+
+export async function getFormLinkEmailHistory(id: string): Promise<FormLinkEmailHistoryItem[]> {
+  const { data } = await api.get<FormLinkEmailHistoryItem[]>(`/form-links/${id}/email-history`)
   return data
 }
