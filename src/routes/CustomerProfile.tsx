@@ -552,10 +552,20 @@ export default function CustomerProfile() {
                             <p className="text-xs text-gray-500">
                               {formatAggregatedLabel(r)} · {isAnswered && r.submittedAt
                                 ? `respondido em ${formatDateTime(r.submittedAt)}`
+                                : r.status === 'pending' && typeof r.progressPercent === 'number'
+                                ? formatProgress(r)
                                 : r.status === 'pending' && r.firstViewedAt
                                 ? `visto em ${formatDateTime(r.firstViewedAt)}`
                                 : `expira em ${formatDateTime(r.expiresAt)}`}
                             </p>
+                            {r.status === 'pending' && typeof r.progressPercent === 'number' && (
+                              <div className="mt-1.5 h-1 w-full max-w-xs bg-gray-100 rounded overflow-hidden">
+                                <div
+                                  className="h-full bg-brand-500 transition-all"
+                                  style={{ width: `${r.progressPercent}%` }}
+                                />
+                              </div>
+                            )}
                           </div>
                           <FormLinkStatusPill status={r.status} />
                           <button
@@ -958,6 +968,30 @@ export default function CustomerProfile() {
 }
 
 // ========== Forms helpers ==========
+
+function formatProgress(r: AggregatedRespondent): string {
+  const pct = r.progressPercent ?? 0
+  const parts: string[] = [`${pct}% respondido`]
+  if (typeof r.currentPageIndex === 'number' && typeof r.totalPages === 'number' && r.totalPages > 1) {
+    parts.push(`página ${r.currentPageIndex + 1} de ${r.totalPages}`)
+  }
+  if (r.lastDraftSavedAt) {
+    parts.push(formatRelativeTime(r.lastDraftSavedAt))
+  }
+  return parts.join(' · ')
+}
+
+function formatRelativeTime(iso: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime()
+  const diffMin = Math.floor(diffMs / 60000)
+  if (diffMin < 1) return 'agora há pouco'
+  if (diffMin < 60) return `há ${diffMin} min`
+  const diffHr = Math.floor(diffMin / 60)
+  if (diffHr < 24) return `há ${diffHr}h`
+  const diffDays = Math.floor(diffHr / 24)
+  if (diffDays === 1) return 'ontem'
+  return `há ${diffDays} dias`
+}
 
 function formatAggregatedLabel(r: AggregatedRespondent): string {
   if (r.respondentType === 'customer') return 'Cliente'
