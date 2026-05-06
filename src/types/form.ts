@@ -501,6 +501,10 @@ export interface AggregatedRespondent {
   submittedAt: string | null
   firstViewedAt: string | null
   manualResendCount: number
+  progressPercent: number | null
+  currentPageIndex: number | null
+  totalPages: number | null
+  lastDraftSavedAt: string | null
   expiresAt: string
 }
 
