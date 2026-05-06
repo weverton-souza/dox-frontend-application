@@ -28,7 +28,8 @@ import {
   deleteCustomerEvent as apiDeleteCustomerEvent,
 } from '@/lib/api/customer-api'
 import { getReportsByCustomer } from '@/lib/api/report-api'
-import { revokeFormLink } from '@/lib/api/form-link-api'
+import { revokeFormLink, resendFormLinkInvite } from '@/lib/api/form-link-api'
+import { MAX_MANUAL_RESENDS } from '@/types'
 import { getAggregatedForms } from '@/lib/api/customer-forms-api'
 import { formatDateTime, calculateAge, getNowIso } from '@/lib/utils'
 import { useCreateReport } from '@/lib/hooks/use-create-report'
@@ -316,6 +317,25 @@ export default function CustomerProfile() {
     [loadFormGroups, showError]
   )
 
+  const [resendingLinkId, setResendingLinkId] = useState<string | null>(null)
+
+  const handleResendInvite = useCallback(
+    async (linkId: string) => {
+      const ok = window.confirm('Reenviar email de convite para este respondente?')
+      if (!ok) return
+      setResendingLinkId(linkId)
+      try {
+        await resendFormLinkInvite(linkId)
+        await loadFormGroups()
+      } catch (err) {
+        showError(err)
+      } finally {
+        setResendingLinkId(null)
+      }
+    },
+    [loadFormGroups, showError]
+  )
+
   const handleSendModalClose = useCallback(() => {
     setShowSendModal(false)
     if (activeSection === 'forms') loadFormGroups()
@@ -536,6 +556,20 @@ export default function CustomerProfile() {
                             </p>
                           </div>
                           <FormLinkStatusPill status={r.status} />
+                          {r.status === 'pending' && r.recipientEmail && r.manualResendCount < MAX_MANUAL_RESENDS && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleResendInvite(r.linkId)
+                              }}
+                              disabled={resendingLinkId === r.linkId}
+                              className="text-xs text-gray-500 hover:text-brand-600 px-2 py-1 rounded transition-colors disabled:opacity-50"
+                              title={`Reenviar email · ${MAX_MANUAL_RESENDS - r.manualResendCount} restante${MAX_MANUAL_RESENDS - r.manualResendCount === 1 ? '' : 's'}`}
+                            >
+                              {resendingLinkId === r.linkId ? 'Reenviando…' : 'Reenviar'}
+                            </button>
+                          )}
                           {r.status === 'pending' && (
                             <button
                               type="button"

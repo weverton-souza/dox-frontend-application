@@ -222,6 +222,26 @@ export default function MultiRespondentSendModal({
     [results],
   )
 
+  const resolveEmailForLink = useCallback(
+    (link: FormLink): string | null => {
+      if (!sendEmail) return null
+      const optionKey = link.customerContactId ?? customerKey
+      const option = recipientOptions.find((o) => o.key === optionKey)
+      return option?.email ?? null
+    },
+    [sendEmail, recipientOptions],
+  )
+
+  const sentByEmailCount = useMemo(() => {
+    if (!sendEmail) return 0
+    return results.reduce(
+      (acc, r) => acc + r.links.filter((link) => resolveEmailForLink(link) !== null).length,
+      0,
+    )
+  }, [sendEmail, results, resolveEmailForLink])
+
+  const linkOnlyCount = totalLinks - sentByEmailCount
+
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="Enviar formulários" size="xl">
       <div className="p-5 space-y-4">
@@ -316,7 +336,19 @@ export default function MultiRespondentSendModal({
               <p className="text-sm font-medium text-gray-900">
                 {totalLinks} {totalLinks === 1 ? 'link gerado' : 'links gerados'} em {results.length} formulário{results.length === 1 ? '' : 's'}
               </p>
-              <p className="text-xs text-gray-500 mt-1">Compartilhe com cada respondente</p>
+              {sendEmail ? (
+                <p className="text-xs text-gray-500 mt-1">
+                  {sentByEmailCount > 0 && (
+                    <span className="text-emerald-700">✓ {sentByEmailCount} enviado{sentByEmailCount === 1 ? '' : 's'} por email</span>
+                  )}
+                  {sentByEmailCount > 0 && linkOnlyCount > 0 && <span className="text-gray-400"> · </span>}
+                  {linkOnlyCount > 0 && (
+                    <span className="text-amber-700">📋 {linkOnlyCount} só com link (sem email)</span>
+                  )}
+                </p>
+              ) : (
+                <p className="text-xs text-gray-500 mt-1">Compartilhe com cada respondente</p>
+              )}
             </div>
 
             {partialError && (
@@ -341,6 +373,7 @@ export default function MultiRespondentSendModal({
                         : link.respondent.relationType
                         ? CUSTOMER_CONTACT_RELATION_LABELS[link.respondent.relationType as keyof typeof CUSTOMER_CONTACT_RELATION_LABELS] ?? 'Contato'
                         : 'Contato'
+                      const sentToEmail = resolveEmailForLink(link)
                       return (
                         <li key={link.id} className="p-3">
                           <div className="flex items-center gap-2 mb-1.5">
@@ -349,6 +382,11 @@ export default function MultiRespondentSendModal({
                             </span>
                             <span className="text-xs text-gray-400 shrink-0">{respondentLabel}</span>
                           </div>
+                          {sendEmail && (
+                            <p className={`text-xs mb-1.5 ${sentToEmail ? 'text-emerald-700' : 'text-amber-700'}`}>
+                              {sentToEmail ? `✓ Enviado para ${sentToEmail}` : '⚠ Sem email — copie o link abaixo'}
+                            </p>
+                          )}
                           <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-2.5 py-1.5">
                             <input
                               type="text"

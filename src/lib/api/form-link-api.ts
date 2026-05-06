@@ -35,3 +35,8 @@ export async function getFormLinksByCustomer(customerId: string): Promise<FormLi
 export async function revokeFormLink(id: string): Promise<void> {
   await api.delete(`/form-links/${id}`)
 }
+
+export async function resendFormLinkInvite(id: string): Promise<FormLink> {
+  const { data } = await api.post<FormLink>(`/form-links/${id}/resend-invite`)
+  return data
+}

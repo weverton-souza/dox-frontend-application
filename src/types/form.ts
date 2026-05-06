@@ -442,9 +442,12 @@ export interface FormLink {
   status: FormLinkStatus
   expiresAt: string
   firstViewedAt?: string | null
+  manualResendCount?: number
   createdAt: string
   updatedAt: string
 }
+
+export const MAX_MANUAL_RESENDS = 3
 
 export interface MultiSendRecipient {
   respondentType: RespondentType
@@ -469,11 +472,13 @@ export interface AggregatedRespondent {
   responseId: string | null
   respondentType: RespondentType
   respondentName: string | null
+  recipientEmail: string | null
   customerContactId: string | null
   relationType: string | null
   status: FormLinkStatus
   submittedAt: string | null
   firstViewedAt: string | null
+  manualResendCount: number
   expiresAt: string
 }
 
