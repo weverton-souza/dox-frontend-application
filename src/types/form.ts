@@ -441,6 +441,7 @@ export interface FormLink {
   respondent: RespondentInfo
   status: FormLinkStatus
   expiresAt: string
+  firstViewedAt?: string | null
   createdAt: string
   updatedAt: string
 }
@@ -472,6 +473,7 @@ export interface AggregatedRespondent {
   relationType: string | null
   status: FormLinkStatus
   submittedAt: string | null
+  firstViewedAt: string | null
   expiresAt: string
 }
 
