@@ -449,6 +449,28 @@ export interface FormLink {
 
 export const MAX_MANUAL_RESENDS = 3
 
+export type EmailLogStatus =
+  | 'PENDING'
+  | 'SENT'
+  | 'FAILED'
+  | 'DELIVERED'
+  | 'BOUNCED'
+  | 'COMPLAINED'
+  | 'OPENED'
+  | 'CLICKED'
+  | 'SUPPRESSED'
+
+export interface FormLinkEmailHistoryItem {
+  id: string
+  templateId: string
+  recipientEmail: string
+  subject: string
+  status: EmailLogStatus
+  errorMessage: string | null
+  sentAt: string
+  updatedAt: string
+}
+
 export interface MultiSendRecipient {
   respondentType: RespondentType
   customerContactId?: string | null
