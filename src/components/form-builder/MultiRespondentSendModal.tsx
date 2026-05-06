@@ -26,6 +26,7 @@ interface RecipientOption {
   contactId?: string
   displayName: string
   relationLabel?: string
+  email?: string | null
 }
 
 interface Envelope {
@@ -76,6 +77,7 @@ export default function MultiRespondentSendModal({
   const [results, setResults] = useState<EnvelopeResult[]>([])
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [partialError, setPartialError] = useState<string | null>(null)
+  const [sendEmail, setSendEmail] = useState<boolean>(false)
 
   const customerKey = 'customer'
 
@@ -88,11 +90,13 @@ export default function MultiRespondentSendModal({
         if (cancelled) return
         setForms(formList)
         const eligible = contactList.filter((c) => c.canReceiveForms)
+        const customerEmail = customer.data.email?.trim() || null
         const options: RecipientOption[] = [
           {
             key: customerKey,
             type: 'customer',
             displayName: customer.data.name || 'Cliente',
+            email: customerEmail,
           },
           ...eligible.map((c) => ({
             key: c.id,
@@ -100,9 +104,11 @@ export default function MultiRespondentSendModal({
             contactId: c.id,
             displayName: c.name,
             relationLabel: formatRelation(c),
+            email: c.email?.trim() || null,
           })),
         ]
         setRecipientOptions(options)
+        setSendEmail(options.some((o) => !!o.email))
 
         const firstFormId =
           initialFormId && formList.some((f) => f.id === initialFormId)
@@ -166,7 +172,7 @@ export default function MultiRespondentSendModal({
       })
       const formTitle = forms.find((f) => f.id === env.formId)?.title || 'Formulário'
       try {
-        const links = await multiSendFormLinks(env.formId, customer.id, recipients, expiresInHours)
+        const links = await multiSendFormLinks(env.formId, customer.id, recipients, expiresInHours, sendEmail)
         collected.push({ formId: env.formId, formTitle, links })
       } catch (err) {
         showError(err)
@@ -184,7 +190,7 @@ export default function MultiRespondentSendModal({
     }
     setResults(collected)
     setStep('success')
-  }, [canSend, envelopes, forms, customer.id, expiresInHours, showError])
+  }, [canSend, envelopes, forms, customer.id, expiresInHours, sendEmail, showError])
 
   const handleCopy = useCallback(async (link: FormLink) => {
     const url = `${window.location.origin}/public/forms/${link.token}`
@@ -236,6 +242,7 @@ export default function MultiRespondentSendModal({
                       forms={forms}
                       recipients={recipientOptions}
                       canRemove={envelopes.length > 1}
+                      sendEmail={sendEmail}
                       onChangeForm={(formId) => updateEnvelope(env.id, { formId })}
                       onToggleRecipient={(key) => toggleRecipient(env.id, key)}
                       onRemove={() => handleRemoveEnvelope(env.id)}
@@ -259,6 +266,21 @@ export default function MultiRespondentSendModal({
                     options={EXPIRES_OPTIONS}
                   />
                 </div>
+
+                <label className="flex items-start gap-3 cursor-pointer p-3 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={sendEmail}
+                    onChange={(e) => setSendEmail(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900">Enviar por email</p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Respondentes com email cadastrado recebem o link automaticamente. Sem email — só o link copiável.
+                    </p>
+                  </div>
+                </label>
 
                 <div className="flex items-center justify-between gap-2 pt-3 border-t border-gray-100">
                   <span className="text-xs text-gray-500">
@@ -370,6 +392,7 @@ interface EnvelopeCardProps {
   forms: Form[]
   recipients: RecipientOption[]
   canRemove: boolean
+  sendEmail: boolean
   onChangeForm: (formId: string) => void
   onToggleRecipient: (key: string) => void
   onRemove: () => void
@@ -381,6 +404,7 @@ function EnvelopeCard({
   forms,
   recipients,
   canRemove,
+  sendEmail,
   onChangeForm,
   onToggleRecipient,
   onRemove,
@@ -446,6 +470,9 @@ function EnvelopeCard({
                     <p className="text-sm font-medium text-gray-900 truncate">{row.displayName || '(sem nome)'}</p>
                     <p className="text-xs text-gray-500 truncate">
                       {row.type === 'customer' ? 'Cliente' : row.relationLabel || 'Contato'}
+                      {sendEmail && (row.email
+                        ? <span className="ml-1.5 text-emerald-600">· ✉ {row.email}</span>
+                        : <span className="ml-1.5 text-amber-600">· sem email</span>)}
                     </p>
                   </div>
                   <span

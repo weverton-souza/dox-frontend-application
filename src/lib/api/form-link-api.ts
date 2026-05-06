@@ -15,12 +15,14 @@ export async function multiSendFormLinks(
   customerId: string,
   recipients: MultiSendRecipient[],
   expiresInHours: number = 168,
+  sendEmail: boolean = false,
 ): Promise<FormLink[]> {
   const { data } = await api.post<FormLink[]>('/form-links/multi-send', {
     formId,
     customerId,
     expiresInHours,
     recipients,
+    sendEmail,
   })
   return data
 }

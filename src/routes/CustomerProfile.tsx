@@ -530,6 +530,8 @@ export default function CustomerProfile() {
                             <p className="text-xs text-gray-500">
                               {formatAggregatedLabel(r)} · {isAnswered && r.submittedAt
                                 ? `respondido em ${formatDateTime(r.submittedAt)}`
+                                : r.status === 'pending' && r.firstViewedAt
+                                ? `visto em ${formatDateTime(r.firstViewedAt)}`
                                 : `expira em ${formatDateTime(r.expiresAt)}`}
                             </p>
                           </div>
