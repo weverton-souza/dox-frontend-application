@@ -138,18 +138,18 @@ export default function CustomerList() {
   return (
     <>
       <main className="page-container">
-      <div className="flex items-center justify-between bg-white rounded-full px-5 py-1.5 shadow-card">
-        <h2 className="text-xl font-bold text-gray-700">{customersLabel}</h2>
+      <div className="flex items-center justify-between bg-white rounded-2xl px-6 py-3 shadow-card border border-gray-100">
+        <h2 className="text-xl font-semibold tracking-tight text-gray-900">{customersLabel}</h2>
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => setFiltersOpen(!filtersOpen)}
-            className={`h-11 w-11 flex items-center justify-center rounded-full transition-colors shadow-sm shrink-0 ${
-              filtersOpen ? 'bg-gray-600 text-white' : 'bg-gray-500 text-white hover:bg-gray-600'
+            className={`h-10 w-10 flex items-center justify-center rounded-xl transition-colors shrink-0 ${
+              filtersOpen ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
             title="Filtros"
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="11" cy="11" r="8" />
               <line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
@@ -157,13 +157,13 @@ export default function CustomerList() {
           <button
             type="button"
             onClick={handleOpenNew}
-            className="h-11 w-11 flex items-center justify-center rounded-full bg-brand-700 text-white hover:bg-brand-800 transition-colors shadow-sm shrink-0"
+            className="h-10 w-10 flex items-center justify-center rounded-xl bg-brand-600 text-white hover:bg-brand-700 transition-colors shadow-sm shrink-0"
             title={`Novo(a) ${customerLabel}`}
           >
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="10" y1="4" x2="10" y2="16" />
-            <line x1="4" y1="10" x2="16" y2="10" />
-          </svg>
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="10" y1="4" x2="10" y2="16" />
+              <line x1="4" y1="10" x2="16" y2="10" />
+            </svg>
           </button>
         </div>
       </div>

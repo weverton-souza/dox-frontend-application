@@ -46,13 +46,12 @@ import Spinner from '@/components/ui/Spinner'
 import StatusBadge from '@/components/ui/StatusBadge'
 import ListCard, { ListCardPill } from '@/components/ui/ListCard'
 import CustomerContactsTab from '@/components/customer/CustomerContactsTab'
-import FamilyAndGuardiansSection from '@/components/customer/FamilyAndGuardiansSection'
 import { TrashIcon } from '@/components/icons'
 import { getAvatarColor, getInitials } from '@/lib/avatar-utils'
 
 // ========== Types ==========
 
-type ProfileSection = 'personal' | 'contact' | 'clinical' | 'contacts' | 'reports' | 'forms' | 'notes' | 'timeline'
+type ProfileSection = 'personal' | 'clinical' | 'contacts' | 'reports' | 'forms' | 'notes' | 'timeline'
 
 interface TabItem {
   key: ProfileSection
@@ -64,13 +63,12 @@ interface TabItem {
 
 const TABS: TabItem[] = [
   { key: 'personal', label: 'Dados Pessoais', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> },
-  { key: 'contact', label: 'Contato', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg> },
   { key: 'clinical', label: 'Dados Clínicos', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg> },
-  { key: 'contacts', label: 'Contatos', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
+  { key: 'contacts', label: 'Pessoas Relacionadas', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
   { key: 'reports', label: 'Relatórios', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> },
   { key: 'forms', label: 'Formulários', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 9h8"/><path d="M8 13h8"/><path d="M8 17h5"/></svg> },
   { key: 'notes', label: 'Notas', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> },
-  { key: 'timeline', label: 'Histórico', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> },
+  { key: 'timeline', label: 'Prontuário', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> },
 ]
 
 const EVENT_TYPE_OPTIONS: { value: CustomerEventType; label: string }[] = [
@@ -104,7 +102,7 @@ function groupEventsByMonth(events: CustomerEvent[]): { label: string; events: C
 // ========== Component ==========
 
 const VALID_SECTIONS: readonly ProfileSection[] = [
-  'personal', 'contact', 'clinical', 'contacts', 'reports', 'forms', 'notes', 'timeline',
+  'personal', 'clinical', 'contacts', 'reports', 'forms', 'notes', 'timeline',
 ]
 
 function parseSection(raw: string | null): ProfileSection {
@@ -382,8 +380,8 @@ export default function CustomerProfile() {
 
   function renderPersonalSection() {
     return (
-      <div className="space-y-4">
-        <SectionCard title="Dados Pessoais" onSave={handleSaveSection} saving={saving}>
+      <div className="space-y-6">
+        <SectionCard title="Identificação" onSave={handleSaveSection} saving={saving}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input label="Nome completo" value={editData!.name} onChange={(e) => updateField('name', e.target.value)} />
             <Input label="CPF" value={editData!.cpf} onChange={(e) => updateField('cpf', e.target.value)} mask="cpf" />
@@ -393,29 +391,20 @@ export default function CustomerProfile() {
             <Input label="Profissão" value={editData!.profession} onChange={(e) => updateField('profession', e.target.value)} />
           </div>
         </SectionCard>
-        {id && (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-            <FamilyAndGuardiansSection customerId={id} />
-          </div>
-        )}
-      </div>
-    )
-  }
 
-  function renderContactSection() {
-    return (
-      <SectionCard title="Contato" onSave={handleSaveSection} saving={saving}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Input label="Telefone" value={editData!.phone ?? ''} onChange={(e) => updateField('phone', e.target.value)} mask="phone" />
-          <Input label="E-mail" type="email" value={editData!.email ?? ''} onChange={(e) => updateField('email', e.target.value)} />
-          <div className="sm:col-span-2">
-            <Input label="Rua / Endereço" value={editData!.addressStreet ?? ''} onChange={(e) => updateField('addressStreet', e.target.value)} />
+        <SectionCard title="Contato" onSave={handleSaveSection} saving={saving}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input label="Telefone" value={editData!.phone ?? ''} onChange={(e) => updateField('phone', e.target.value)} mask="phone" />
+            <Input label="E-mail" type="email" value={editData!.email ?? ''} onChange={(e) => updateField('email', e.target.value)} />
+            <div className="sm:col-span-2">
+              <Input label="Rua / Endereço" value={editData!.addressStreet ?? ''} onChange={(e) => updateField('addressStreet', e.target.value)} />
+            </div>
+            <Input label="Cidade" value={editData!.addressCity ?? ''} onChange={(e) => updateField('addressCity', e.target.value)} />
+            <Input label="Estado" value={editData!.addressState ?? ''} onChange={(e) => updateField('addressState', e.target.value)} />
+            <Input label="CEP" value={editData!.addressZipCode ?? ''} onChange={(e) => updateField('addressZipCode', e.target.value)} mask="cep" />
           </div>
-          <Input label="Cidade" value={editData!.addressCity ?? ''} onChange={(e) => updateField('addressCity', e.target.value)} />
-          <Input label="Estado" value={editData!.addressState ?? ''} onChange={(e) => updateField('addressState', e.target.value)} />
-          <Input label="CEP" value={editData!.addressZipCode ?? ''} onChange={(e) => updateField('addressZipCode', e.target.value)} mask="cep" />
-        </div>
-      </SectionCard>
+        </SectionCard>
+      </div>
     )
   }
 
@@ -813,7 +802,6 @@ export default function CustomerProfile() {
 
   const sectionRenderers: Record<ProfileSection, () => React.ReactNode> = {
     personal: renderPersonalSection,
-    contact: renderContactSection,
     clinical: renderClinicalSection,
     contacts: renderContactsSection,
     reports: renderReportsSection,
@@ -824,12 +812,15 @@ export default function CustomerProfile() {
 
   // ========== Main Render ==========
 
+  const lastSession = findLastSession(events)
+  const ageShort = formatAgeShort(customer.data.age)
+
   return (
     <div className="flex-1 flex flex-col">
       {/* Profile hero */}
-      <div className="bg-gradient-to-b from-gray-50 to-white border-b border-gray-200">
+      <div className="bg-gradient-to-b from-gray-50/60 to-white border-b border-gray-200">
         {/* Breadcrumb */}
-        <div className="max-w-page mx-auto px-page pt-4 pb-2">
+        <div className="max-w-page mx-auto px-page pt-5 pb-2">
           <div className="flex items-center gap-2 text-sm">
             <button
               onClick={() => navigate('/customers')}
@@ -847,60 +838,62 @@ export default function CustomerProfile() {
         </div>
 
         {/* Profile card */}
-        <div className="max-w-page mx-auto px-page py-6">
-          <div className="flex flex-col sm:flex-row gap-5 sm:gap-8">
+        <div className="max-w-page mx-auto px-page py-8 sm:py-10">
+          <div className="flex flex-col sm:flex-row gap-6 sm:gap-8">
             {/* Avatar */}
             <div className="shrink-0">
-              <div className={`w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-gradient-to-br ${avatarColor} flex items-center justify-center text-2xl sm:text-3xl font-bold text-white shadow-lg shadow-gray-300/30`}>
+              <div className={`w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-gradient-to-br ${avatarColor} flex items-center justify-center text-3xl sm:text-4xl font-bold text-white shadow-xl shadow-gray-300/40 ring-1 ring-black/5`}>
                 {initials}
               </div>
             </div>
 
             {/* Quick info */}
             <div className="flex-1 min-w-0">
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">
+              <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-gray-900 truncate" title={`Cadastrado em ${formatDateTime(customer.createdAt)}`}>
                 {customer.data.name || `${customerLabel} sem nome`}
               </h1>
 
-              <div className="flex items-center gap-3 mt-2 flex-wrap">
+              {/* Pills row */}
+              <div className="flex items-center gap-2 mt-3 flex-wrap">
+                {ageShort && (
+                  <HeroPill variant="brand" icon={
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  }>
+                    {ageShort}
+                  </HeroPill>
+                )}
                 {customer.data.profession && (
-                  <span className="inline-flex items-center gap-1.5 text-xs text-gray-600 bg-white border border-gray-200 px-2.5 py-1 rounded-lg">
+                  <HeroPill variant="neutral">
                     {customer.data.profession}
-                  </span>
+                  </HeroPill>
+                )}
+                {lastSession && (
+                  <HeroPill variant="neutral" icon={
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/><polyline points="12 7 12 12 15 14"/></svg>
+                  }>
+                    Última sessão · {formatRelativeDate(lastSession)}
+                  </HeroPill>
                 )}
               </div>
 
               {/* Stats row */}
-              <div className="flex items-center gap-4 mt-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-brand-50 flex items-center justify-center">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-brand-600" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                      <polyline points="14 2 14 8 20 8" />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="text-lg font-bold text-gray-900">{reports.length}</p>
-                    <p className="text-xs text-gray-400 -mt-0.5">{reports.length === 1 ? 'relatório' : 'relatórios'}</p>
-                  </div>
-                </div>
-                <div className="w-px h-8 bg-gray-200" />
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-amber-600" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="12" r="10"/>
-                      <polyline points="12 6 12 12 16 14"/>
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="text-lg font-bold text-gray-900">{notes.length + events.length}</p>
-                    <p className="text-xs text-gray-400 -mt-0.5">{notes.length + events.length === 1 ? 'registro' : 'registros'}</p>
-                  </div>
-                </div>
-                <div className="w-px h-8 bg-gray-200" />
-                <div className="text-xs text-gray-400">
-                  Cadastrado em {formatDateTime(customer.createdAt)}
-                </div>
+              <div className="flex items-center gap-3 mt-5 flex-wrap">
+                <StatChip
+                  count={reports.length}
+                  label={reports.length === 1 ? 'relatório' : 'relatórios'}
+                  tint="brand"
+                  icon={
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  }
+                />
+                <StatChip
+                  count={notes.length + events.length}
+                  label={notes.length + events.length === 1 ? 'registro' : 'registros'}
+                  tint="amber"
+                  icon={
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  }
+                />
               </div>
             </div>
           </div>
@@ -908,20 +901,22 @@ export default function CustomerProfile() {
       </div>
 
       {/* Tabs */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+      <div className="bg-white/95 backdrop-blur border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-page mx-auto px-page">
-          <nav className="flex gap-1 -mb-px">
+          <nav className="flex gap-2 -mb-px overflow-x-auto">
             {TABS.map((tab) => {
               const isActive = activeSection === tab.key
               return (
                 <button
                   key={tab.key}
                   onClick={() => handleSectionChange(tab.key)}
+                  title={tab.label}
                   className={`
-                    flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all whitespace-nowrap
+                    flex items-center gap-2 px-4 sm:px-5 py-3.5 text-sm font-medium border-b-2 whitespace-nowrap rounded-t-md
+                    transition-colors duration-200
                     ${isActive
                       ? 'border-brand-600 text-brand-700'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      : 'border-transparent text-gray-500 hover:text-gray-900 hover:bg-gray-50/80'
                     }
                   `.trim()}
                 >
@@ -965,6 +960,88 @@ export default function CustomerProfile() {
         linkId={historyTarget?.linkId ?? null}
         respondentName={historyTarget?.respondentName ?? null}
       />
+    </div>
+  )
+}
+
+// ========== Hero helpers ==========
+
+const SESSION_EVENT_TYPES: ReadonlyArray<CustomerEventType> = ['consulta', 'retorno', 'avaliacao']
+
+function findLastSession(events: CustomerEvent[]): string | null {
+  const now = Date.now()
+  const past = events
+    .filter((e) => SESSION_EVENT_TYPES.includes(e.type) && new Date(e.date).getTime() <= now)
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  return past[0]?.date ?? null
+}
+
+function formatAgeShort(age: string): string {
+  const trimmed = age.trim()
+  if (!trimmed) return ''
+  const yearsMatch = trimmed.match(/(\d+)\s*ano/i)
+  if (yearsMatch) return `${yearsMatch[1]} anos`
+  return trimmed
+}
+
+function formatRelativeDate(iso: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime()
+  const diffDays = Math.floor(diffMs / (24 * 60 * 60 * 1000))
+  if (diffDays < 1) return 'hoje'
+  if (diffDays === 1) return 'ontem'
+  if (diffDays < 7) return `há ${diffDays} dias`
+  if (diffDays < 30) {
+    const weeks = Math.floor(diffDays / 7)
+    return weeks === 1 ? 'há 1 semana' : `há ${weeks} semanas`
+  }
+  if (diffDays < 365) {
+    const months = Math.floor(diffDays / 30)
+    return months === 1 ? 'há 1 mês' : `há ${months} meses`
+  }
+  return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
+function HeroPill({
+  children,
+  icon,
+  variant,
+}: {
+  children: React.ReactNode
+  icon?: React.ReactNode
+  variant: 'brand' | 'neutral'
+}) {
+  const styles = variant === 'brand'
+    ? 'bg-brand-50 text-brand-700 border-brand-100'
+    : 'bg-white text-gray-700 border-gray-200'
+  return (
+    <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border ${styles}`}>
+      {icon && <span className="opacity-80">{icon}</span>}
+      {children}
+    </span>
+  )
+}
+
+function StatChip({
+  count,
+  label,
+  icon,
+  tint,
+}: {
+  count: number
+  label: string
+  icon: React.ReactNode
+  tint: 'brand' | 'amber'
+}) {
+  const iconBg = tint === 'brand' ? 'bg-brand-50 text-brand-600' : 'bg-amber-50 text-amber-600'
+  return (
+    <div className="inline-flex items-center gap-2.5 rounded-2xl border border-gray-200 bg-white px-3 py-2 shadow-sm">
+      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${iconBg}`}>
+        {icon}
+      </div>
+      <div className="leading-tight">
+        <p className="text-base font-semibold text-gray-900">{count}</p>
+        <p className="text-xs text-gray-500 -mt-0.5">{label}</p>
+      </div>
     </div>
   )
 }
@@ -1029,14 +1106,14 @@ function SectionCard({
   children: React.ReactNode
 }) {
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-      <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-gray-100 bg-gray-50/50">
-        <h2 className="text-base font-semibold text-gray-900">{title}</h2>
-        <Button size="sm" onClick={onSave} disabled={saving}>
-          {saving ? 'Salvando...' : 'Salvar'}
+    <div className="bg-white rounded-2xl border border-gray-200 shadow-card overflow-hidden">
+      <div className="flex items-center justify-between px-6 sm:px-8 py-5 border-b border-gray-100">
+        <h2 className="text-base font-semibold tracking-tight text-gray-900">{title}</h2>
+        <Button size="sm" variant="secondary" onClick={onSave} disabled={saving}>
+          {saving ? 'Salvando…' : 'Salvar'}
         </Button>
       </div>
-      <div className="px-5 sm:px-6 py-5">
+      <div className="px-6 sm:px-8 py-6">
         {children}
       </div>
     </div>
