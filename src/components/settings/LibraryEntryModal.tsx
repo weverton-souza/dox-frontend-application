@@ -131,17 +131,6 @@ export default function LibraryEntryModal({
           />
         </div>
 
-        <div>
-          <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5">
-            Conteúdo
-          </label>
-          <PlateEditorComponent
-            content={form.content}
-            onChange={(value) => update('content', value)}
-            placeholder="Digite o conteúdo que será inserido nos relatórios…"
-          />
-        </div>
-
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Input
             label="Autores"
@@ -170,6 +159,17 @@ export default function LibraryEntryModal({
           placeholder="Ex: infantil, atenção, neuropsicologia…"
           suggestions={knownTags}
         />
+
+        <div>
+          <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5">
+            Conteúdo
+          </label>
+          <PlateEditorComponent
+            content={form.content}
+            onChange={(value) => update('content', value)}
+            placeholder="Digite o conteúdo que será inserido nos relatórios…"
+          />
+        </div>
       </div>
 
       <div className="flex justify-end gap-2 px-5 py-4 border-t border-gray-100">
