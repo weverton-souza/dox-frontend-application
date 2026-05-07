@@ -22,8 +22,9 @@ const TemplateEditor = lazy(() => import('@/routes/TemplateEditor'))
 const Settings = lazy(() => import('@/routes/Settings'))
 const SettingsAccount = lazy(() => import('@/routes/SettingsAccount'))
 const SettingsBilling = lazy(() => import('@/routes/SettingsBilling'))
-const SettingsGeneral = lazy(() => import('@/routes/SettingsGeneral'))
-const SettingsLibrary = lazy(() => import('@/routes/SettingsLibrary'))
+const Personalization = lazy(() => import('@/routes/Personalization'))
+const PersonalizationAppearance = lazy(() => import('@/routes/PersonalizationAppearance'))
+const PersonalizationLibrary = lazy(() => import('@/routes/PersonalizationLibrary'))
 
 function NotFound() {
   return (
@@ -70,9 +71,15 @@ export default function App() {
             <Route path="/forms/:id/responses" element={<FormResponseList />} />
             <Route path="/calendar" element={<Calendar />} />
             <Route path="/guides" element={<FormulaGuide />} />
+            <Route path="/personalization" element={<Personalization />}>
+              <Route index element={<Navigate to="appearance" replace />} />
+              <Route path="appearance" element={<PersonalizationAppearance />} />
+              <Route path="library" element={<PersonalizationLibrary />} />
+            </Route>
             <Route path="/settings" element={<Settings />}>
               <Route index element={<Navigate to="account" replace />} />
-              <Route path="general" element={<SettingsGeneral />} />
+              <Route path="general" element={<Navigate to="/personalization/appearance" replace />} />
+              <Route path="library" element={<Navigate to="/personalization/library" replace />} />
               <Route path="account" element={<SettingsAccount />} />
               <Route
                 path="privacy"
@@ -84,7 +91,6 @@ export default function App() {
                 }
               />
               <Route path="billing" element={<SettingsBilling />} />
-              <Route path="library" element={<SettingsLibrary />} />
               <Route
                 path="usage"
                 element={

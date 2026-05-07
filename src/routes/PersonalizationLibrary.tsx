@@ -43,7 +43,7 @@ function previewText(content: ContentLibraryEntry['content']): string {
   return ''
 }
 
-export default function SettingsLibrary() {
+export default function PersonalizationLibrary() {
   const { showError } = useError()
   const [entries, setEntries] = useState<ContentLibraryEntry[]>([])
   const [loading, setLoading] = useState(true)

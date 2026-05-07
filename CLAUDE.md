@@ -116,14 +116,25 @@
 - Preview do relatório atualiza automaticamente após geração
 - Status "requer mais informações" para seções com dados insuficientes
 
+### Personalização (rota `/personalization`)
+- Sidebar lateral com 2 sub-abas: **Aparência** (default) e **Biblioteca**
+- Item na Sidebar principal entre Formulários e Agenda (`PaletteIcon`)
+- Layout em `src/routes/Personalization.tsx` + `src/components/personalization/PersonalizationSidebar.tsx`
+- Mesmo padrão visual do Settings (sidebar lateral + Outlet)
+- **Aparência** (`PersonalizationAppearance.tsx`): ThemeSelector + DocumentBrandingForm — tema visual e identidade que aparecem nos relatórios exportados
+- **Biblioteca** (`PersonalizationLibrary.tsx`): CRUD dos `content_library` entries (ver seção dedicada)
+- `/settings/general` e `/settings/library` redirecionam pra `/personalization/...` (backward compat)
+
 ### Configurações (rota `/settings`)
-- Sidebar de Configurações com 7 abas: **Geral** (default), **Conta**, Privacidade, Cobrança, Uso, Notificações, Segurança
+- Sidebar agrupada em 2 grupos com headers uppercase pequenos:
+  - **CONTA**: Perfil (renomeado de "Conta"), Privacidade, Segurança, Notificações
+  - **PLANO**: Cobrança, Uso
 - Layout em `src/routes/Settings.tsx` (wrapper com `<Outlet />`) + `src/components/settings/SettingsSidebar.tsx`
 - `SettingsPlaceholder.tsx` para abas ainda não implementadas (Em breve)
 - Avatar dropdown no `GlobalTopBar` linka para `/settings` (default redireciona para `/settings/account`)
-- Modal `ProfessionalModal` removido — conteúdo migrado para páginas de Settings
+- Conteúdo de "personalização do laudo" (tema, branding, biblioteca) **moveu pra `/personalization`** — Settings fica só com identidade pessoal e plano
 
-### Biblioteca (`/settings/library`)
+### Biblioteca (`/personalization/library`)
 - CRUD dedicado dos `content_library` entries — complementa o modal inline do TextBlock pro profissional pré-popular fora do contexto de relatório
 - Tabs por type (Todos | Referência | Instrumento | Procedimento | Geral) com contador
 - Busca por título/autor/instrumento/tag (debounce 250ms)
@@ -133,7 +144,7 @@
 - `TagsInput` (`src/components/ui/`) — chips reusável com Enter/comma pra adicionar, Backspace pra remover último, sugestões clicáveis das tags já usadas no tenant. Helpers `parseTagsString` e `tagsToString` pra converter `string` (CSV) ↔ `string[]`
 - Tags armazenadas como `string` CSV no campo `tags` do backend (já existia no schema)
 
-### Conta (`/settings/account`)
+### Perfil (`/settings/account`)
 - Hero card com avatar gradient (`getAvatarColor` + `getInitials`), nome, email e badges "Conta ativa" + vertical formatado
 - `AccountForm.tsx` com 4 sections: Identidade pessoal, Identidade profissional, Endereço de atendimento, Sobre você
 - Identidade pessoal: Nome, Nome social, Gênero (Select: Prefiro não informar / Feminino / Masculino / Não-binário / Outro)
@@ -154,8 +165,8 @@
 - `.docx` gerado também usa label dinâmica: header do relatório ("DADOS DO(A) PACIENTE"), assinatura de paciente em closing page, header de form impresso ("Paciente: …"), rodapé do paradata. Resolução via `prof.customerLabel` (vem do `getProfessional()` quando o docx é gerado) com fallback localStorage
 - Backend permanece com `customer*` em todos os endpoints — só a label exibida muda
 
-### Geral (`/settings/general`)
-- `SettingsGeneral.tsx` renderiza `ThemeSelector` + `DocumentBrandingForm`
+### Aparência (`/personalization/appearance`)
+- `PersonalizationAppearance.tsx` renderiza `ThemeSelector` + `DocumentBrandingForm`
 - `DocumentBrandingForm.tsx` (`src/components/settings/`): Logo (cabeçalho do .docx) + Contatos e Redes Sociais (rodapé do .docx)
 - `ThemeSelector` mantém os 4 cards: Clássico, Terroso, Grave, Suave
 
