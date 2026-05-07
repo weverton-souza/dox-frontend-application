@@ -137,8 +137,11 @@
 ### Customer label dinâmico (Maio 2026)
 - `useCustomerLabel()` em `lib/hooks/` retorna `{ singular, plural }` lendo do `AuthContext.user.customerLabel` (vem resolvido do backend), com fallback pro localStorage (`dox_customer_label`) pra carregamento instantâneo, e por último `'Cliente'`
 - Cache em **localStorage** (`getStoredCustomerLabel` / `setStoredCustomerLabel` em `api-client`) sobrevive ao fechar tab — UI carrega com label correta antes do AuthContext hidratar
-- `AuthResponse` + `AuthUser` ganham `customerLabel: string`. `Professional` ganha `customerLabelOverride?: string | null` (UI de edição em PR futuro)
-- Strings "Cliente"/"Clientes" hardcoded substituídas em Sidebar, CustomerList, CustomerProfile, NewReportModal, GenerateReportModal, AiFinalizationModal, VersionHistoryModal, CreateEventModal, ReportList, FormResponseList, MultiRespondentSendModal, FormComparisonView
+- `AuthResponse` + `AuthUser` ganham `customerLabel: string`. `Professional` ganha `customerLabelOverride?: string | null`
+- `/settings/account` permite escolher o termo via Select (presets Paciente/Cliente/Atendido/Analisando/Estudante/Periciado/Tutor + "Outro…" com texto livre até 40 chars). Live preview na tela
+- `AuthContext.updateCustomerLabel(label)` — após salvar settings, atualiza o user no contexto pra Sidebar e demais hooks reagirem em tempo real (sem precisar relogar)
+- Strings "Cliente"/"Clientes" hardcoded substituídas em todos os pontos de UI: Sidebar, CustomerList, CustomerProfile, NewReportModal, GenerateReportModal, AiFinalizationModal, VersionHistoryModal, CreateEventModal, ReportList, FormResponseList, MultiRespondentSendModal, FormComparisonView, IdentificationBlock
+- `.docx` gerado também usa label dinâmica: header do relatório ("DADOS DO(A) PACIENTE"), assinatura de paciente em closing page, header de form impresso ("Paciente: …"), rodapé do paradata. Resolução via `prof.customerLabel` (vem do `getProfessional()` quando o docx é gerado) com fallback localStorage
 - Backend permanece com `customer*` em todos os endpoints — só a label exibida muda
 
 ### Geral (`/settings/general`)

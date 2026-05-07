@@ -18,6 +18,7 @@ interface AuthContextValue {
   register: (data: RegisterRequest) => Promise<void>
   logout: () => Promise<void>
   switchTenant: (tenantId: string) => Promise<void>
+  updateCustomerLabel: (label: string) => void
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -99,6 +100,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(authResponseToUser(response))
   }, [])
 
+  const updateCustomerLabel = useCallback((label: string) => {
+    setUser((prev) => prev ? { ...prev, customerLabel: label } : prev)
+  }, [])
+
   return (
     <AuthContext.Provider
       value={{
@@ -109,6 +114,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         register,
         logout,
         switchTenant,
+        updateCustomerLabel,
       }}
     >
       {children}
