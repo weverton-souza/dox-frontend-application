@@ -2,7 +2,7 @@ import { useState } from 'react'
 import ThemeSelector from '@/components/ui/ThemeSelector'
 import DocumentBrandingForm from '@/components/settings/DocumentBrandingForm'
 
-export default function PersonalizationAppearance() {
+export default function ReportSettingsAppearance() {
   const [savedAt, setSavedAt] = useState<number | null>(null)
 
   return (

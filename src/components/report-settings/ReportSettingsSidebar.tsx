@@ -1,20 +1,20 @@
 import { NavLink } from 'react-router-dom'
 
-interface PersonalizationSection {
+interface ReportSettingsSection {
   to: string
   label: string
 }
 
-const SECTIONS: PersonalizationSection[] = [
-  { to: '/personalization/appearance', label: 'Aparência' },
-  { to: '/personalization/library', label: 'Biblioteca' },
+const SECTIONS: ReportSettingsSection[] = [
+  { to: '/reports/settings/appearance', label: 'Aparência' },
+  { to: '/reports/settings/library', label: 'Biblioteca' },
 ]
 
-export default function PersonalizationSidebar() {
+export default function ReportSettingsSidebar() {
   return (
     <aside className="w-60 flex-shrink-0">
       <h1 className="px-3 pb-6 text-2xl font-semibold text-gray-900">
-        Personalização
+        Configurações de Relatório
       </h1>
       <nav className="flex flex-col gap-0.5">
         {SECTIONS.map((section) => (

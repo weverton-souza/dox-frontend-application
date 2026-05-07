@@ -6,7 +6,6 @@ import {
   ClipboardListIcon,
   CalendarIcon,
   BookIcon,
-  PaletteIcon,
 } from '@/components/icons'
 import type { IconProps } from '@/components/icons'
 import type { ModuleId } from '@/types'
@@ -45,12 +44,6 @@ function buildNavItems(customersLabel: string): NavItemConfig[] {
       icon: ClipboardListIcon,
       matchPaths: ['/forms/'],
       module: 'forms',
-    },
-    {
-      to: '/personalization',
-      label: 'Personalização',
-      icon: PaletteIcon,
-      matchPaths: ['/personalization/'],
     },
     {
       to: '/calendar',

@@ -116,14 +116,14 @@
 - Preview do relatório atualiza automaticamente após geração
 - Status "requer mais informações" para seções com dados insuficientes
 
-### Personalização (rota `/personalization`)
+### Configurações de Relatório (rota `/reports/settings`)
+- Acessada via **engrenagem** no header da `/` (lista de relatórios), depois do botão "+" — é a ação menos frequente
 - Sidebar lateral com 2 sub-abas: **Aparência** (default) e **Biblioteca**
-- Item na Sidebar principal entre Formulários e Agenda (`PaletteIcon`)
-- Layout em `src/routes/Personalization.tsx` + `src/components/personalization/PersonalizationSidebar.tsx`
+- Layout em `src/routes/ReportSettings.tsx` + `src/components/report-settings/ReportSettingsSidebar.tsx`
 - Mesmo padrão visual do Settings (sidebar lateral + Outlet)
-- **Aparência** (`PersonalizationAppearance.tsx`): ThemeSelector + DocumentBrandingForm — tema visual e identidade que aparecem nos relatórios exportados
-- **Biblioteca** (`PersonalizationLibrary.tsx`): CRUD dos `content_library` entries (ver seção dedicada)
-- `/settings/general` e `/settings/library` redirecionam pra `/personalization/...` (backward compat)
+- **Aparência** (`ReportSettingsAppearance.tsx`): ThemeSelector + DocumentBrandingForm — tema visual e identidade que aparecem nos relatórios exportados
+- **Biblioteca** (`ReportSettingsLibrary.tsx`): CRUD dos `content_library` entries (ver seção dedicada)
+- Redirects backward compat: `/personalization`, `/personalization/{appearance,library}`, `/settings/general`, `/settings/library` → `/reports/settings/...`
 
 ### Configurações (rota `/settings`)
 - Sidebar agrupada em 2 grupos com headers uppercase pequenos:
@@ -134,7 +134,7 @@
 - Avatar dropdown no `GlobalTopBar` linka para `/settings` (default redireciona para `/settings/account`)
 - Conteúdo de "personalização do laudo" (tema, branding, biblioteca) **moveu pra `/personalization`** — Settings fica só com identidade pessoal e plano
 
-### Biblioteca (`/personalization/library`)
+### Biblioteca (`/reports/settings/library`)
 - CRUD dedicado dos `content_library` entries — complementa o modal inline do TextBlock pro profissional pré-popular fora do contexto de relatório
 - Tabs por type (Todos | Referência | Instrumento | Procedimento | Geral) com contador
 - Busca por título/autor/instrumento/tag (debounce 250ms)
@@ -165,8 +165,8 @@
 - `.docx` gerado também usa label dinâmica: header do relatório ("DADOS DO(A) PACIENTE"), assinatura de paciente em closing page, header de form impresso ("Paciente: …"), rodapé do paradata. Resolução via `prof.customerLabel` (vem do `getProfessional()` quando o docx é gerado) com fallback localStorage
 - Backend permanece com `customer*` em todos os endpoints — só a label exibida muda
 
-### Aparência (`/personalization/appearance`)
-- `PersonalizationAppearance.tsx` renderiza `ThemeSelector` + `DocumentBrandingForm`
+### Aparência (`/reports/settings/appearance`)
+- `ReportSettingsAppearance.tsx` renderiza `ThemeSelector` + `DocumentBrandingForm`
 - `DocumentBrandingForm.tsx` (`src/components/settings/`): Logo (cabeçalho do .docx) + Contatos e Redes Sociais (rodapé do .docx)
 - `ThemeSelector` mantém os 4 cards: Clássico, Terroso, Grave, Suave
 
