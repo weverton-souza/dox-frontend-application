@@ -23,6 +23,7 @@ const Settings = lazy(() => import('@/routes/Settings'))
 const SettingsAccount = lazy(() => import('@/routes/SettingsAccount'))
 const SettingsBilling = lazy(() => import('@/routes/SettingsBilling'))
 const SettingsGeneral = lazy(() => import('@/routes/SettingsGeneral'))
+const SettingsLibrary = lazy(() => import('@/routes/SettingsLibrary'))
 
 function NotFound() {
   return (
@@ -83,6 +84,7 @@ export default function App() {
                 }
               />
               <Route path="billing" element={<SettingsBilling />} />
+              <Route path="library" element={<SettingsLibrary />} />
               <Route
                 path="usage"
                 element={

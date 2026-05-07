@@ -123,6 +123,16 @@
 - Avatar dropdown no `GlobalTopBar` linka para `/settings` (default redireciona para `/settings/account`)
 - Modal `ProfessionalModal` removido — conteúdo migrado para páginas de Settings
 
+### Biblioteca (`/settings/library`)
+- CRUD dedicado dos `content_library` entries — complementa o modal inline do TextBlock pro profissional pré-popular fora do contexto de relatório
+- Tabs por type (Todos | Referência | Instrumento | Procedimento | Geral) com contador
+- Busca por título/autor/instrumento/tag (debounce 250ms)
+- Lista de cards com badge de tipo, autor/ano/instrumento inline, preview de 180 chars do conteúdo, chips de tag
+- Hover actions: editar, duplicar (cria cópia com sufixo "(cópia)"), excluir
+- `LibraryEntryModal` (`src/components/settings/`): Plate.js editor + campos (tipo, título, autores, ano, instrumento, tags). Suporta criar e editar
+- `TagsInput` (`src/components/ui/`) — chips reusável com Enter/comma pra adicionar, Backspace pra remover último, sugestões clicáveis das tags já usadas no tenant. Helpers `parseTagsString` e `tagsToString` pra converter `string` (CSV) ↔ `string[]`
+- Tags armazenadas como `string` CSV no campo `tags` do backend (já existia no schema)
+
 ### Conta (`/settings/account`)
 - Hero card com avatar gradient (`getAvatarColor` + `getInitials`), nome, email e badges "Conta ativa" + vertical formatado
 - `AccountForm.tsx` com 4 sections: Identidade pessoal, Identidade profissional, Endereço de atendimento, Sobre você
