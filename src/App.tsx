@@ -22,8 +22,9 @@ const TemplateEditor = lazy(() => import('@/routes/TemplateEditor'))
 const Settings = lazy(() => import('@/routes/Settings'))
 const SettingsAccount = lazy(() => import('@/routes/SettingsAccount'))
 const SettingsBilling = lazy(() => import('@/routes/SettingsBilling'))
-const SettingsGeneral = lazy(() => import('@/routes/SettingsGeneral'))
-const SettingsLibrary = lazy(() => import('@/routes/SettingsLibrary'))
+const ReportSettings = lazy(() => import('@/routes/ReportSettings'))
+const ReportSettingsAppearance = lazy(() => import('@/routes/ReportSettingsAppearance'))
+const ReportSettingsLibrary = lazy(() => import('@/routes/ReportSettingsLibrary'))
 
 function NotFound() {
   return (
@@ -70,9 +71,18 @@ export default function App() {
             <Route path="/forms/:id/responses" element={<FormResponseList />} />
             <Route path="/calendar" element={<Calendar />} />
             <Route path="/guides" element={<FormulaGuide />} />
+            <Route path="/reports/settings" element={<ReportSettings />}>
+              <Route index element={<Navigate to="library" replace />} />
+              <Route path="appearance" element={<ReportSettingsAppearance />} />
+              <Route path="library" element={<ReportSettingsLibrary />} />
+            </Route>
+            <Route path="/personalization" element={<Navigate to="/reports/settings/library" replace />} />
+            <Route path="/personalization/appearance" element={<Navigate to="/reports/settings/appearance" replace />} />
+            <Route path="/personalization/library" element={<Navigate to="/reports/settings/library" replace />} />
             <Route path="/settings" element={<Settings />}>
               <Route index element={<Navigate to="account" replace />} />
-              <Route path="general" element={<SettingsGeneral />} />
+              <Route path="general" element={<Navigate to="/reports/settings/appearance" replace />} />
+              <Route path="library" element={<Navigate to="/reports/settings/library" replace />} />
               <Route path="account" element={<SettingsAccount />} />
               <Route
                 path="privacy"
@@ -84,7 +94,6 @@ export default function App() {
                 }
               />
               <Route path="billing" element={<SettingsBilling />} />
-              <Route path="library" element={<SettingsLibrary />} />
               <Route
                 path="usage"
                 element={

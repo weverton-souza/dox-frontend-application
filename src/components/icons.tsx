@@ -292,3 +292,4 @@ export function SendIcon({ size = 16, className }: IconProps) {
     </svg>
   )
 }
+

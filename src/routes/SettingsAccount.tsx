@@ -14,7 +14,7 @@ export default function SettingsAccount() {
   return (
     <div>
       <header className="border-b border-gray-200 pb-5">
-        <h2 className="text-2xl font-semibold text-gray-900">Conta</h2>
+        <h2 className="text-2xl font-semibold text-gray-900">Perfil</h2>
         <p className="mt-1 text-sm text-gray-600">
           Identidade pessoal e profissional usada na plataforma e nos relatórios.
         </p>

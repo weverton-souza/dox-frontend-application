@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
-import { SettingsIcon } from '@/components/icons'
 import AiUsageBadge from '@/components/ai/AiUsageBadge'
 import { useAiGeneration } from '@/lib/hooks/use-ai-generation'
 
@@ -74,16 +73,6 @@ export default function GlobalTopBar({
           limit={ai.usageSummary.limit}
         />
       )}
-
-      {/* Configurações */}
-      <button
-        type="button"
-        onClick={() => navigate('/settings')}
-        className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
-        aria-label="Configurações"
-      >
-        <SettingsIcon size={18} />
-      </button>
 
       {/* Avatar + menu do usuário */}
       <div className="relative" ref={menuRef}>

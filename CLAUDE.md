@@ -116,14 +116,24 @@
 - Preview do relatório atualiza automaticamente após geração
 - Status "requer mais informações" para seções com dados insuficientes
 
+### Configurações de Relatório (rota `/reports/settings`)
+- Acessada via **engrenagem** no header da `/` (lista de relatórios), depois do botão "+" — é a ação menos frequente
+- Layout: `EditorPageHeader` sticky com Voltar à esquerda + `SegmentedControl` (Biblioteca | Aparência) no centro — mesmo padrão de FormBuilder/ReportEditor
+- **Biblioteca** (`/reports/settings/library`, default — mais usada): CRUD dos `content_library` entries (ver seção dedicada)
+- **Aparência** (`/reports/settings/appearance`): ThemeSelector + DocumentBrandingForm — tema visual e identidade que aparecem nos relatórios exportados
+- Conteúdo `max-w-6xl` sem sidebar lateral — full width abaixo do header
+- Redirects backward compat: `/personalization`, `/personalization/{appearance,library}`, `/settings/general`, `/settings/library` → `/reports/settings/...`
+
 ### Configurações (rota `/settings`)
-- Sidebar de Configurações com 7 abas: **Geral** (default), **Conta**, Privacidade, Cobrança, Uso, Notificações, Segurança
+- Sidebar agrupada em 2 grupos com headers uppercase pequenos:
+  - **CONTA**: Perfil (renomeado de "Conta"), Privacidade, Segurança, Notificações
+  - **PLANO**: Cobrança, Uso
 - Layout em `src/routes/Settings.tsx` (wrapper com `<Outlet />`) + `src/components/settings/SettingsSidebar.tsx`
 - `SettingsPlaceholder.tsx` para abas ainda não implementadas (Em breve)
 - Avatar dropdown no `GlobalTopBar` linka para `/settings` (default redireciona para `/settings/account`)
-- Modal `ProfessionalModal` removido — conteúdo migrado para páginas de Settings
+- Conteúdo de "personalização do laudo" (tema, branding, biblioteca) **moveu pra `/personalization`** — Settings fica só com identidade pessoal e plano
 
-### Biblioteca (`/settings/library`)
+### Biblioteca (`/reports/settings/library`)
 - CRUD dedicado dos `content_library` entries — complementa o modal inline do TextBlock pro profissional pré-popular fora do contexto de relatório
 - Tabs por type (Todos | Referência | Instrumento | Procedimento | Geral) com contador
 - Busca por título/autor/instrumento/tag (debounce 250ms)
@@ -133,7 +143,7 @@
 - `TagsInput` (`src/components/ui/`) — chips reusável com Enter/comma pra adicionar, Backspace pra remover último, sugestões clicáveis das tags já usadas no tenant. Helpers `parseTagsString` e `tagsToString` pra converter `string` (CSV) ↔ `string[]`
 - Tags armazenadas como `string` CSV no campo `tags` do backend (já existia no schema)
 
-### Conta (`/settings/account`)
+### Perfil (`/settings/account`)
 - Hero card com avatar gradient (`getAvatarColor` + `getInitials`), nome, email e badges "Conta ativa" + vertical formatado
 - `AccountForm.tsx` com 4 sections: Identidade pessoal, Identidade profissional, Endereço de atendimento, Sobre você
 - Identidade pessoal: Nome, Nome social, Gênero (Select: Prefiro não informar / Feminino / Masculino / Não-binário / Outro)
@@ -154,8 +164,8 @@
 - `.docx` gerado também usa label dinâmica: header do relatório ("DADOS DO(A) PACIENTE"), assinatura de paciente em closing page, header de form impresso ("Paciente: …"), rodapé do paradata. Resolução via `prof.customerLabel` (vem do `getProfessional()` quando o docx é gerado) com fallback localStorage
 - Backend permanece com `customer*` em todos os endpoints — só a label exibida muda
 
-### Geral (`/settings/general`)
-- `SettingsGeneral.tsx` renderiza `ThemeSelector` + `DocumentBrandingForm`
+### Aparência (`/reports/settings/appearance`)
+- `ReportSettingsAppearance.tsx` renderiza `ThemeSelector` + `DocumentBrandingForm`
 - `DocumentBrandingForm.tsx` (`src/components/settings/`): Logo (cabeçalho do .docx) + Contatos e Redes Sociais (rodapé do .docx)
 - `ThemeSelector` mantém os 4 cards: Clássico, Terroso, Grave, Suave
 
@@ -177,7 +187,7 @@
 - Paleta azul Apple (#007AFF) + cinzas quentes Apple (#F5F5F7)
 - Sombras multi-layer estilo Apple (xs, sm, md, lg, xl, card, dropdown, modal)
 - Tailwind config consome os tokens via `var()` — alterações no CSS propagam automaticamente
-- Navegação: GlobalTopBar (avatar, settings, logout) + PageHeader (toolbar contextual por página)
+- Navegação: GlobalTopBar (avatar dropdown com Configurações + Sair) + PageHeader (toolbar contextual por página). Sem mais botão de engrenagem solto no topbar — acesso a `/settings` via avatar dropdown
 - Font stack: Inter, -apple-system, BlinkMacSystemFont, Segoe UI, system-ui
 
 ### Persistência (Backend REST API)
