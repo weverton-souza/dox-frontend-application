@@ -7,7 +7,7 @@ import Button from '@/components/ui/Button'
 import Spinner from '@/components/ui/Spinner'
 import EmptyState from '@/components/ui/EmptyState'
 import ConfirmDeleteModal from '@/components/ui/ConfirmDeleteModal'
-import { EditIcon, TrashIcon, CopyIcon } from '@/components/icons'
+import { EditIcon, TrashIcon } from '@/components/icons'
 import LibraryEntryModal from '@/components/settings/LibraryEntryModal'
 import { parseTagsString } from '@/components/ui/TagsInput'
 import { isSlateContent, slateContentToPlainText } from '@/types'
@@ -124,15 +124,6 @@ export default function SettingsLibrary() {
 
   const handleEdit = (entry: ContentLibraryEntry) => {
     setEditingEntry(entry)
-    setShowModal(true)
-  }
-
-  const handleDuplicate = async (entry: ContentLibraryEntry) => {
-    setEditingEntry({
-      ...entry,
-      id: '',
-      title: `${entry.title} (cópia)`,
-    })
     setShowModal(true)
   }
 
@@ -261,14 +252,6 @@ export default function SettingsLibrary() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleDuplicate(entry)}
-                        title="Duplicar"
-                        className="p-1.5 rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors"
-                      >
-                        <CopyIcon />
-                      </button>
-                      <button
-                        type="button"
                         onClick={() => confirmDelete.requestDelete(entry.id)}
                         title="Excluir"
                         className="p-1.5 rounded-md hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors"
@@ -287,15 +270,10 @@ export default function SettingsLibrary() {
       <LibraryEntryModal
         isOpen={showModal}
         onClose={() => setShowModal(false)}
-        entry={editingEntry?.id ? editingEntry : null}
+        entry={editingEntry}
         defaultType={defaultTypeForNew}
         knownTags={knownTags}
-        onSaved={() => {
-          if (editingEntry && !editingEntry.id) {
-            // duplicação: cria nova ao invés de editar
-          }
-          load()
-        }}
+        onSaved={load}
       />
 
       <ConfirmDeleteModal

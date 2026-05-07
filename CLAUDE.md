@@ -128,7 +128,7 @@
 - Tabs por type (Todos | Referência | Instrumento | Procedimento | Geral) com contador
 - Busca por título/autor/instrumento/tag (debounce 250ms)
 - Lista de cards com badge de tipo, autor/ano/instrumento inline, preview de 180 chars do conteúdo, chips de tag
-- Hover actions: editar, duplicar (cria cópia com sufixo "(cópia)"), excluir
+- Hover actions: editar, excluir
 - `LibraryEntryModal` (`src/components/settings/`): Plate.js editor + campos (tipo, título, autores, ano, instrumento, tags). Suporta criar e editar
 - `TagsInput` (`src/components/ui/`) — chips reusável com Enter/comma pra adicionar, Backspace pra remover último, sugestões clicáveis das tags já usadas no tenant. Helpers `parseTagsString` e `tagsToString` pra converter `string` (CSV) ↔ `string[]`
 - Tags armazenadas como `string` CSV no campo `tags` do backend (já existia no schema)
