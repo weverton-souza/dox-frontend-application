@@ -141,13 +141,13 @@ export default function SettingsLibrary() {
   return (
     <div>
       <header className="border-b border-gray-200 pb-5 flex items-start justify-between gap-4">
-        <div>
+        <div className="min-w-0 flex-1">
           <h2 className="text-2xl font-semibold text-gray-900">Biblioteca de conteúdo</h2>
           <p className="mt-1 text-sm text-gray-600">
             Trechos reusáveis (referências, instrumentos, procedimentos) que aparecem na busca dentro do editor de relatórios.
           </p>
         </div>
-        <Button onClick={handleNew}>+ Novo conteúdo</Button>
+        <Button onClick={handleNew} className="shrink-0 whitespace-nowrap">+ Novo conteúdo</Button>
       </header>
 
       <div className="mt-6 flex flex-wrap items-center gap-2">
