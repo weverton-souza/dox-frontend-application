@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import type { Professional } from '@/types'
 import { getProfessional, updateProfessional } from '@/lib/api/professional-api'
-import { useAuth } from '@/contexts/AuthContext'
 import { useError } from '@/contexts/ErrorContext'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
@@ -38,24 +37,8 @@ const UF_OPTIONS = [
   ...['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'].map((uf) => ({ value: uf, label: uf })),
 ]
 
-const CUSTOMER_LABEL_PRESETS = ['Paciente', 'Cliente', 'Atendido', 'Analisando', 'Estudante', 'Periciado', 'Tutor']
-const CUSTOMER_LABEL_CUSTOM = '__custom__'
-
-const CUSTOMER_LABEL_OPTIONS = [
-  { value: '', label: 'Padrão da vertical' },
-  ...CUSTOMER_LABEL_PRESETS.map((label) => ({ value: label, label })),
-  { value: CUSTOMER_LABEL_CUSTOM, label: 'Outro…' },
-]
-
 const sectionTitle = 'text-sm font-semibold text-gray-700 uppercase tracking-wide'
 const sectionDivider = 'border-t border-gray-100 pt-6'
-
-function presetForOverride(override: string | null | undefined): string {
-  if (!override) return ''
-  const normalized = override.trim()
-  if (!normalized) return ''
-  return CUSTOMER_LABEL_PRESETS.includes(normalized) ? normalized : CUSTOMER_LABEL_CUSTOM
-}
 
 export default function AccountForm({ onSaved }: AccountFormProps) {
   const [professional, setProfessional] = useState<Professional>({
@@ -63,27 +46,12 @@ export default function AccountForm({ onSaved }: AccountFormProps) {
     crp: '',
     specialization: '',
   })
-  const [labelMode, setLabelMode] = useState<string>('')
-  const [labelCustom, setLabelCustom] = useState<string>('')
   const [saving, setSaving] = useState(false)
   const { showError } = useError()
-  const { updateCustomerLabel } = useAuth()
 
   useEffect(() => {
-    getProfessional()
-      .then((data) => {
-        setProfessional(data)
-        const override = data.customerLabelOverride ?? null
-        setLabelMode(presetForOverride(override))
-        setLabelCustom(override && !CUSTOMER_LABEL_PRESETS.includes(override.trim()) ? override : '')
-      })
-      .catch(showError)
+    getProfessional().then(setProfessional).catch(showError)
   }, [showError])
-
-  const resolvedOverride = labelMode === CUSTOMER_LABEL_CUSTOM
-    ? labelCustom.trim()
-    : labelMode
-  const previewLabel = resolvedOverride || professional.customerLabel || 'Cliente'
 
   const update = useCallback((patch: Partial<Professional>) => {
     setProfessional((prev) => ({ ...prev, ...patch }))
@@ -92,20 +60,14 @@ export default function AccountForm({ onSaved }: AccountFormProps) {
   const handleSave = useCallback(async () => {
     setSaving(true)
     try {
-      const payload: Professional = {
-        ...professional,
-        customerLabelOverride: resolvedOverride || null,
-      }
-      const updated = await updateProfessional(payload)
-      setProfessional(updated)
-      if (updated.customerLabel) updateCustomerLabel(updated.customerLabel)
+      await updateProfessional(professional)
       onSaved?.()
     } catch (err) {
       showError(err)
     } finally {
       setSaving(false)
     }
-  }, [professional, resolvedOverride, onSaved, showError, updateCustomerLabel])
+  }, [professional, onSaved, showError])
 
   return (
     <div className="space-y-8">
@@ -209,37 +171,6 @@ export default function AccountForm({ onSaved }: AccountFormProps) {
             {(professional.bio ?? '').length}/500
           </p>
         </div>
-      </section>
-
-      {/* Como você chama quem é atendido */}
-      <section className={sectionDivider}>
-        <h4 className={sectionTitle}>Como você chama quem é atendido?</h4>
-        <p className="mt-1 text-xs text-gray-500">
-          Aparece em todo o app e nos relatórios. Deixe em branco para usar o padrão da sua área.
-        </p>
-        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Select
-            label="Termo"
-            value={labelMode}
-            onChange={(value) => {
-              setLabelMode(value)
-              if (value !== CUSTOMER_LABEL_CUSTOM) setLabelCustom('')
-            }}
-            options={CUSTOMER_LABEL_OPTIONS}
-          />
-          {labelMode === CUSTOMER_LABEL_CUSTOM && (
-            <Input
-              label="Termo personalizado"
-              value={labelCustom}
-              onChange={(e) => setLabelCustom(e.target.value.slice(0, 40))}
-              placeholder="Ex: Tutelado"
-              maxLength={40}
-            />
-          )}
-        </div>
-        <p className="mt-3 text-sm text-gray-500">
-          Pré-visualização: <span className="font-medium text-gray-800">Você atendeu o(a) {previewLabel} Maria Silva ontem.</span>
-        </p>
       </section>
 
       <div className="flex justify-end pt-2">
