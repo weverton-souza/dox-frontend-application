@@ -6,6 +6,7 @@ import { getFormById, listFormResponses, deleteFormResponse } from '@/lib/api/fo
 import { useError } from '@/contexts/ErrorContext'
 import { formatDateTime } from '@/lib/utils'
 import { useConfirmDelete } from '@/lib/hooks/use-confirm-delete'
+import { useCustomerLabel } from '@/lib/hooks/useCustomerLabel'
 import { usePagination } from '@/lib/hooks/use-pagination'
 import Pagination from '@/components/ui/Pagination'
 import ConfirmDeleteModal from '@/components/ui/ConfirmDeleteModal'
@@ -22,6 +23,7 @@ export default function FormResponseList() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { showError } = useError()
+  const { singular: customerLabel } = useCustomerLabel()
 
   const [form, setForm] = useState<Form | null>(null)
   const [responses, setResponses] = useState<FormResponse[]>([])
@@ -170,7 +172,7 @@ export default function FormResponseList() {
                   <ListCard
                     key={resp.id}
                     onClick={resp.customerId ? () => handleOpenResponse(resp) : undefined}
-                    title={resp.customerName || 'Cliente sem nome'}
+                    title={resp.customerName || `${customerLabel} sem nome`}
                     pills={
                       <>
                         <ListCardPill>{formatDateTime(resp.updatedAt)}</ListCardPill>

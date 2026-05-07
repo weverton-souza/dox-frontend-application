@@ -8,6 +8,7 @@ import { formatDateTime, calculateAge } from '@/lib/utils'
 import { applyMask } from '@/lib/masks'
 import { useConfirmDelete } from '@/lib/hooks/use-confirm-delete'
 import { useCreateReport } from '@/lib/hooks/use-create-report'
+import { useCustomerLabel } from '@/lib/hooks/useCustomerLabel'
 import { useError } from '@/contexts/ErrorContext'
 import NewReportModal from '@/components/NewReportModal'
 import Button from '@/components/ui/Button'
@@ -26,6 +27,7 @@ import { getAvatarColor, getInitials } from '@/lib/avatar-utils'
 export default function CustomerList() {
   const navigate = useNavigate()
   const { showError } = useError()
+  const { singular: customerLabel, plural: customersLabel } = useCustomerLabel()
 
   const [customersPage, setCustomersPage] = useState<Page<Customer> | null>(null)
   const [currentPage, setCurrentPage] = useState(0)
@@ -137,7 +139,7 @@ export default function CustomerList() {
     <>
       <main className="page-container">
       <div className="flex items-center justify-between bg-white rounded-full px-5 py-1.5 shadow-card">
-        <h2 className="text-xl font-bold text-gray-700">Clientes</h2>
+        <h2 className="text-xl font-bold text-gray-700">{customersLabel}</h2>
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -156,7 +158,7 @@ export default function CustomerList() {
             type="button"
             onClick={handleOpenNew}
             className="h-11 w-11 flex items-center justify-center rounded-full bg-brand-700 text-white hover:bg-brand-800 transition-colors shadow-sm shrink-0"
-            title="Novo Cliente"
+            title={`Novo(a) ${customerLabel}`}
           >
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="10" y1="4" x2="10" y2="16" />
@@ -192,14 +194,14 @@ export default function CustomerList() {
                 <line x1="22" y1="11" x2="16" y2="11" />
               </svg>
             }
-            title="Nenhum cliente cadastrado"
-            message="Cadastre seu primeiro cliente para começar"
-            buttonLabel="+ Novo Cliente"
+            title={`Nenhum(a) ${customerLabel.toLowerCase()} cadastrado(a)`}
+            message={`Cadastre seu primeiro(a) ${customerLabel.toLowerCase()} para começar`}
+            buttonLabel={`+ Novo(a) ${customerLabel}`}
             onAction={handleOpenNew}
           />
         ) : customersPage && customersPage.totalElements === 0 && debouncedSearch ? (
           <div className="text-center py-12">
-            <p className="text-sm text-gray-500">Nenhum cliente encontrado para "{search}"</p>
+            <p className="text-sm text-gray-500">Nenhum(a) {customerLabel.toLowerCase()} encontrado(a) para "{search}"</p>
           </div>
         ) : customersPage ? (
           /* Customer list */
@@ -226,7 +228,7 @@ export default function CustomerList() {
                         </span>
                       </div>
                     }
-                    title={customer.data.name || 'Cliente sem nome'}
+                    title={customer.data.name || `${customerLabel} sem nome`}
                     pills={
                       <>
                         {customer.data.cpf && <ListCardPill>{applyMask(customer.data.cpf, 'cpf')}</ListCardPill>}
@@ -251,8 +253,8 @@ export default function CustomerList() {
                     actions={
                       <>
                         <ListCardAction onClick={() => showReportModal(customer)} title="Novo relatório" icon={<DocumentPlusIcon />} variant="brand" />
-                        <ListCardAction onClick={() => handleOpenEdit(customer)} title="Editar cliente" icon={<EditIcon />} />
-                        <ListCardAction onClick={() => setConfirmDeleteId(customer.id)} title="Excluir cliente" icon={<ListTrashIcon />} variant="danger" />
+                        <ListCardAction onClick={() => handleOpenEdit(customer)} title={`Editar ${customerLabel.toLowerCase()}`} icon={<EditIcon />} />
+                        <ListCardAction onClick={() => setConfirmDeleteId(customer.id)} title={`Excluir ${customerLabel.toLowerCase()}`} icon={<ListTrashIcon />} variant="danger" />
                       </>
                     }
                   />
@@ -315,7 +317,7 @@ export default function CustomerList() {
       <Modal
         isOpen={showFormModal}
         onClose={() => { setShowFormModal(false); setEditingCustomer(null) }}
-        title={editingCustomer?.createdAt === editingCustomer?.updatedAt && !customersPage?.content.find(p => p.id === editingCustomer?.id) ? 'Novo Cliente' : 'Editar Cliente'}
+        title={editingCustomer?.createdAt === editingCustomer?.updatedAt && !customersPage?.content.find(p => p.id === editingCustomer?.id) ? `Novo(a) ${customerLabel}` : `Editar ${customerLabel.toLowerCase()}`}
         size="lg"
       >
         {editingCustomer && (
@@ -325,7 +327,7 @@ export default function CustomerList() {
                 label="Nome"
                 value={editingCustomer.data.name}
                 onChange={(e) => updateEditingField('name', e.target.value)}
-                placeholder="Nome completo do cliente"
+                placeholder={`Nome completo do(a) ${customerLabel.toLowerCase()}`}
               />
               <Input
                 label="CPF"

@@ -10,6 +10,7 @@ import {
 import type { IconProps } from '@/components/icons'
 import type { ModuleId } from '@/types'
 import { useAccessibleModules } from '@/lib/hooks/use-modules'
+import { useCustomerLabel } from '@/lib/hooks/useCustomerLabel'
 import logoDoxMark from '@/assets/logo-dox-mark.svg'
 import logoDoxText from '@/assets/logo-dox-text.svg'
 
@@ -21,35 +22,37 @@ interface NavItemConfig {
   module?: ModuleId
 }
 
-const NAV_ITEMS: NavItemConfig[] = [
-  {
-    to: '/',
-    label: 'Relatórios',
-    icon: DocumentIcon,
-    matchPaths: ['/reports/'],
-    module: 'reports',
-  },
-  {
-    to: '/customers',
-    label: 'Clientes',
-    icon: UsersIcon,
-    matchPaths: ['/customers/'],
-    module: 'customers',
-  },
-  {
-    to: '/forms',
-    label: 'Formulários',
-    icon: ClipboardListIcon,
-    matchPaths: ['/forms/'],
-    module: 'forms',
-  },
-  {
-    to: '/calendar',
-    label: 'Agenda',
-    icon: CalendarIcon,
-    module: 'calendar',
-  },
-]
+function buildNavItems(customersLabel: string): NavItemConfig[] {
+  return [
+    {
+      to: '/',
+      label: 'Relatórios',
+      icon: DocumentIcon,
+      matchPaths: ['/reports/'],
+      module: 'reports',
+    },
+    {
+      to: '/customers',
+      label: customersLabel,
+      icon: UsersIcon,
+      matchPaths: ['/customers/'],
+      module: 'customers',
+    },
+    {
+      to: '/forms',
+      label: 'Formulários',
+      icon: ClipboardListIcon,
+      matchPaths: ['/forms/'],
+      module: 'forms',
+    },
+    {
+      to: '/calendar',
+      label: 'Agenda',
+      icon: CalendarIcon,
+      module: 'calendar',
+    },
+  ]
+}
 
 function LockBadge() {
   return (
@@ -91,6 +94,8 @@ export default function Sidebar({
   const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map())
   const [slider, setSlider] = useState<{ top: number; height: number } | null>(null)
   const { modules: accessibleModules, loading: modulesLoading, error: modulesError } = useAccessibleModules()
+  const { plural: customersLabel } = useCustomerLabel()
+  const navItems = buildNavItems(customersLabel)
 
   const hasModuleAccess = (moduleId?: ModuleId): boolean => {
     if (!moduleId) return true
@@ -112,7 +117,7 @@ export default function Sidebar({
     const nav = navRef.current
     if (!nav) return
 
-    const activeItem = NAV_ITEMS.find((item) => isActive(item))
+    const activeItem = navItems.find((item) => isActive(item))
     if (!activeItem) {
       setSlider(null)
       return
@@ -175,7 +180,7 @@ export default function Sidebar({
           />
         )}
 
-        {NAV_ITEMS.map((item) => {
+        {navItems.map((item) => {
           const active = isActive(item)
           const Icon = item.icon
           const allowed = hasModuleAccess(item.module)

@@ -1,23 +1,8 @@
 import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { getAvatarColor, getInitials } from '@/lib/avatar-utils'
+import { formatVertical } from '@/lib/vertical-format'
 import AccountForm from '@/components/settings/AccountForm'
-
-const VERTICAL_LABELS: Record<string, string> = {
-  psicologia: 'Psicologia',
-  neuropsicologia: 'Neuropsicologia',
-  medicina: 'Medicina',
-  engenharia: 'Engenharia',
-  direito: 'Direito',
-  educacao: 'Educação',
-  psicopedagogia: 'Psicopedagogia',
-  geral: 'Geral',
-}
-
-function formatVertical(vertical: string | undefined): string {
-  if (!vertical) return 'Profissional'
-  return VERTICAL_LABELS[vertical.toLowerCase()] ?? vertical
-}
 
 export default function SettingsAccount() {
   const { user } = useAuth()

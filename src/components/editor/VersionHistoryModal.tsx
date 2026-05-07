@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { ReportVersion } from '@/types'
 import { formatDateTime } from '@/lib/utils'
+import { useCustomerLabel } from '@/lib/hooks/useCustomerLabel'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import StatusBadge from '@/components/ui/StatusBadge'
@@ -18,6 +19,7 @@ export default function VersionHistoryModal({
   versions,
   onRestore,
 }: VersionHistoryModalProps) {
+  const { singular: customerLabel } = useCustomerLabel()
   const [confirmRestoreId, setConfirmRestoreId] = useState<string | null>(null)
 
   const handleRestore = (version: ReportVersion) => {
@@ -68,7 +70,7 @@ export default function VersionHistoryModal({
                   </div>
                   {version.customerName && (
                     <p className="text-xs text-gray-400 mt-1 truncate">
-                      Cliente: {version.customerName}
+                      {customerLabel}: {version.customerName}
                     </p>
                   )}
                   <p className="text-xs text-gray-400 mt-0.5">

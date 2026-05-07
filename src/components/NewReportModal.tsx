@@ -3,6 +3,7 @@ import type { Customer, ReportTemplate } from '@/types'
 import { getReportTemplates, duplicateReportTemplate } from '@/lib/api/template-api'
 import { getAllTemplates } from '@/lib/default-templates'
 import { getBlockTitle } from '@/lib/block-constants'
+import { useCustomerLabel } from '@/lib/hooks/useCustomerLabel'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 
@@ -21,6 +22,7 @@ export default function NewReportModal({
   onSelectTemplate,
   onSelectBlank,
 }: NewReportModalProps) {
+  const { singular: customerLabel } = useCustomerLabel()
   const [customTemplates, setCustomTemplates] = useState<ReportTemplate[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -53,7 +55,7 @@ export default function NewReportModal({
       <div className="p-4 space-y-4">
         <div className="bg-brand-50 rounded-lg px-4 py-3">
           <p className="text-sm text-brand-800">
-            <span className="font-medium">Cliente:</span> {customer.data.name}
+            <span className="font-medium">{customerLabel}:</span> {customer.data.name}
           </p>
         </div>
 

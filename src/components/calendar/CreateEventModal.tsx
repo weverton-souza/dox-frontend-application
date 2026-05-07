@@ -7,6 +7,7 @@ import TextArea from '@/components/ui/TextArea'
 import Toggle from '@/components/ui/Toggle'
 import DatePicker from '@/components/ui/DatePicker'
 import { useCustomerSearch } from '@/lib/hooks/use-customer-search'
+import { useCustomerLabel } from '@/lib/hooks/useCustomerLabel'
 import TagPicker from '@/components/calendar/TagPicker'
 
 interface CreateEventModalProps {
@@ -77,6 +78,7 @@ const EMPTY_FORM: EventFormData = {
 }
 
 export default function CreateEventModal({ isOpen, onClose, onSave, onDelete, tags, onNewTag, event, initialDate }: CreateEventModalProps) {
+  const { singular: customerLabel } = useCustomerLabel()
   const [form, setForm] = useState<EventFormData>(EMPTY_FORM)
   const { search: customerSearch, setSearch: setCustomerSearch, customers, loading: _customerLoading, reset: resetCustomerSearch } = useCustomerSearch(isOpen)
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false)
@@ -266,7 +268,7 @@ export default function CreateEventModal({ isOpen, onClose, onSave, onDelete, ta
         <TagPicker tags={tags} selectedId={form.tagId} onChange={(v) => updateForm({ tagId: v })} onNewTag={onNewTag} />
 
         <div className="relative">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Cliente (opcional)</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">{customerLabel} (opcional)</label>
           <div className="flex items-center gap-2">
             <input
               type="text"

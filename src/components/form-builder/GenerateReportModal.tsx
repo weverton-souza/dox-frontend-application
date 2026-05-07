@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import type { Form, FormResponse, ReportTemplate, SectionProgressEvent } from '@/types'
 import { useRotatingMessage } from '@/lib/hooks/use-rotating-message'
+import { useCustomerLabel } from '@/lib/hooks/useCustomerLabel'
 import { getProfessional } from '@/lib/api/professional-api'
 import { createReport } from '@/lib/api/report-api'
 import { getCustomer } from '@/lib/api/customer-api'
@@ -37,6 +38,7 @@ export default function GenerateReportModal({
   template,
   onReportGenerated,
 }: GenerateReportModalProps) {
+  const { singular: customerLabel } = useCustomerLabel()
   const [state, setState] = useState<GenerationState>('confirm')
   const [errorMessage, setErrorMessage] = useState('')
   const [sections, setSections] = useState<ProgressSection[]>([])
@@ -259,7 +261,7 @@ export default function GenerateReportModal({
               <h3 className="text-sm font-medium text-brand-800 mb-2">Resumo da geração</h3>
               <dl className="space-y-1 text-sm">
                 <div className="flex gap-2">
-                  <dt className="text-brand-600 font-medium">Cliente:</dt>
+                  <dt className="text-brand-600 font-medium">{customerLabel}:</dt>
                   <dd className="text-brand-800">{response?.customerName || '(sem nome)'}</dd>
                 </div>
                 <div className="flex gap-2">

@@ -4,6 +4,7 @@ import { CUSTOMER_CONTACT_RELATION_LABELS } from '@/types'
 import { getForms } from '@/lib/api/form-api'
 import { getCustomerContacts } from '@/lib/api/customer-api'
 import { multiSendFormLinks } from '@/lib/api/form-link-api'
+import { useCustomerLabel } from '@/lib/hooks/useCustomerLabel'
 import { useError } from '@/contexts/ErrorContext'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
@@ -68,6 +69,7 @@ export default function MultiRespondentSendModal({
   initialFormId,
 }: MultiRespondentSendModalProps) {
   const { showError } = useError()
+  const { singular: customerLabel } = useCustomerLabel()
   const [step, setStep] = useState<Step>('compose')
   const [forms, setForms] = useState<Form[]>([])
   const [recipientOptions, setRecipientOptions] = useState<RecipientOption[]>([])
@@ -95,7 +97,7 @@ export default function MultiRespondentSendModal({
           {
             key: customerKey,
             type: 'customer',
-            displayName: customer.data.name || 'Cliente',
+            displayName: customer.data.name || customerLabel,
             email: customerEmail,
           },
           ...eligible.map((c) => ({
@@ -369,7 +371,7 @@ export default function MultiRespondentSendModal({
                       const url = `${window.location.origin}/public/forms/${link.token}`
                       const isCopied = copiedId === link.id
                       const respondentLabel = link.respondent.type === 'customer'
-                        ? 'Cliente'
+                        ? customerLabel
                         : link.respondent.relationType
                         ? CUSTOMER_CONTACT_RELATION_LABELS[link.respondent.relationType as keyof typeof CUSTOMER_CONTACT_RELATION_LABELS] ?? 'Contato'
                         : 'Contato'
@@ -447,6 +449,7 @@ function EnvelopeCard({
   onToggleRecipient,
   onRemove,
 }: EnvelopeCardProps) {
+  const { singular: customerLabel } = useCustomerLabel()
   return (
     <div className="border border-gray-200 rounded-xl p-4 space-y-3 bg-white">
       <div className="flex items-center justify-between">
@@ -507,7 +510,7 @@ function EnvelopeCard({
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">{row.displayName || '(sem nome)'}</p>
                     <p className="text-xs text-gray-500 truncate">
-                      {row.type === 'customer' ? 'Cliente' : row.relationLabel || 'Contato'}
+                      {row.type === 'customer' ? customerLabel : row.relationLabel || 'Contato'}
                       {sendEmail && (row.email
                         ? <span className="ml-1.5 text-emerald-600">· ✉ {row.email}</span>
                         : <span className="ml-1.5 text-amber-600">· sem email</span>)}

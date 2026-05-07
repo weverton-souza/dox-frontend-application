@@ -11,7 +11,8 @@ function isAuthResponse(value: unknown): value is AuthResponse {
     typeof v.email === 'string' &&
     typeof v.name === 'string' &&
     typeof v.tenantId === 'string' &&
-    typeof v.vertical === 'string'
+    typeof v.vertical === 'string' &&
+    typeof v.customerLabel === 'string'
   )
 }
 
@@ -66,5 +67,6 @@ export function authResponseToUser(response: AuthResponse): AuthUser {
     name: response.name,
     tenantId: response.tenantId,
     vertical: response.vertical,
+    customerLabel: response.customerLabel,
   }
 }

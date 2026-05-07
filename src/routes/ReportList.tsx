@@ -7,6 +7,7 @@ import { getAllTemplates } from '@/lib/default-templates'
 import { formatDateTime } from '@/lib/utils'
 import { useCreateReport } from '@/lib/hooks/use-create-report'
 import { useCustomerSearch } from '@/lib/hooks/use-customer-search'
+import { useCustomerLabel } from '@/lib/hooks/useCustomerLabel'
 import { useConfirmDelete } from '@/lib/hooks/use-confirm-delete'
 import { useError } from '@/contexts/ErrorContext'
 import Modal from '@/components/ui/Modal'
@@ -27,6 +28,7 @@ export default function ReportList() {
   const navigate = useNavigate()
   const location = useLocation()
   const { showError } = useError()
+  const { singular: customerLabel } = useCustomerLabel()
 
   const [reportsPage, setReportsPage] = useState<Page<Report> | null>(null)
   const [currentPage, setCurrentPage] = useState(0)
@@ -212,7 +214,7 @@ export default function ReportList() {
               <ListCard
                 key={report.id}
                 onClick={() => navigate(`/reports/${report.id}`)}
-                title={report.customerName || 'Cliente sem nome'}
+                title={report.customerName || `${customerLabel} sem nome`}
                 pills={
                   <>
                     <ListCardPill>{formatDateTime(report.updatedAt)}</ListCardPill>
@@ -258,7 +260,7 @@ export default function ReportList() {
       <Modal
         isOpen={showCustomerPicker}
         onClose={() => { setShowCustomerPicker(false); customerSearch.reset() }}
-        title="Selecionar Cliente"
+        title={`Selecionar ${customerLabel}`}
         size="md"
       >
         <div className="p-4 space-y-4">
