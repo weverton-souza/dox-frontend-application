@@ -33,6 +33,8 @@ export interface Professional {
   email?: string
   logo?: string                 // base64 data URL
   contactItems?: ContactItem[]  // footer contacts/social
+  customerLabel?: string        // resolvido pelo backend
+  customerLabelOverride?: string | null
 }
 
 export interface Solicitor {

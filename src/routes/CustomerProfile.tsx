@@ -33,6 +33,7 @@ import { MAX_MANUAL_RESENDS } from '@/types'
 import { getAggregatedForms } from '@/lib/api/customer-forms-api'
 import { formatDateTime, calculateAge, getNowIso } from '@/lib/utils'
 import { useCreateReport } from '@/lib/hooks/use-create-report'
+import { useCustomerLabel } from '@/lib/hooks/useCustomerLabel'
 import { useError } from '@/contexts/ErrorContext'
 import NewReportModal from '@/components/NewReportModal'
 import MultiRespondentSendModal from '@/components/form-builder/MultiRespondentSendModal'
@@ -118,6 +119,7 @@ export default function CustomerProfile() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const { showError } = useError()
+  const { singular: customerLabel, plural: customersLabel } = useCustomerLabel()
 
   const [customer, setCustomer] = useState<Customer | null>(null)
   const [editData, setEditData] = useState<CustomerData | null>(null)
@@ -357,14 +359,14 @@ export default function CustomerProfile() {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-gray-500 text-sm">Cliente não encontrado</p>
+          <p className="text-gray-500 text-sm">{customerLabel} não encontrado(a)</p>
           <Button
             variant="ghost"
             size="sm"
             className="mt-3"
             onClick={() => navigate('/customers')}
           >
-            Voltar para Clientes
+            Voltar para {customersLabel}
           </Button>
         </div>
       </div>
@@ -550,7 +552,7 @@ export default function CustomerProfile() {
                               {r.respondentName || '(sem nome)'}
                             </p>
                             <p className="text-xs text-gray-500">
-                              {formatAggregatedLabel(r)} · {isAnswered && r.submittedAt
+                              {formatAggregatedLabel(r, customerLabel)} · {isAnswered && r.submittedAt
                                 ? `respondido em ${formatDateTime(r.submittedAt)}`
                                 : r.status === 'pending' && typeof r.progressPercent === 'number'
                                 ? formatProgress(r)
@@ -833,7 +835,7 @@ export default function CustomerProfile() {
               onClick={() => navigate('/customers')}
               className="text-gray-400 hover:text-brand-600 transition-colors"
             >
-              Clientes
+              {customersLabel}
             </button>
             <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor" className="text-gray-300">
               <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
@@ -857,7 +859,7 @@ export default function CustomerProfile() {
             {/* Quick info */}
             <div className="flex-1 min-w-0">
               <h1 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">
-                {customer.data.name || 'Cliente sem nome'}
+                {customer.data.name || `${customerLabel} sem nome`}
               </h1>
 
               <div className="flex items-center gap-3 mt-2 flex-wrap">
@@ -993,8 +995,8 @@ function formatRelativeTime(iso: string): string {
   return `há ${diffDays} dias`
 }
 
-function formatAggregatedLabel(r: AggregatedRespondent): string {
-  if (r.respondentType === 'customer') return 'Cliente'
+function formatAggregatedLabel(r: AggregatedRespondent, customerLabel: string): string {
+  if (r.respondentType === 'customer') return customerLabel
   if (r.respondentType === 'professional') return 'Profissional'
   const rt = r.relationType as keyof typeof CUSTOMER_CONTACT_RELATION_LABELS | undefined
   if (rt && CUSTOMER_CONTACT_RELATION_LABELS[rt]) {

@@ -28,6 +28,8 @@ export interface AuthResponse {
   name: string
   tenantId: string
   vertical: string
+  emailVerified?: boolean
+  customerLabel: string
 }
 
 export interface AuthUser {
@@ -36,6 +38,7 @@ export interface AuthUser {
   name: string
   tenantId: string
   vertical: string
+  customerLabel: string
 }
 
 // ========== Workspace Types ==========

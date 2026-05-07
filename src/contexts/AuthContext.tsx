@@ -8,7 +8,7 @@ import {
   switchTenant as apiSwitchTenant,
   authResponseToUser,
 } from '@/lib/api/auth-service'
-import { clearTokens, getAccessToken, getStoredUser, setStoredUser, setOnSessionExpired } from '@/lib/api/api-client'
+import { clearTokens, getAccessToken, getStoredUser, setStoredUser, setStoredCustomerLabel, setOnSessionExpired } from '@/lib/api/api-client'
 
 interface AuthContextValue {
   user: AuthUser | null
@@ -56,9 +56,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => { cancelled = true }
   }, [])
 
-  // Persist user to sessionStorage whenever it changes
+  // Persist user to sessionStorage whenever it changes; cache customerLabel in localStorage para boot rápido
   useEffect(() => {
     setStoredUser(user ? JSON.stringify(user) : null)
+    setStoredCustomerLabel(user?.customerLabel ?? null)
   }, [user])
 
   // Registra callback para sessão expirada (interceptor chama quando refresh falha)

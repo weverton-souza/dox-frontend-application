@@ -13,6 +13,7 @@ import { getAggregatedForms, getFormComparison } from '@/lib/api/customer-forms-
 import { getFormResponseById, updateFormResponse } from '@/lib/api/form-api'
 import { buildFormSectionGroups } from '@/lib/utils'
 import { useError } from '@/contexts/ErrorContext'
+import { useCustomerLabel } from '@/lib/hooks/useCustomerLabel'
 import type { SaveStatus } from '@/lib/hooks/use-auto-save'
 import SaveStatusIndicator from '@/components/ui/SaveStatusIndicator'
 import Spinner from '@/components/ui/Spinner'
@@ -43,8 +44,8 @@ function formatTotalDuration(ms: number): string {
   return rem === 0 ? `${minutes}min` : `${minutes}min ${rem}s`
 }
 
-function formatRespondentLabel(r: ComparisonRespondent): string {
-  if (r.respondentType === 'customer') return 'Cliente'
+function formatRespondentLabel(r: ComparisonRespondent, customerLabel: string): string {
+  if (r.respondentType === 'customer') return customerLabel
   if (r.respondentType === 'professional') return 'Profissional'
   const rt = r.relationType as keyof typeof CUSTOMER_CONTACT_RELATION_LABELS | undefined
   if (rt && CUSTOMER_CONTACT_RELATION_LABELS[rt]) {
@@ -59,6 +60,7 @@ export default function FormComparisonView() {
   const versionId = searchParams.get('versionId') || ''
   const navigate = useNavigate()
   const { showError } = useError()
+  const { singular: customerLabel } = useCustomerLabel()
 
   const [data, setData] = useState<ComparisonResult | null>(null)
   const [loading, setLoading] = useState(true)
@@ -128,7 +130,7 @@ export default function FormComparisonView() {
       index: idx,
       color: colorForIndex(idx),
       initials: getInitials(r.respondentName || '?'),
-      label: formatRespondentLabel(r),
+      label: formatRespondentLabel(r, customerLabel),
     }))
   }, [data])
 

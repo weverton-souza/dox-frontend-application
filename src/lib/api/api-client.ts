@@ -11,6 +11,7 @@ const REFRESH_TOKEN_KEY = 'dox_refresh_token'
 const ACCESS_TOKEN_KEY = 'dox_access_token'
 const USER_KEY = 'dox_user'
 const REMEMBER_ME_KEY = 'dox_remember_me'
+const CUSTOMER_LABEL_KEY = 'dox_customer_label'
 
 accessToken = sessionStorage.getItem(ACCESS_TOKEN_KEY)
 
@@ -65,9 +66,22 @@ export function setStoredUser(json: string | null): void {
   }
 }
 
+export function getStoredCustomerLabel(): string | null {
+  return localStorage.getItem(CUSTOMER_LABEL_KEY)
+}
+
+export function setStoredCustomerLabel(label: string | null): void {
+  if (label) {
+    localStorage.setItem(CUSTOMER_LABEL_KEY, label)
+  } else {
+    localStorage.removeItem(CUSTOMER_LABEL_KEY)
+  }
+}
+
 export function clearTokens(): void {
   accessToken = null
   localStorage.removeItem(REFRESH_TOKEN_KEY)
+  localStorage.removeItem(CUSTOMER_LABEL_KEY)
   sessionStorage.removeItem(REFRESH_TOKEN_KEY)
   sessionStorage.removeItem(ACCESS_TOKEN_KEY)
   sessionStorage.removeItem(USER_KEY)

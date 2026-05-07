@@ -132,6 +132,14 @@
 - Helper `lib/professional-format.ts` com `formatCouncil(prof)` e `formatCouncilWithFallback` — prioriza novo formato (`councilType + councilNumber + councilState`), cai para `crp` legado
 - Tipo `Professional` ganha 8 campos opcionais: `socialName`, `gender`, `councilType`, `councilNumber`, `councilState`, `addressCity`, `addressState`, `bio`
 - `lib/docx-engine/generator.ts` atualizado em 5 lugares para usar `formatCouncil` (header docx, profRows identification, metaLines, signature subtitle)
+- Badge "vertical formatado" usa `formatVertical(user.vertical)` de `lib/vertical-format.ts` — mapeia as verticals do backend em lowercase (`health` → "Saúde", `nutrition` → "Nutrição", `social_work` → "Serviço Social", etc.)
+
+### Customer label dinâmico (Maio 2026)
+- `useCustomerLabel()` em `lib/hooks/` retorna `{ singular, plural }` lendo do `AuthContext.user.customerLabel` (vem resolvido do backend), com fallback pro localStorage (`dox_customer_label`) pra carregamento instantâneo, e por último `'Cliente'`
+- Cache em **localStorage** (`getStoredCustomerLabel` / `setStoredCustomerLabel` em `api-client`) sobrevive ao fechar tab — UI carrega com label correta antes do AuthContext hidratar
+- `AuthResponse` + `AuthUser` ganham `customerLabel: string`. `Professional` ganha `customerLabelOverride?: string | null` (UI de edição em PR futuro)
+- Strings "Cliente"/"Clientes" hardcoded substituídas em Sidebar, CustomerList, CustomerProfile, NewReportModal, GenerateReportModal, AiFinalizationModal, VersionHistoryModal, CreateEventModal, ReportList, FormResponseList, MultiRespondentSendModal, FormComparisonView
+- Backend permanece com `customer*` em todos os endpoints — só a label exibida muda
 
 ### Geral (`/settings/general`)
 - `SettingsGeneral.tsx` renderiza `ThemeSelector` + `DocumentBrandingForm`

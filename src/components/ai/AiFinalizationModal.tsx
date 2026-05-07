@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useCustomerLabel } from '@/lib/hooks/useCustomerLabel'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
@@ -28,6 +29,7 @@ export default function AiFinalizationModal({
   customerName,
   blockCount,
 }: AiFinalizationModalProps) {
+  const { singular: customerLabel } = useCustomerLabel()
   const [confirmation, setConfirmation] = useState('')
   const [acceptedIrreversible, setAcceptedIrreversible] = useState(false)
 
@@ -80,7 +82,7 @@ export default function AiFinalizationModal({
             </div>
             {customerName && (
               <div className="flex items-baseline justify-between gap-3">
-                <span className="text-gray-500">Cliente</span>
+                <span className="text-gray-500">{customerLabel}</span>
                 <span className="font-medium truncate">{customerName}</span>
               </div>
             )}
