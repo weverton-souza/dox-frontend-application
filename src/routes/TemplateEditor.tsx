@@ -162,7 +162,7 @@ export default function TemplateEditor() {
         } else {
           const loaded = await getReportTemplateById(id!)
           if (!loaded) {
-            navigate('/')
+            navigate('/reports')
             return
           }
           setTemplate(loaded)
@@ -171,7 +171,7 @@ export default function TemplateEditor() {
         }
       } catch (err) {
         showError(err)
-        navigate('/')
+        navigate('/reports')
       } finally {
         setLoading(false)
       }

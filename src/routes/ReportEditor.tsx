@@ -157,7 +157,7 @@ export default function ReportEditor() {
           }
         }
       } catch {
-        navigate('/')
+        navigate('/reports')
       }
     }
     load()
@@ -804,7 +804,7 @@ export default function ReportEditor() {
       <EditorPageHeader
         onBack={() => {
           handleForceSave()
-          navigate('/')
+          navigate('/reports')
         }}
         showSaveStatus={false}
         alignWithSidebar

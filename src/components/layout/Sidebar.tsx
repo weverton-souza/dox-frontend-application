@@ -6,6 +6,7 @@ import {
   ClipboardListIcon,
   CalendarIcon,
   BookIcon,
+  HomeIcon,
 } from '@/components/icons'
 import type { IconProps } from '@/components/icons'
 import type { ModuleId } from '@/types'
@@ -25,7 +26,12 @@ interface NavItemConfig {
 function buildNavItems(customersLabel: string): NavItemConfig[] {
   return [
     {
-      to: '/',
+      to: '/dashboard',
+      label: 'Início',
+      icon: HomeIcon,
+    },
+    {
+      to: '/reports',
       label: 'Relatórios',
       icon: DocumentIcon,
       matchPaths: ['/reports/'],
