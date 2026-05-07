@@ -152,12 +152,12 @@ export default function ReportSettingsLibrary() {
               onClick={() => setActiveTab(tab.value)}
               className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium border transition-colors ${
                 isActive
-                  ? 'bg-gray-900 text-white border-gray-900'
+                  ? 'bg-brand-600 text-white border-brand-600'
                   : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
               }`}
             >
               {tab.label}
-              <span className={`text-xs ${isActive ? 'text-gray-300' : 'text-gray-400'}`}>{count}</span>
+              <span className={`text-xs ${isActive ? 'text-brand-100' : 'text-gray-400'}`}>{count}</span>
             </button>
           )
         })}

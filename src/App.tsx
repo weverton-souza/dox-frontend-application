@@ -72,11 +72,11 @@ export default function App() {
             <Route path="/calendar" element={<Calendar />} />
             <Route path="/guides" element={<FormulaGuide />} />
             <Route path="/reports/settings" element={<ReportSettings />}>
-              <Route index element={<Navigate to="appearance" replace />} />
+              <Route index element={<Navigate to="library" replace />} />
               <Route path="appearance" element={<ReportSettingsAppearance />} />
               <Route path="library" element={<ReportSettingsLibrary />} />
             </Route>
-            <Route path="/personalization" element={<Navigate to="/reports/settings/appearance" replace />} />
+            <Route path="/personalization" element={<Navigate to="/reports/settings/library" replace />} />
             <Route path="/personalization/appearance" element={<Navigate to="/reports/settings/appearance" replace />} />
             <Route path="/personalization/library" element={<Navigate to="/reports/settings/library" replace />} />
             <Route path="/settings" element={<Settings />}>

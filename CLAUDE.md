@@ -118,11 +118,10 @@
 
 ### Configurações de Relatório (rota `/reports/settings`)
 - Acessada via **engrenagem** no header da `/` (lista de relatórios), depois do botão "+" — é a ação menos frequente
-- Sidebar lateral com 2 sub-abas: **Aparência** (default) e **Biblioteca**
-- Layout em `src/routes/ReportSettings.tsx` + `src/components/report-settings/ReportSettingsSidebar.tsx`
-- Mesmo padrão visual do Settings (sidebar lateral + Outlet)
-- **Aparência** (`ReportSettingsAppearance.tsx`): ThemeSelector + DocumentBrandingForm — tema visual e identidade que aparecem nos relatórios exportados
-- **Biblioteca** (`ReportSettingsLibrary.tsx`): CRUD dos `content_library` entries (ver seção dedicada)
+- Layout: `EditorPageHeader` sticky com Voltar à esquerda + `SegmentedControl` (Biblioteca | Aparência) no centro — mesmo padrão de FormBuilder/ReportEditor
+- **Biblioteca** (`/reports/settings/library`, default — mais usada): CRUD dos `content_library` entries (ver seção dedicada)
+- **Aparência** (`/reports/settings/appearance`): ThemeSelector + DocumentBrandingForm — tema visual e identidade que aparecem nos relatórios exportados
+- Conteúdo `max-w-6xl` sem sidebar lateral — full width abaixo do header
 - Redirects backward compat: `/personalization`, `/personalization/{appearance,library}`, `/settings/general`, `/settings/library` → `/reports/settings/...`
 
 ### Configurações (rota `/settings`)
@@ -188,7 +187,7 @@
 - Paleta azul Apple (#007AFF) + cinzas quentes Apple (#F5F5F7)
 - Sombras multi-layer estilo Apple (xs, sm, md, lg, xl, card, dropdown, modal)
 - Tailwind config consome os tokens via `var()` — alterações no CSS propagam automaticamente
-- Navegação: GlobalTopBar (avatar, settings, logout) + PageHeader (toolbar contextual por página)
+- Navegação: GlobalTopBar (avatar dropdown com Configurações + Sair) + PageHeader (toolbar contextual por página). Sem mais botão de engrenagem solto no topbar — acesso a `/settings` via avatar dropdown
 - Font stack: Inter, -apple-system, BlinkMacSystemFont, Segoe UI, system-ui
 
 ### Persistência (Backend REST API)
