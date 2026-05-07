@@ -11,6 +11,7 @@ const SECTIONS: SettingsSection[] = [
   { to: '/settings/account', label: 'Conta' },
   { to: '/settings/privacy', label: 'Privacidade' },
   { to: '/settings/billing', label: 'Cobrança' },
+  { to: '/settings/library', label: 'Biblioteca' },
   { to: '/settings/usage', label: 'Uso' },
   { to: '/settings/notifications', label: 'Notificações' },
   { to: '/settings/security', label: 'Segurança' },
