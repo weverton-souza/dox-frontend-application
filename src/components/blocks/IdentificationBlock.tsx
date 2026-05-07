@@ -5,6 +5,7 @@ import Toggle from '@/components/ui/Toggle'
 import Select from '@/components/ui/Select'
 import DatePicker from '@/components/ui/DatePicker'
 import { CloseIcon } from '@/components/icons'
+import { useCustomerLabel } from '@/lib/hooks/useCustomerLabel'
 
 interface IdentificationBlockProps {
   data: IdentificationData
@@ -70,15 +71,16 @@ function calculateAge(birthDate: string, referenceDate: string): string {
 }
 
 export default function IdentificationBlock({ data, onChange, customers, onCustomerSelected }: IdentificationBlockProps) {
+  const { singular: customerLabel } = useCustomerLabel()
   const hasSolicitor = !!data.solicitor
 
   const customerOptions = useMemo(() => {
     if (!customers || customers.length === 0) return []
     return customers.map((p) => ({
       value: p.id,
-      label: p.data.name || 'Cliente sem nome',
+      label: p.data.name || `${customerLabel} sem nome`,
     }))
-  }, [customers])
+  }, [customers, customerLabel])
 
   const handleSelectCustomer = useCallback(
     (customerId: string) => {
@@ -302,9 +304,9 @@ export default function IdentificationBlock({ data, onChange, customers, onCusto
         )}
       </section>
 
-      {/* Dados do Cliente */}
+      {/* Dados do customer (label dinâmico) */}
       <section>
-        <h3 className={sectionHeaderClass}>Dados do Cliente</h3>
+        <h3 className={sectionHeaderClass}>Dados do(a) {customerLabel}</h3>
         {customerOptions.length > 0 && (
           <div className="mb-4">
             <Select

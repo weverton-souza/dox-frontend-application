@@ -40,6 +40,7 @@ import { Chart as ChartJS } from 'chart.js'
 import QRCode from 'qrcode'
 import './chart/setup'
 import { getProfessional } from '@/lib/api/professional-api'
+import { getStoredCustomerLabel } from '@/lib/api/api-client'
 import { formatDate, buildBlockTree, flattenTree } from '@/lib/utils'
 import { formatCouncil, formatCouncilWithFallback } from '@/lib/professional-format'
 import { base64ToUint8Array } from './shared/social-icons'
@@ -414,7 +415,7 @@ async function createDocFooter(prof: import('@/types').Professional, report: Rep
 
 // ========== Block renderers ==========
 
-function renderIdentification(data: IdentificationData): (Paragraph | Table)[] {
+function renderIdentification(data: IdentificationData, customerLabel: string): (Paragraph | Table)[] {
   const elements: (Paragraph | Table)[] = []
 
   // Section: Profissional Responsavel
@@ -446,8 +447,8 @@ function renderIdentification(data: IdentificationData): (Paragraph | Table)[] {
     elements.push(createKeyValueTable(solicitorRows))
   }
 
-  // Section: Dados do Paciente
-  elements.push(createSectionHeader('DADOS DO PACIENTE'))
+  // Section: Dados do customer (label dinâmico)
+  elements.push(createSectionHeader(`DADOS DO(A) ${customerLabel.toUpperCase()}`))
 
   const baseRows = [
     ['Nome', data.customer.name],
@@ -1592,7 +1593,7 @@ function renderCover(data: CoverData, report: Report, prof: import('@/types').Pr
 
 // ========== Closing Page ==========
 
-async function renderClosingPage(data: ClosingPageData, report: Report, prof: import('@/types').Professional): Promise<(Paragraph | Table)[]> {
+async function renderClosingPage(data: ClosingPageData, report: Report, prof: import('@/types').Professional, customerLabel: string): Promise<(Paragraph | Table)[]> {
   const elements: (Paragraph | Table)[] = []
 
   // Find identification block for customer info
@@ -1680,8 +1681,8 @@ async function renderClosingPage(data: ClosingPageData, report: Report, prof: im
 
   if (showPatient) {
     signatures.push({
-      name: idData?.customer?.name || 'Paciente',
-      subtitle: 'Paciente',
+      name: idData?.customer?.name || customerLabel,
+      subtitle: customerLabel,
     })
   }
   if (showParents) {
@@ -2002,6 +2003,7 @@ export async function generateDocx(report: Report, options: GenerateDocxOptions 
 
 async function buildDocxBlob(report: Report): Promise<Blob> {
   const prof = await getProfessional()
+  const customerLabel = (prof.customerLabel || getStoredCustomerLabel() || 'Cliente').trim() || 'Cliente'
   const sortedBlocks = flattenTree(buildBlockTree(report.blocks))
 
   const sectionChildren: (Paragraph | Table)[] = []
@@ -2030,7 +2032,7 @@ async function buildDocxBlob(report: Report): Promise<Blob> {
 
     switch (block.type) {
       case 'identification':
-        sectionChildren.push(...renderIdentification(block.data as IdentificationData))
+        sectionChildren.push(...renderIdentification(block.data as IdentificationData, customerLabel))
         break
       case 'section':
         sectionChildren.push(...renderSection(block.data as SectionData, getBlockDepth(block)))
@@ -2051,7 +2053,7 @@ async function buildDocxBlob(report: Report): Promise<Blob> {
         sectionChildren.push(...renderReferences(block.data as ReferencesData))
         break
       case 'closing-page':
-        sectionChildren.push(...await renderClosingPage(block.data as ClosingPageData, report, prof))
+        sectionChildren.push(...await renderClosingPage(block.data as ClosingPageData, report, prof, customerLabel))
         break
       case 'cover':
         sectionChildren.push(...renderCover(block.data as CoverData, report, prof))

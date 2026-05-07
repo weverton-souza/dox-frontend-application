@@ -21,6 +21,7 @@ import type {
   Professional,
 } from '@/types'
 import { formatCouncil } from '@/lib/professional-format'
+import { getStoredCustomerLabel } from '@/lib/api/api-client'
 import { base64ToUint8Array } from './shared/social-icons'
 
 type DocxAlignment = (typeof AlignmentType)[keyof typeof AlignmentType]
@@ -61,6 +62,10 @@ function paragraph(text: string, opts: { bold?: boolean; size?: number; color?: 
   })
 }
 
+function resolveCustomerLabel(header: FormPrintHeader): string {
+  return (header.professional?.customerLabel || getStoredCustomerLabel() || 'Cliente').trim() || 'Cliente'
+}
+
 function buildHeaderTable(header: FormPrintHeader): Table {
   const left: Paragraph[] = []
   if (header.professional?.logo) {
@@ -96,7 +101,8 @@ function buildHeaderTable(header: FormPrintHeader): Table {
   const right: Paragraph[] = []
   right.push(paragraph(`Data: ${header.date.toLocaleDateString('pt-BR')}`, { size: 18, color: SUBTLE_GRAY, alignment: AlignmentType.RIGHT }))
   if (header.customerName) {
-    right.push(paragraph(`Paciente: ${header.customerName}`, { size: 20, bold: true, alignment: AlignmentType.RIGHT }))
+    const label = resolveCustomerLabel(header)
+    right.push(paragraph(`${label}: ${header.customerName}`, { size: 20, bold: true, alignment: AlignmentType.RIGHT }))
   }
 
   return new Table({
@@ -294,7 +300,7 @@ function buildEvaluatorsFooter(evaluators: AdditionalEvaluator[] | undefined): P
   return result
 }
 
-function buildTotalDurationFooter(response: FormResponse | undefined | null): Paragraph[] {
+function buildTotalDurationFooter(response: FormResponse | undefined | null, customerLabel: string): Paragraph[] {
   if (!response?.pageDurationsMs) return []
   const totalMs = Object.values(response.pageDurationsMs).reduce((acc, v) => acc + v, 0)
   if (totalMs <= 0) return []
@@ -311,7 +317,7 @@ function buildTotalDurationFooter(response: FormResponse | undefined | null): Pa
       alignment: AlignmentType.RIGHT,
       children: [
         new TextRun({
-          text: `Tempo total de preenchimento do paciente: ${fmt}`,
+          text: `Tempo total de preenchimento do(a) ${customerLabel.toLowerCase()}: ${fmt}`,
           italics: true,
           size: 18,
           color: SUBTLE_GRAY,
@@ -324,6 +330,7 @@ function buildTotalDurationFooter(response: FormResponse | undefined | null): Pa
 export async function generateFormDocx(input: FormPrintInput): Promise<void> {
   const { formTitle, fields, selectedFieldIds, header, response, evaluators } = input
   const isFilled = !!response
+  const customerLabel = resolveCustomerLabel(header)
 
   const children: FileChild[] = []
   children.push(buildHeaderTable(header))
@@ -372,7 +379,7 @@ export async function generateFormDocx(input: FormPrintInput): Promise<void> {
   }
 
   children.push(...buildEvaluatorsFooter(evaluators))
-  if (isFilled) children.push(...buildTotalDurationFooter(response))
+  if (isFilled) children.push(...buildTotalDurationFooter(response, customerLabel))
 
   const doc = new Document({
     sections: [
