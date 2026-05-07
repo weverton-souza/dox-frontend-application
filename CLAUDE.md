@@ -78,7 +78,8 @@
 ### Clientes (Customers)
 - Cadastro completo: dados pessoais, contato, dados clínicos
 - Busca por nome ou CPF com paginação
-- Perfil com 6 abas: Dados Pessoais, Contato, Dados Clínicos, Relatórios, Notas, Histórico
+- Perfil com 7 abas: Dados Pessoais (inclui Contato), Dados Clínicos, Pessoas Relacionadas, Relatórios, Formulários, Notas, Prontuário
+- Hero do perfil com pills (idade, profissão, última sessão) + StatChips (relatórios, registros)
 - Notas clínicas com timestamp
 - Timeline de eventos (consulta, retorno, avaliação, relatório, observação) agrupados por mês/ano
 - Vínculo com relatórios via customerId — criar relatório a partir do cliente pré-preenche o bloco de identificação
