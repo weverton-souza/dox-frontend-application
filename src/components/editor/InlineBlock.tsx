@@ -72,6 +72,7 @@ function renderBody(
     case 'cover':
       return <CoverBlock data={block.data as CoverData} onChange={handleChange} />
     case 'section':
+    case 'page-break':
       return null
   }
 }
@@ -91,6 +92,54 @@ export default function InlineBlock({
   const [collapsed, setCollapsed] = useState(true)
 
   if (block.type === 'section') return null
+
+  if (block.type === 'page-break') {
+    return (
+      <div className="group relative flex items-center gap-3 py-3 px-4 bg-white rounded-xl border border-dashed border-gray-300 hover:border-gray-400 transition-colors">
+        <div className={`p-1.5 rounded-md ${BLOCK_TYPE_COLORS[block.type]}`}>
+          {getBlockTypeIcon(block.type, 14)}
+        </div>
+        <div className="flex-1 flex items-center gap-2 min-w-0">
+          <div className="flex-1 border-t border-dashed border-gray-300" />
+          <span className="text-xs font-medium uppercase tracking-wider text-gray-400 shrink-0">
+            {BLOCK_TYPE_LABELS['page-break']}
+          </span>
+          <div className="flex-1 border-t border-dashed border-gray-300" />
+        </div>
+        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+          {onDuplicate && (
+            <button
+              type="button"
+              onClick={() => onDuplicate(block.id)}
+              className="p-1.5 rounded-md hover:bg-gray-200 text-gray-400 hover:text-gray-700 transition-colors"
+              title="Duplicar"
+            >
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M7 3.5A1.5 1.5 0 018.5 2h3.879a1.5 1.5 0 011.06.44l3.122 3.12A1.5 1.5 0 0117 6.622V12.5a1.5 1.5 0 01-1.5 1.5h-1v-3.379a3 3 0 00-.879-2.121L10.5 5.379A3 3 0 008.379 4.5H7v-1z" />
+                <path d="M4.5 6A1.5 1.5 0 003 7.5v9A1.5 1.5 0 004.5 18h7a1.5 1.5 0 001.5-1.5v-5.879a1.5 1.5 0 00-.44-1.06L9.44 6.44A1.5 1.5 0 008.378 6H4.5z" />
+              </svg>
+            </button>
+          )}
+          {onRemove && (
+            <button
+              type="button"
+              onClick={() => onRemove(block.id)}
+              className="p-1.5 rounded-md hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors"
+              title="Remover"
+            >
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                <path
+                  fillRule="evenodd"
+                  d="M8.75 1A2.75 2.75 0 006 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 10.23 1.482l.149-.022.841 10.518A2.75 2.75 0 007.596 19h4.807a2.75 2.75 0 002.742-2.53l.841-10.52.149.023a.75.75 0 00.23-1.482A41.03 41.03 0 0014 4.193V3.75A2.75 2.75 0 0011.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 00-1.5.06l.3 7.5a.75.75 0 101.5-.06l-.3-7.5zm4.34.06a.75.75 0 10-1.5-.06l-.3 7.5a.75.75 0 101.5.06l.3-7.5z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </button>
+          )}
+        </div>
+      </div>
+    )
+  }
 
   const showReview = block.type === 'text' && !!onReviewBlock
 

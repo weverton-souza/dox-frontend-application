@@ -18,6 +18,7 @@ import {
   createEmptyReferencesData,
   createEmptyClosingPageData,
   createEmptyCoverData,
+  createEmptyPageBreakData,
   createEmptySectionData,
 } from '@/types'
 import type { Professional } from '@/types'
@@ -112,6 +113,9 @@ export function createBlock(type: BlockType, order: number, professional?: Profe
       break
     case 'cover':
       data = createEmptyCoverData()
+      break
+    case 'page-break':
+      data = createEmptyPageBreakData()
       break
   }
 

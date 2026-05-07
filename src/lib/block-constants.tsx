@@ -13,6 +13,7 @@ export const BLOCK_TYPE_LABELS: Record<BlockType, string> = {
   'references': 'Referências',
   'closing-page': 'Termo de Entrega',
   'cover': 'Capa',
+  'page-break': 'Quebra de página',
 }
 
 export const BLOCK_TYPE_DESCRIPTIONS: Record<BlockType, string> = {
@@ -25,6 +26,7 @@ export const BLOCK_TYPE_DESCRIPTIONS: Record<BlockType, string> = {
   'references': 'Referências bibliográficas com formatação ABNT',
   'closing-page': 'Termo de entrega e ciência com assinaturas',
   'cover': 'Página de capa do relatório (primeira página do .docx)',
+  'page-break': 'Força nova página no .docx a partir deste ponto',
 }
 
 // ========== Colors ==========
@@ -39,6 +41,7 @@ export const BLOCK_TYPE_COLORS: Record<BlockType, string> = {
   references: 'bg-slate-50 text-slate-500',
   'closing-page': 'bg-gray-100 text-gray-500',
   cover: 'bg-slate-100 text-slate-500',
+  'page-break': 'bg-gray-100 text-gray-500',
 }
 
 // Border color for sections varies by depth — this is the default/fallback
@@ -52,6 +55,7 @@ export const BLOCK_TYPE_BORDER_COLORS: Record<BlockType, string> = {
   references: 'border-l-slate-300',
   'closing-page': 'border-l-gray-400',
   cover: 'border-l-slate-400',
+  'page-break': 'border-l-gray-300',
 }
 
 // Section border color by depth in the tree (same hue, decreasing intensity)
@@ -82,6 +86,7 @@ export function getBlockTitle(block: { type: string; data: unknown }): string {
     case 'closing-page': return (block.data as ClosingPageData).title || BLOCK_TYPE_LABELS['closing-page']
     case 'identification': return BLOCK_TYPE_LABELS.identification
     case 'cover': return (block.data as CoverData).customTitle || BLOCK_TYPE_LABELS.cover
+    case 'page-break': return BLOCK_TYPE_LABELS['page-break']
     default: return block.type
   }
 }
@@ -155,6 +160,14 @@ export function getBlockTypeIcon(type: BlockType, size: number = 24): React.Reac
         <rect x="4" y="3" width="16" height="18" rx="1" />
         <line x1="8" y1="8" x2="16" y2="8" />
         <line x1="9" y1="12" x2="15" y2="12" />
+      </>)
+    case 'page-break':
+      return blockIcon(size, <>
+        <line x1="3" y1="12" x2="6" y2="12" strokeDasharray="2 2" />
+        <line x1="9" y1="12" x2="12" y2="12" strokeDasharray="2 2" />
+        <line x1="15" y1="12" x2="18" y2="12" strokeDasharray="2 2" />
+        <polyline points="14 7 19 12 14 17" />
+        <line x1="19" y1="12" x2="21" y2="12" />
       </>)
   }
 }
