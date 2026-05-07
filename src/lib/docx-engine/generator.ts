@@ -2058,6 +2058,9 @@ async function buildDocxBlob(report: Report): Promise<Blob> {
       case 'cover':
         sectionChildren.push(...renderCover(block.data as CoverData, report, prof))
         break
+      case 'page-break':
+        sectionChildren.push(new Paragraph({ children: [new PageBreak()] }))
+        break
     }
 
     // Spacing between blocks

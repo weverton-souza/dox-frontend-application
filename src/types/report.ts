@@ -223,7 +223,11 @@ export interface ClosingPageData {
 
 // ========== Block ==========
 
-export type BlockType = 'identification' | 'section' | 'text' | 'score-table' | 'info-box' | 'chart' | 'references' | 'closing-page' | 'cover'
+export type BlockType = 'identification' | 'section' | 'text' | 'score-table' | 'info-box' | 'chart' | 'references' | 'closing-page' | 'cover' | 'page-break'
+
+// ========== Page Break ==========
+
+export type PageBreakData = Record<string, never>
 
 export interface SectionData {
   title: string
@@ -232,7 +236,7 @@ export interface SectionData {
   color?: string
 }
 
-export type BlockData = IdentificationData | SectionData | TextBlockData | ScoreTableData | InfoBoxData | ChartData | ReferencesData | ClosingPageData | CoverData
+export type BlockData = IdentificationData | SectionData | TextBlockData | ScoreTableData | InfoBoxData | ChartData | ReferencesData | ClosingPageData | CoverData | PageBreakData
 
 export interface Block {
   id: string
@@ -444,6 +448,10 @@ export function createEmptyCoverData(): CoverData {
     customTitle: '',
     customSubtitle: '',
   }
+}
+
+export function createEmptyPageBreakData(): PageBreakData {
+  return {}
 }
 
 export function createScoreTableColumn(label: string = ''): ScoreTableColumn {

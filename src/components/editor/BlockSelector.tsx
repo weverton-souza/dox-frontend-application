@@ -35,6 +35,7 @@ const blockOptions: BlockOption[] = [
   { type: 'info-box', label: BLOCK_TYPE_LABELS['info-box'], description: BLOCK_TYPE_DESCRIPTIONS['info-box'], icon: getBlockTypeIcon('info-box'), colorClass: BLOCK_TYPE_COLORS['info-box'] },
   { type: 'chart', label: BLOCK_TYPE_LABELS.chart, description: BLOCK_TYPE_DESCRIPTIONS.chart, icon: getBlockTypeIcon('chart'), colorClass: BLOCK_TYPE_COLORS.chart },
   { type: 'references', label: BLOCK_TYPE_LABELS.references, description: BLOCK_TYPE_DESCRIPTIONS.references, icon: getBlockTypeIcon('references'), colorClass: BLOCK_TYPE_COLORS.references },
+  { type: 'page-break', label: BLOCK_TYPE_LABELS['page-break'], description: BLOCK_TYPE_DESCRIPTIONS['page-break'], icon: getBlockTypeIcon('page-break'), colorClass: BLOCK_TYPE_COLORS['page-break'] },
 ]
 
 export default function BlockSelector({ isOpen, onClose, onSelect, contextLabel }: BlockSelectorProps) {

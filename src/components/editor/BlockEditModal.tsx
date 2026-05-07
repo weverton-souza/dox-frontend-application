@@ -56,6 +56,7 @@ const MODAL_SIZES: Record<BlockType, 'sm' | 'md' | 'lg' | 'xl' | '2xl'> = {
   references: 'xl',
   'closing-page': 'lg',
   cover: 'md',
+  'page-break': 'sm',
 }
 
 function getModalTitle(block: Block): string {

@@ -19,7 +19,7 @@
 
 ### Relatórios (Reports)
 - Editor de blocos com drag-and-drop (dnd-kit) e auto-save via API
-- 9 tipos de bloco: identification, section, text, score-table, info-box, chart, references, closing-page, cover
+- 10 tipos de bloco: identification, section, text, score-table, info-box, chart, references, closing-page, cover, page-break
 - Bloco de Capa (`cover`) como bloco-raiz singleton opcional — título editorial centralizado + subtítulo (default: nome do cliente) + metadados do profissional no pé. Primeira página do `.docx`
 - Blocos-raiz singletons (cover, identification, closing-page) podem ser removidos e re-adicionados livremente via modal `AddRootBlockModal` que aparece ao clicar "+ Adicionar Seção" no sumário
 - Hierarquia explícita com `parentId` — blocos section podem conter outros blocos (multinível)
