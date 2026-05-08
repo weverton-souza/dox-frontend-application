@@ -1,5 +1,6 @@
 import type {
   AccessibleModule,
+  Addon,
   ApiNfseInvoice,
   ApiPayment,
   ApiSubscription,
@@ -32,6 +33,16 @@ export async function listBundles(): Promise<Bundle[]> {
 
 export async function getBundle(id: string): Promise<Bundle> {
   const { data } = await api.get<Bundle>(`/bundles/${id}`)
+  return data
+}
+
+export async function listAddons(): Promise<Addon[]> {
+  const { data } = await api.get<Addon[]>('/addons')
+  return data
+}
+
+export async function getAddon(id: string): Promise<Addon> {
+  const { data } = await api.get<Addon>(`/addons/${id}`)
   return data
 }
 

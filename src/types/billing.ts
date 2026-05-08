@@ -205,3 +205,18 @@ export interface PriceBreakdown {
   finalPriceCents: number
   cycle: 'MONTHLY' | 'QUARTERLY' | 'SEMIANNUALLY' | 'YEARLY'
 }
+
+export type AddonType = 'MODULE' | 'SLOT_QUOTA' | 'SEAT_QUOTA' | 'PERCENTAGE_FEE'
+
+export interface Addon {
+  id: string
+  name: string
+  description: string | null
+  type: AddonType
+  targetModuleId: string | null
+  priceMonthlyCents: number
+  priceUnitCents: number | null
+  feePercentage: number | null
+  availableForBundles: string[]
+  sortOrder: number
+}
