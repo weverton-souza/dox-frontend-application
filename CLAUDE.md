@@ -116,6 +116,18 @@
 - Preview do relatório atualiza automaticamente após geração
 - Status "requer mais informações" para seções com dados insuficientes
 
+### Início / Dashboard (rota `/dashboard`)
+- Primeira tela após login (`/` redireciona pra `/dashboard`)
+- Item "Início" como primeiro da Sidebar principal (`HomeIcon`)
+- Componente `routes/Dashboard.tsx` carrega 4 endpoints em paralelo no mount: `getReports`, `getCustomers`, `getCalendarEvents` (próximos 30d), `getUsageSummary` (mês/ano atuais)
+- **Banner de avisos** (condicional, no topo): IA ≥ 80% da quota (amber/red), relatórios em revisão > 7 dias
+- **4 cards de stat** (`StatCard`): Pacientes (+ N este mês), Em andamento (rascunho + em_revisao), Próximas sessões (7d), IA este mês com barra de progresso
+- **4 listas em grid 2 colunas** (`Section`): Últimos relatórios (5), Próximas sessões (5), Pacientes recentes (3), Relatórios finalizados por mês (gráfico bar Tailwind, 6 meses)
+- Listas vazias mostram texto centrado em cinza
+- Click em card de relatório → `/reports/:id`; sessão → `/calendar`; paciente → `/customers/:id`
+- Lista de relatórios continua acessível em `/reports` (era `/`); navegação interna em `ReportEditor`/`TemplateEditor`/`ReportSettings` atualizada pra usar `/reports`
+- Sidebar passa de 4 → 5 itens (Início, Relatórios, Pacientes, Formulários, Agenda)
+
 ### Configurações de Relatório (rota `/reports/settings`)
 - Acessada via **engrenagem** no header da `/` (lista de relatórios), depois do botão "+" — é a ação menos frequente
 - Layout: `EditorPageHeader` sticky com Voltar à esquerda + `SegmentedControl` (Biblioteca | Aparência) no centro — mesmo padrão de FormBuilder/ReportEditor

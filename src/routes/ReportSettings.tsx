@@ -22,7 +22,7 @@ export default function ReportSettings() {
   return (
     <>
       <EditorPageHeader
-        onBack={() => navigate('/')}
+        onBack={() => navigate('/reports')}
         showSaveStatus={false}
         center={
           <SegmentedControl

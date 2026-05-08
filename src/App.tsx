@@ -6,6 +6,7 @@ import SettingsPlaceholder from '@/components/settings/SettingsPlaceholder'
 
 const Login = lazy(() => import('@/routes/Login'))
 const Register = lazy(() => import('@/routes/Register'))
+const Dashboard = lazy(() => import('@/routes/Dashboard'))
 const ReportList = lazy(() => import('@/routes/ReportList'))
 const ReportEditor = lazy(() => import('@/routes/ReportEditor'))
 const CustomerList = lazy(() => import('@/routes/CustomerList'))
@@ -59,7 +60,9 @@ export default function App() {
         <Route path="/v/:code" element={<VerifyDocument />} />
         <Route element={<ProtectedRoute />}>
           <Route element={<AppLayout />}>
-            <Route path="/" element={<ReportList />} />
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/reports" element={<ReportList />} />
             <Route path="/reports/:id" element={<ReportEditor />} />
             <Route path="/templates/new" element={<TemplateEditor />} />
             <Route path="/templates/:id" element={<TemplateEditor />} />
