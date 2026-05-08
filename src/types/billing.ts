@@ -220,3 +220,34 @@ export interface Addon {
   availableForBundles: string[]
   sortOrder: number
 }
+
+export type PromotionDiscountType =
+  | 'PERCENTAGE'
+  | 'FIXED_AMOUNT'
+  | 'FREE_MONTHS'
+  | 'TRIAL_EXTENSION_DAYS'
+export type PromotionDurationType = 'ONCE' | 'FOREVER' | 'FIXED_MONTHS'
+export type TenantPromotionStatus = 'ACTIVE' | 'EXPIRED' | 'REVOKED'
+
+export interface PromotionSummary {
+  id: string
+  code: string | null
+  name: string
+  type: string
+  discountType: PromotionDiscountType
+  discountValue: number
+  durationType: PromotionDurationType
+  durationMonths: number | null
+  appliesTo: string
+}
+
+export interface TenantPromotion {
+  id: string
+  tenantId: string
+  promotion: PromotionSummary
+  appliedAt: string
+  expiresAt: string | null
+  status: TenantPromotionStatus
+  sourceEvent: string | null
+  notes: string | null
+}

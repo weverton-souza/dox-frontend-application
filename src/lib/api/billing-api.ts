@@ -8,6 +8,7 @@ import type {
   ModuleCatalogEntry,
   ModuleId,
   PriceBreakdown,
+  TenantPromotion,
 } from '@/types'
 import { api } from '@/lib/api/api-client'
 
@@ -43,6 +44,21 @@ export async function listAddons(): Promise<Addon[]> {
 
 export async function getAddon(id: string): Promise<Addon> {
   const { data } = await api.get<Addon>(`/addons/${id}`)
+  return data
+}
+
+export async function applyCoupon(code: string): Promise<TenantPromotion> {
+  const { data } = await api.post<TenantPromotion>('/billing/apply-coupon', { code })
+  return data
+}
+
+export async function listActivePromotions(): Promise<TenantPromotion[]> {
+  const { data } = await api.get<TenantPromotion[]>('/billing/promotions/active')
+  return data
+}
+
+export async function revokePromotion(tenantPromotionId: string): Promise<TenantPromotion> {
+  const { data } = await api.delete<TenantPromotion>(`/billing/promotions/${tenantPromotionId}`)
   return data
 }
 
