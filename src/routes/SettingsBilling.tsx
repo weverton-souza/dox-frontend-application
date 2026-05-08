@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import type { Invoice, Payment, Subscription } from '@/types'
 import { getSubscription, listInvoices, listPayments } from '@/lib/api/billing-api'
 import { adaptInvoice, adaptPayment, adaptSubscription } from '@/lib/billing-adapter'
@@ -15,6 +16,7 @@ import Spinner from '@/components/ui/Spinner'
 import Modal from '@/components/ui/Modal'
 
 export default function SettingsBilling() {
+  const navigate = useNavigate()
   const { showError } = useError()
   const { modules: accessibleModules } = useAccessibleModules()
 
@@ -67,7 +69,7 @@ export default function SettingsBilling() {
           <Spinner />
         </div>
       ) : !subscription ? (
-        <EmptyState onChoosePlan={() => setComingSoonAction('Escolher plano')} />
+        <EmptyState onChoosePlan={() => navigate('/pricing')} />
       ) : (
         <div className="mt-8 space-y-10">
           <SubscriptionOverview subscription={subscription} />
