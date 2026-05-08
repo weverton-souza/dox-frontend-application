@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import type { Invoice, Payment, Subscription } from '@/types'
 import { getSubscription, listInvoices, listPayments } from '@/lib/api/billing-api'
 import { adaptInvoice, adaptPayment, adaptSubscription } from '@/lib/billing-adapter'
@@ -17,8 +17,20 @@ import Modal from '@/components/ui/Modal'
 
 export default function SettingsBilling() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { showError } = useError()
   const { modules: accessibleModules } = useAccessibleModules()
+  const justSubscribed = searchParams.get('subscribed') === '1'
+
+  useEffect(() => {
+    if (!justSubscribed) return
+    const timer = window.setTimeout(() => {
+      const next = new URLSearchParams(searchParams)
+      next.delete('subscribed')
+      setSearchParams(next, { replace: true })
+    }, 8000)
+    return () => window.clearTimeout(timer)
+  }, [justSubscribed, searchParams, setSearchParams])
 
   const [subscription, setSubscription] = useState<Subscription | null>(null)
   const [payments, setPayments] = useState<Payment[]>([])
@@ -63,6 +75,14 @@ export default function SettingsBilling() {
           Gerencie sua assinatura, módulos ativos e histórico de pagamentos.
         </p>
       </header>
+
+      {justSubscribed && (
+        <div className="mt-6 rounded-xl border border-success/30 bg-success/5 px-4 py-3 text-sm text-gray-800">
+          Assinatura processada com sucesso. Seu primeiro pagamento aparece
+          aqui em instantes — pode demorar alguns segundos para o Asaas gerar
+          o PIX ou boleto.
+        </div>
+      )}
 
       {loading ? (
         <div className="flex items-center justify-center py-24">
