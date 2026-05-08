@@ -28,7 +28,7 @@ import PriceBreakdown from '@/components/billing/PriceBreakdown'
 import Spinner from '@/components/ui/Spinner'
 import Modal from '@/components/ui/Modal'
 
-type PaymentMethod = 'PIX' | 'BOLETO' | 'CREDIT_CARD'
+type PaymentMethod = 'PIX' | 'CREDIT_CARD'
 type Cycle = 'MONTHLY' | 'QUARTERLY' | 'SEMIANNUALLY' | 'YEARLY'
 
 const currencyFormatter = new Intl.NumberFormat('pt-BR', {
@@ -88,7 +88,9 @@ export default function Checkout() {
   const [subscription, setSubscription] = useState<ApiSubscription | null>(null)
   const [breakdown, setBreakdown] = useState<PriceBreakdownData | null>(null)
   const [appliedPromo, setAppliedPromo] = useState<TenantPromotion | null>(null)
-  const [method, setMethod] = useState<PaymentMethod>('PIX')
+  const [method, setMethod] = useState<PaymentMethod>(
+    cycle === 'MONTHLY' ? 'CREDIT_CARD' : 'PIX',
+  )
   const [billingName, setBillingName] = useState('')
   const [billingCpfCnpj, setBillingCpfCnpj] = useState('')
   const [billingEmail, setBillingEmail] = useState('')
@@ -304,11 +306,11 @@ export default function Checkout() {
             onClear={handleClearCoupon}
           />
 
-          <PaymentMethodPicker value={method} onChange={setMethod} />
+          <PaymentMethodPicker value={method} onChange={setMethod} cycle={cycle} />
           {method === 'CREDIT_CARD' && (
             <p className="rounded-lg border border-warning/30 bg-warning/5 px-3 py-2 text-xs text-warning">
-              Pagamento por cartão chega na próxima atualização. Por enquanto
-              use PIX ou Boleto.
+              Tokenização de cartão chega na próxima atualização. Por enquanto,
+              escolha o plano anual e pague via PIX.
             </p>
           )}
         </section>

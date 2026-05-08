@@ -1,10 +1,10 @@
-import type { BillingType } from '@/types'
-
-type SelectableMethod = Extract<BillingType, 'PIX' | 'BOLETO' | 'CREDIT_CARD'>
+type SelectableMethod = 'PIX' | 'CREDIT_CARD'
+type Cycle = 'MONTHLY' | 'QUARTERLY' | 'SEMIANNUALLY' | 'YEARLY'
 
 interface PaymentMethodPickerProps {
   value: SelectableMethod
   onChange: (method: SelectableMethod) => void
+  cycle: Cycle
 }
 
 interface MethodOption {
@@ -13,19 +13,33 @@ interface MethodOption {
   description: string
 }
 
-const METHODS: MethodOption[] = [
-  { id: 'PIX', label: 'PIX', description: 'Liquidação imediata, sem taxa extra' },
-  { id: 'CREDIT_CARD', label: 'Cartão de crédito', description: 'Cobrança recorrente automática' },
-  { id: 'BOLETO', label: 'Boleto', description: 'Compensação em até 2 dias úteis' },
-]
+const CARD_OPTION: MethodOption = {
+  id: 'CREDIT_CARD',
+  label: 'Cartão de crédito',
+  description: 'Cobrança recorrente automática',
+}
 
-export default function PaymentMethodPicker({ value, onChange }: PaymentMethodPickerProps) {
+const PIX_OPTION: MethodOption = {
+  id: 'PIX',
+  label: 'PIX',
+  description: 'Pagamento único do plano anual, liquidação imediata',
+}
+
+export default function PaymentMethodPicker({ value, onChange, cycle }: PaymentMethodPickerProps) {
+  const methods = cycle === 'MONTHLY' ? [CARD_OPTION] : [PIX_OPTION, CARD_OPTION]
+
   return (
     <fieldset className="flex flex-col gap-2">
       <legend className="mb-1 text-xs font-medium text-gray-700">
         Método de pagamento
       </legend>
-      {METHODS.map((method) => {
+      {cycle === 'MONTHLY' && (
+        <p className="text-xs text-gray-500">
+          Plano mensal só pode ser pago no cartão (cobrança recorrente). Para
+          pagar via PIX, escolha o plano anual.
+        </p>
+      )}
+      {methods.map((method) => {
         const selected = value === method.id
         return (
           <label
