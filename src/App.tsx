@@ -24,6 +24,7 @@ const Settings = lazy(() => import('@/routes/Settings'))
 const SettingsAccount = lazy(() => import('@/routes/SettingsAccount'))
 const SettingsBilling = lazy(() => import('@/routes/SettingsBilling'))
 const Pricing = lazy(() => import('@/routes/Pricing'))
+const Checkout = lazy(() => import('@/routes/Checkout'))
 const ReportSettings = lazy(() => import('@/routes/ReportSettings'))
 const ReportSettingsAppearance = lazy(() => import('@/routes/ReportSettingsAppearance'))
 const ReportSettingsLibrary = lazy(() => import('@/routes/ReportSettingsLibrary'))
@@ -76,6 +77,7 @@ export default function App() {
             <Route path="/calendar" element={<Calendar />} />
             <Route path="/guides" element={<FormulaGuide />} />
             <Route path="/pricing" element={<Pricing />} />
+            <Route path="/checkout" element={<Checkout />} />
             <Route path="/reports/settings" element={<ReportSettings />}>
               <Route index element={<Navigate to="library" replace />} />
               <Route path="appearance" element={<ReportSettingsAppearance />} />
