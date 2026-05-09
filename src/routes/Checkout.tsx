@@ -19,10 +19,17 @@ import {
   revokePromotion,
   subscribeBundle,
   subscribeModules,
+  tokenizeCreditCard,
 } from '@/lib/api/billing-api'
 import { useAuth } from '@/contexts/AuthContext'
 import { useError } from '@/contexts/ErrorContext'
 import CouponInput from '@/components/billing/CouponInput'
+import CreditCardForm, {
+  EMPTY_CREDIT_CARD,
+  digitsOnly as cardDigits,
+  isCreditCardFormValid,
+  type CreditCardFormState,
+} from '@/components/billing/CreditCardForm'
 import PaymentMethodPicker from '@/components/billing/PaymentMethodPicker'
 import PriceBreakdown from '@/components/billing/PriceBreakdown'
 import Spinner from '@/components/ui/Spinner'
@@ -94,6 +101,7 @@ export default function Checkout() {
   const [billingName, setBillingName] = useState('')
   const [billingCpfCnpj, setBillingCpfCnpj] = useState('')
   const [billingEmail, setBillingEmail] = useState('')
+  const [card, setCard] = useState<CreditCardFormState>(EMPTY_CREDIT_CARD)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [comingSoonAction, setComingSoonAction] = useState<string | null>(null)
@@ -174,18 +182,35 @@ export default function Checkout() {
     }
   }
 
-  const formInvalid =
+  const billingProfileInvalid =
     !billingName.trim() || !isValidCpfCnpj(billingCpfCnpj) || !billingEmail.includes('@')
+  const cardFormInvalid = method === 'CREDIT_CARD' && !isCreditCardFormValid(card)
+  const formInvalid = billingProfileInvalid || cardFormInvalid
 
   async function handleConfirm() {
-    if (method === 'CREDIT_CARD') {
-      setComingSoonAction('Pagamento com cartão')
-      return
-    }
     if (formInvalid || submitting) return
 
     setSubmitting(true)
     try {
+      let creditCardToken: string | undefined
+      if (method === 'CREDIT_CARD') {
+        const tokenized = await tokenizeCreditCard({
+          cardHolderName: card.holderName.trim(),
+          cardNumber: cardDigits(card.number),
+          cardExpiryMonth: card.expiryMonth.padStart(2, '0'),
+          cardExpiryYear: card.expiryYear,
+          cardCcv: cardDigits(card.ccv),
+          billingName: billingName.trim(),
+          billingEmail: billingEmail.trim(),
+          billingCpfCnpj: digitsOnly(billingCpfCnpj),
+          billingPostalCode: cardDigits(card.postalCode),
+          billingAddressNumber: card.addressNumber.trim(),
+          billingAddressComplement: card.addressComplement.trim() || undefined,
+          makeDefault: card.makeDefault,
+        })
+        creditCardToken = tokenized.token
+      }
+
       if (bundle) {
         await subscribeBundle({
           bundleId: bundle.id,
@@ -194,6 +219,7 @@ export default function Checkout() {
           customerName: billingName.trim(),
           customerCpfCnpj: digitsOnly(billingCpfCnpj),
           customerEmail: billingEmail.trim(),
+          creditCardToken,
         })
       } else if (addon?.targetModuleId) {
         await subscribeModules({
@@ -203,6 +229,7 @@ export default function Checkout() {
           customerName: billingName.trim(),
           customerCpfCnpj: digitsOnly(billingCpfCnpj),
           customerEmail: billingEmail.trim(),
+          creditCardToken,
         })
       } else {
         setComingSoonAction('Assinatura desse add-on')
@@ -307,12 +334,7 @@ export default function Checkout() {
           />
 
           <PaymentMethodPicker value={method} onChange={setMethod} cycle={cycle} />
-          {method === 'CREDIT_CARD' && (
-            <p className="rounded-lg border border-warning/30 bg-warning/5 px-3 py-2 text-xs text-warning">
-              Tokenização de cartão chega na próxima atualização. Por enquanto,
-              escolha o plano anual e pague via PIX.
-            </p>
-          )}
+          {method === 'CREDIT_CARD' && <CreditCardForm value={card} onChange={setCard} />}
         </section>
 
         <aside className="flex flex-col gap-4">
@@ -333,7 +355,7 @@ export default function Checkout() {
           <button
             type="button"
             onClick={handleConfirm}
-            disabled={submitting || formInvalid || method === 'CREDIT_CARD'}
+            disabled={submitting || formInvalid}
             className="rounded-lg bg-brand-500 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {submitting ? 'Processando…' : 'Confirmar e pagar'}
