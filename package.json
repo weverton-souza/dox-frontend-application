@@ -30,6 +30,7 @@
     "react-day-picker": "^9.14.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^6.28.0",
+    "react-svg-credit-card-payment-icons": "^5.1.2",
     "use-sync-external-store": "^1.6.0",
     "uuid": "^9.0.1"
   },

@@ -1,5 +1,6 @@
 import type {
   AccessibleModule,
+  Addon,
   ApiNfseInvoice,
   ApiPayment,
   ApiSubscription,
@@ -7,6 +8,7 @@ import type {
   ModuleCatalogEntry,
   ModuleId,
   PriceBreakdown,
+  TenantPromotion,
 } from '@/types'
 import { api } from '@/lib/api/api-client'
 
@@ -35,6 +37,31 @@ export async function getBundle(id: string): Promise<Bundle> {
   return data
 }
 
+export async function listAddons(): Promise<Addon[]> {
+  const { data } = await api.get<Addon[]>('/addons')
+  return data
+}
+
+export async function getAddon(id: string): Promise<Addon> {
+  const { data } = await api.get<Addon>(`/addons/${id}`)
+  return data
+}
+
+export async function applyCoupon(code: string): Promise<TenantPromotion> {
+  const { data } = await api.post<TenantPromotion>('/billing/apply-coupon', { code })
+  return data
+}
+
+export async function listActivePromotions(): Promise<TenantPromotion[]> {
+  const { data } = await api.get<TenantPromotion[]>('/billing/promotions/active')
+  return data
+}
+
+export async function revokePromotion(tenantPromotionId: string): Promise<TenantPromotion> {
+  const { data } = await api.delete<TenantPromotion>(`/billing/promotions/${tenantPromotionId}`)
+  return data
+}
+
 export async function getSubscription(): Promise<ApiSubscription | null> {
   const { data } = await api.get<ApiSubscription | null>('/billing/subscription')
   return data
@@ -47,6 +74,12 @@ export interface SubscribeBundleRequest {
   customerName: string
   customerCpfCnpj: string
   customerEmail?: string
+  customerMobilePhone: string
+  customerPostalCode: string
+  customerAddress: string
+  customerAddressNumber: string
+  customerAddressComplement?: string
+  customerProvince: string
   creditCardToken?: string
 }
 
@@ -91,6 +124,63 @@ export async function listPayments(from?: string, to?: string): Promise<ApiPayme
 
 export async function listInvoices(): Promise<ApiNfseInvoice[]> {
   const { data } = await api.get<ApiNfseInvoice[]>('/billing/invoices')
+  return data
+}
+
+export interface ApiPaymentMethodCard {
+  id: string
+  brand: string
+  last4: string
+  holderName: string
+  isDefault: boolean
+  expiresAt: string | null
+}
+
+export async function listPaymentMethods(): Promise<ApiPaymentMethodCard[]> {
+  const { data } = await api.get<ApiPaymentMethodCard[]>('/billing/payment-methods')
+  return data
+}
+
+export async function setDefaultPaymentMethod(id: string): Promise<ApiPaymentMethodCard> {
+  const { data } = await api.post<ApiPaymentMethodCard>(`/billing/payment-methods/${id}/default`)
+  return data
+}
+
+export async function deletePaymentMethod(id: string): Promise<void> {
+  await api.delete(`/billing/payment-methods/${id}`)
+}
+
+export interface CustomerProfile {
+  name: string
+  email: string | null
+  cpfCnpj: string
+  mobilePhone: string | null
+  postalCode: string | null
+  address: string | null
+  addressNumber: string | null
+  complement: string | null
+  province: string | null
+}
+
+export async function getCustomerProfile(): Promise<CustomerProfile | null> {
+  const { data } = await api.get<CustomerProfile | null>('/billing/customer-profile')
+  return data
+}
+
+export interface UpdateCustomerProfileRequest {
+  name: string
+  email?: string
+  cpfCnpj: string
+  mobilePhone: string
+  postalCode: string
+  address: string
+  addressNumber: string
+  complement?: string
+  province: string
+}
+
+export async function updateCustomerProfile(req: UpdateCustomerProfileRequest): Promise<CustomerProfile> {
+  const { data } = await api.put<CustomerProfile>('/billing/customer-profile', req)
   return data
 }
 

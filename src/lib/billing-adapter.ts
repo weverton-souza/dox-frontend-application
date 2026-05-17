@@ -12,7 +12,9 @@ import type {
   PaymentMethod,
   PaymentStatus,
   Subscription,
+  TenantPromotion,
 } from '@/types'
+import type { ApiPaymentMethodCard } from '@/lib/api/billing-api'
 
 const ACCEPTED_BILLING_CYCLES: BillingCycle[] = ['MONTHLY', 'YEARLY']
 
@@ -66,6 +68,32 @@ export function adaptSubscription(
     trialEnd: apiSub.trialEnd,
     cancelEffectiveAt: apiSub.cancelEffectiveAt,
     createdAt: apiSub.currentPeriodStart ?? new Date().toISOString(),
+  }
+}
+
+export function adaptTenantPromotion(tp: TenantPromotion): ActivePromotion {
+  return {
+    id: tp.id,
+    code: tp.promotion.code ?? tp.promotion.name,
+    name: tp.promotion.name,
+    type: tp.promotion.type as ActivePromotion['type'],
+    discountType: tp.promotion.discountType as ActivePromotion['discountType'],
+    discountValue: tp.promotion.discountValue,
+    durationType: tp.promotion.durationType as ActivePromotion['durationType'],
+    appliedAt: tp.appliedAt,
+    expiresAt: tp.expiresAt ?? undefined,
+  }
+}
+
+export function adaptPaymentMethodCard(card: ApiPaymentMethodCard): PaymentMethod {
+  return {
+    id: card.id,
+    type: 'CREDIT_CARD',
+    brand: card.brand,
+    last4: card.last4,
+    holderName: card.holderName,
+    isDefault: card.isDefault,
+    expiresAt: card.expiresAt ?? undefined,
   }
 }
 

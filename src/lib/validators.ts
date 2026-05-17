@@ -8,7 +8,7 @@ export interface AddressLookup {
   state: string
 }
 
-function digitsOnly(raw: string): string {
+export function digitsOnly(raw: string): string {
   return raw.replace(/\D/g, '')
 }
 
