@@ -13,6 +13,7 @@ import {
   applyCoupon,
   getAddon,
   getBundle,
+  getCustomerProfile,
   getSubscription,
   listActivePromotions,
   pricePreview,
@@ -20,13 +21,22 @@ import {
   subscribeBundle,
   subscribeModules,
   tokenizeCreditCard,
+  type CustomerProfile,
 } from '@/lib/api/billing-api'
 import { useAuth } from '@/contexts/AuthContext'
 import { useError } from '@/contexts/ErrorContext'
+import BillingAddressModal from '@/components/billing/BillingAddressModal'
+import BillingProfileForm, {
+  EMPTY_BILLING_ADDRESS,
+  isBillingAddressValid,
+  isValidCpfCnpj,
+  type BillingAddress,
+} from '@/components/billing/BillingProfileForm'
+import { digitsOnly, formatCep, formatPhoneBr } from '@/lib/validators'
+import { isCustomerProfileComplete } from '@/lib/customer-profile'
 import CouponInput from '@/components/billing/CouponInput'
 import CreditCardForm, {
   EMPTY_CREDIT_CARD,
-  digitsOnly as cardDigits,
   isCreditCardFormValid,
   type CreditCardFormState,
 } from '@/components/billing/CreditCardForm'
@@ -70,15 +80,6 @@ function describePromotion(p: TenantPromotion): string {
   return promo.name
 }
 
-function digitsOnly(value: string): string {
-  return value.replace(/\D/g, '')
-}
-
-function isValidCpfCnpj(raw: string): boolean {
-  const d = digitsOnly(raw)
-  return d.length === 11 || d.length === 14
-}
-
 export default function Checkout() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
@@ -101,10 +102,29 @@ export default function Checkout() {
   const [billingName, setBillingName] = useState('')
   const [billingCpfCnpj, setBillingCpfCnpj] = useState('')
   const [billingEmail, setBillingEmail] = useState('')
+  const [address, setAddress] = useState<BillingAddress>(EMPTY_BILLING_ADDRESS)
   const [card, setCard] = useState<CreditCardFormState>(EMPTY_CREDIT_CARD)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [comingSoonAction, setComingSoonAction] = useState<string | null>(null)
+  const [profile, setProfile] = useState<CustomerProfile | null>(null)
+  const [addressModalOpen, setAddressModalOpen] = useState(false)
+
+  const hasProfile = isCustomerProfileComplete(profile)
+
+  function applyProfileToForm(p: CustomerProfile) {
+    setBillingName(p.name)
+    if (p.email) setBillingEmail(p.email)
+    setBillingCpfCnpj(p.cpfCnpj)
+    setAddress({
+      mobilePhone: formatPhoneBr(p.mobilePhone ?? ''),
+      postalCode: formatCep(p.postalCode ?? ''),
+      street: p.address ?? '',
+      number: p.addressNumber ?? '',
+      complement: p.complement ?? '',
+      neighborhood: p.province ?? '',
+    })
+  }
 
   useEffect(() => {
     if (user) {
@@ -125,13 +145,18 @@ export default function Checkout() {
       loadAddon,
       getSubscription().catch(() => null),
       listActivePromotions().catch(() => [] as TenantPromotion[]),
+      getCustomerProfile().catch(() => null),
     ])
-      .then(async ([bundleData, addonData, sub, promos]) => {
+      .then(async ([bundleData, addonData, sub, promos, profileData]) => {
         if (cancelled) return
         setBundle(bundleData)
         setAddon(addonData)
         setSubscription(sub)
         setAppliedPromo(promos[0] ?? null)
+        setProfile(profileData)
+        if (isCustomerProfileComplete(profileData)) {
+          applyProfileToForm(profileData as CustomerProfile)
+        }
 
         if (bundleData) {
           const moduleIds = bundleData.modules.map((m) => m.id) as ModuleId[]
@@ -183,7 +208,10 @@ export default function Checkout() {
   }
 
   const billingProfileInvalid =
-    !billingName.trim() || !isValidCpfCnpj(billingCpfCnpj) || !billingEmail.includes('@')
+    !billingName.trim() ||
+    !isValidCpfCnpj(billingCpfCnpj) ||
+    !billingEmail.includes('@') ||
+    !isBillingAddressValid(address)
   const cardFormInvalid = method === 'CREDIT_CARD' && !isCreditCardFormValid(card)
   const formInvalid = billingProfileInvalid || cardFormInvalid
 
@@ -196,19 +224,32 @@ export default function Checkout() {
       if (method === 'CREDIT_CARD') {
         const tokenized = await tokenizeCreditCard({
           cardHolderName: card.holderName.trim(),
-          cardNumber: cardDigits(card.number),
+          cardNumber: digitsOnly(card.number),
           cardExpiryMonth: card.expiryMonth.padStart(2, '0'),
           cardExpiryYear: card.expiryYear,
-          cardCcv: cardDigits(card.ccv),
+          cardCcv: digitsOnly(card.ccv),
           billingName: billingName.trim(),
           billingEmail: billingEmail.trim(),
           billingCpfCnpj: digitsOnly(billingCpfCnpj),
-          billingPostalCode: cardDigits(card.postalCode),
-          billingAddressNumber: card.addressNumber.trim(),
-          billingAddressComplement: card.addressComplement.trim() || undefined,
+          billingPostalCode: digitsOnly(address.postalCode),
+          billingAddressNumber: address.number.trim(),
+          billingAddressComplement: address.complement.trim() || undefined,
+          billingMobilePhone: digitsOnly(address.mobilePhone),
           makeDefault: card.makeDefault,
         })
         creditCardToken = tokenized.token
+      }
+
+      const customerPayload = {
+        customerName: billingName.trim(),
+        customerCpfCnpj: digitsOnly(billingCpfCnpj),
+        customerEmail: billingEmail.trim(),
+        customerMobilePhone: digitsOnly(address.mobilePhone),
+        customerPostalCode: digitsOnly(address.postalCode),
+        customerAddress: address.street.trim(),
+        customerAddressNumber: address.number.trim(),
+        customerAddressComplement: address.complement.trim() || undefined,
+        customerProvince: address.neighborhood.trim(),
       }
 
       if (bundle) {
@@ -216,9 +257,7 @@ export default function Checkout() {
           bundleId: bundle.id,
           cycle,
           billingType: method,
-          customerName: billingName.trim(),
-          customerCpfCnpj: digitsOnly(billingCpfCnpj),
-          customerEmail: billingEmail.trim(),
+          ...customerPayload,
           creditCardToken,
         })
       } else if (addon?.targetModuleId) {
@@ -226,9 +265,7 @@ export default function Checkout() {
           moduleIds: [addon.targetModuleId as ModuleId],
           cycle: 'MONTHLY',
           billingType: method,
-          customerName: billingName.trim(),
-          customerCpfCnpj: digitsOnly(billingCpfCnpj),
-          customerEmail: billingEmail.trim(),
+          ...customerPayload,
           creditCardToken,
         })
       } else {
@@ -311,14 +348,42 @@ export default function Checkout() {
             )}
           </div>
 
-          <BillingProfileForm
-            name={billingName}
-            cpfCnpj={billingCpfCnpj}
-            email={billingEmail}
-            onChangeName={setBillingName}
-            onChangeCpfCnpj={setBillingCpfCnpj}
-            onChangeEmail={setBillingEmail}
-          />
+          {hasProfile ? (
+            <div className="flex items-start justify-between gap-3 rounded-xl border border-gray-200 bg-white p-5 shadow-xs">
+              <div className="text-sm">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  Cobrança em
+                </p>
+                <p className="mt-1 font-medium text-gray-900">{billingName}</p>
+                <p className="text-gray-600">
+                  {address.street}, {address.number}
+                  {address.complement ? ` · ${address.complement}` : ''}
+                </p>
+                <p className="text-gray-600">
+                  {address.neighborhood} · CEP {address.postalCode}
+                </p>
+                <p className="mt-1 text-gray-500">{address.mobilePhone}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAddressModalOpen(true)}
+                className="text-sm font-medium text-brand-600 hover:text-brand-700"
+              >
+                Editar
+              </button>
+            </div>
+          ) : (
+            <BillingProfileForm
+              name={billingName}
+              cpfCnpj={billingCpfCnpj}
+              email={billingEmail}
+              address={address}
+              onChangeName={setBillingName}
+              onChangeCpfCnpj={setBillingCpfCnpj}
+              onChangeEmail={setBillingEmail}
+              onChangeAddress={setAddress}
+            />
+          )}
 
           <CouponInput
             applied={
@@ -367,6 +432,15 @@ export default function Checkout() {
         </aside>
       </div>
 
+      <BillingAddressModal
+        open={addressModalOpen}
+        onClose={() => setAddressModalOpen(false)}
+        onSaved={(updated) => {
+          setProfile(updated)
+          applyProfileToForm(updated)
+        }}
+      />
+
       {comingSoonAction && (
         <Modal
           isOpen={true}
@@ -394,74 +468,3 @@ export default function Checkout() {
   )
 }
 
-interface BillingProfileFormProps {
-  name: string
-  cpfCnpj: string
-  email: string
-  onChangeName: (v: string) => void
-  onChangeCpfCnpj: (v: string) => void
-  onChangeEmail: (v: string) => void
-}
-
-function BillingProfileForm({
-  name,
-  cpfCnpj,
-  email,
-  onChangeName,
-  onChangeCpfCnpj,
-  onChangeEmail,
-}: BillingProfileFormProps) {
-  return (
-    <fieldset className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-5 shadow-xs">
-      <legend className="text-sm font-semibold text-gray-700">Dados de cobrança</legend>
-      <Field label="Nome completo ou razão social" id="billing-name">
-        <input
-          id="billing-name"
-          type="text"
-          value={name}
-          onChange={(e) => onChangeName(e.target.value)}
-          className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-        />
-      </Field>
-      <Field label="CPF ou CNPJ" id="billing-cpfcnpj">
-        <input
-          id="billing-cpfcnpj"
-          type="text"
-          inputMode="numeric"
-          value={cpfCnpj}
-          onChange={(e) => onChangeCpfCnpj(e.target.value)}
-          placeholder="Apenas números"
-          className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-        />
-      </Field>
-      <Field label="E-mail" id="billing-email">
-        <input
-          id="billing-email"
-          type="email"
-          value={email}
-          onChange={(e) => onChangeEmail(e.target.value)}
-          className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-        />
-      </Field>
-    </fieldset>
-  )
-}
-
-function Field({
-  label,
-  id,
-  children,
-}: {
-  label: string
-  id: string
-  children: React.ReactNode
-}) {
-  return (
-    <div className="flex flex-col gap-1">
-      <label htmlFor={id} className="text-xs font-medium text-gray-700">
-        {label}
-      </label>
-      {children}
-    </div>
-  )
-}

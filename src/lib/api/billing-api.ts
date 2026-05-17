@@ -74,6 +74,12 @@ export interface SubscribeBundleRequest {
   customerName: string
   customerCpfCnpj: string
   customerEmail?: string
+  customerMobilePhone: string
+  customerPostalCode: string
+  customerAddress: string
+  customerAddressNumber: string
+  customerAddressComplement?: string
+  customerProvince: string
   creditCardToken?: string
 }
 
@@ -118,6 +124,63 @@ export async function listPayments(from?: string, to?: string): Promise<ApiPayme
 
 export async function listInvoices(): Promise<ApiNfseInvoice[]> {
   const { data } = await api.get<ApiNfseInvoice[]>('/billing/invoices')
+  return data
+}
+
+export interface ApiPaymentMethodCard {
+  id: string
+  brand: string
+  last4: string
+  holderName: string
+  isDefault: boolean
+  expiresAt: string | null
+}
+
+export async function listPaymentMethods(): Promise<ApiPaymentMethodCard[]> {
+  const { data } = await api.get<ApiPaymentMethodCard[]>('/billing/payment-methods')
+  return data
+}
+
+export async function setDefaultPaymentMethod(id: string): Promise<ApiPaymentMethodCard> {
+  const { data } = await api.post<ApiPaymentMethodCard>(`/billing/payment-methods/${id}/default`)
+  return data
+}
+
+export async function deletePaymentMethod(id: string): Promise<void> {
+  await api.delete(`/billing/payment-methods/${id}`)
+}
+
+export interface CustomerProfile {
+  name: string
+  email: string | null
+  cpfCnpj: string
+  mobilePhone: string | null
+  postalCode: string | null
+  address: string | null
+  addressNumber: string | null
+  complement: string | null
+  province: string | null
+}
+
+export async function getCustomerProfile(): Promise<CustomerProfile | null> {
+  const { data } = await api.get<CustomerProfile | null>('/billing/customer-profile')
+  return data
+}
+
+export interface UpdateCustomerProfileRequest {
+  name: string
+  email?: string
+  cpfCnpj: string
+  mobilePhone: string
+  postalCode: string
+  address: string
+  addressNumber: string
+  complement?: string
+  province: string
+}
+
+export async function updateCustomerProfile(req: UpdateCustomerProfileRequest): Promise<CustomerProfile> {
+  const { data } = await api.put<CustomerProfile>('/billing/customer-profile', req)
   return data
 }
 

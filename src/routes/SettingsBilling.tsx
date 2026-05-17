@@ -1,13 +1,30 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import type { Invoice, Payment, Subscription } from '@/types'
-import { getSubscription, listInvoices, listPayments } from '@/lib/api/billing-api'
-import { adaptInvoice, adaptPayment, adaptSubscription } from '@/lib/billing-adapter'
+import {
+  getCustomerProfile,
+  getSubscription,
+  listActivePromotions,
+  listInvoices,
+  listPaymentMethods,
+  listPayments,
+  type CustomerProfile,
+} from '@/lib/api/billing-api'
+import {
+  adaptInvoice,
+  adaptPayment,
+  adaptPaymentMethodCard,
+  adaptSubscription,
+  adaptTenantPromotion,
+} from '@/lib/billing-adapter'
 import { useAccessibleModules } from '@/lib/hooks/use-modules'
-import { MOCK_ACTIVE_PROMOTIONS, MOCK_PAYMENT_METHODS } from '@/lib/mock/billing-mock'
 import { useError } from '@/contexts/ErrorContext'
+import { isCustomerProfileComplete } from '@/lib/customer-profile'
 import SubscriptionOverview from '@/components/billing/SubscriptionOverview'
 import ActivePromotionsCard from '@/components/billing/ActivePromotionsCard'
+import AddCardModal from '@/components/billing/AddCardModal'
+import BillingAddressCard from '@/components/billing/BillingAddressCard'
+import BillingAddressModal from '@/components/billing/BillingAddressModal'
 import PaymentMethodSection from '@/components/billing/PaymentMethodSection'
 import PaymentHistoryTable from '@/components/billing/PaymentHistoryTable'
 import InvoiceTable from '@/components/billing/InvoiceTable'
@@ -37,6 +54,12 @@ export default function SettingsBilling() {
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [loading, setLoading] = useState(true)
   const [comingSoonAction, setComingSoonAction] = useState<string | null>(null)
+  const [addCardOpen, setAddCardOpen] = useState(false)
+  const [addressModalOpen, setAddressModalOpen] = useState(false)
+  const [customerProfile, setCustomerProfile] = useState<CustomerProfile | null>(null)
+  const [reloadKey, setReloadKey] = useState(0)
+
+  const hasBillingAddress = isCustomerProfileComplete(customerProfile)
 
   useEffect(() => {
     let cancelled = false
@@ -45,18 +68,24 @@ export default function SettingsBilling() {
       getSubscription().catch(() => null),
       listPayments().catch(() => []),
       listInvoices().catch(() => []),
+      listPaymentMethods().catch(() => []),
+      listActivePromotions().catch(() => []),
+      getCustomerProfile().catch(() => null),
     ])
-      .then(([apiSub, apiPayments, apiInvoices]) => {
+      .then(([apiSub, apiPayments, apiInvoices, apiCards, apiPromos, profile]) => {
         if (cancelled) return
+        const paymentMethods = apiCards.map(adaptPaymentMethodCard)
+        const promotions = apiPromos.map(adaptTenantPromotion)
         const adapted = adaptSubscription(apiSub, accessibleModules, {
-          promotions: MOCK_ACTIVE_PROMOTIONS,
-          paymentMethods: MOCK_PAYMENT_METHODS,
+          promotions,
+          paymentMethods,
         })
         const mappedPayments = apiPayments.map(adaptPayment)
         const paymentById = new Map(mappedPayments.map((p) => [p.id, p]))
         setSubscription(adapted)
         setPayments(mappedPayments)
         setInvoices(apiInvoices.map((i) => adaptInvoice(i, paymentById.get(i.paymentId))))
+        setCustomerProfile(profile)
       })
       .catch(showError)
       .finally(() => {
@@ -65,7 +94,7 @@ export default function SettingsBilling() {
     return () => {
       cancelled = true
     }
-  }, [accessibleModules, showError])
+  }, [accessibleModules, showError, reloadKey])
 
   return (
     <div>
@@ -96,9 +125,34 @@ export default function SettingsBilling() {
 
           <ActivePromotionsCard promotions={subscription.activePromotions} />
 
+          <BillingAddressCard
+            profile={customerProfile}
+            onEdit={() => setAddressModalOpen(true)}
+          />
+
           <PaymentMethodSection
             methods={subscription.paymentMethods}
-            onChangeRequest={() => setComingSoonAction('Trocar método de pagamento')}
+            onChangeRequest={() => {
+              if (!hasBillingAddress) {
+                setAddressModalOpen(true)
+                return
+              }
+              setAddCardOpen(true)
+            }}
+            onChanged={async () => {
+              const apiCards = await listPaymentMethods().catch(() => null)
+              if (!apiCards) return
+              const paymentMethods = apiCards.map(adaptPaymentMethodCard)
+              setSubscription((prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      paymentMethods,
+                      defaultPaymentMethod: paymentMethods.find((p) => p.isDefault),
+                    }
+                  : prev,
+              )
+            }}
           />
 
           <PaymentHistoryTable payments={payments} />
@@ -112,6 +166,18 @@ export default function SettingsBilling() {
           />
         </div>
       )}
+
+      <AddCardModal
+        open={addCardOpen}
+        onClose={() => setAddCardOpen(false)}
+        onAdded={() => setReloadKey((k) => k + 1)}
+      />
+
+      <BillingAddressModal
+        open={addressModalOpen}
+        onClose={() => setAddressModalOpen(false)}
+        onSaved={(profile) => setCustomerProfile(profile)}
+      />
 
       {comingSoonAction && (
         <Modal
