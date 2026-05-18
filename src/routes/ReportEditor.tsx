@@ -23,6 +23,7 @@ import VersionHistoryModal from '@/components/editor/VersionHistoryModal'
 import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
 import Input from '@/components/ui/Input'
+import NotificationBanner from '@/components/ui/NotificationBanner'
 import EditorFloatingToolbar from '@/components/editor/EditorFloatingToolbar'
 import EditorPageHeader from '@/components/editor/EditorPageHeader'
 import { useAiGeneration } from '@/lib/hooks/use-ai-generation'
@@ -881,6 +882,17 @@ export default function ReportEditor() {
         }
       />
 
+      {/* Top notification banner (full width) */}
+      {!canEdit && reasonText && (
+        <NotificationBanner
+          variant="warning"
+          title="Relatório finalizado"
+          message={reasonText}
+          dismissable
+          className="rounded-none border-x-0 border-t-0"
+        />
+      )}
+
       {/* Main content area */}
       <div className="flex-1 flex gap-4 lg:gap-8 w-full px-4 sm:px-6 lg:px-8 pt-6 lg:pt-14">
         {/* Floating toolbar — left column */}
@@ -909,17 +921,6 @@ export default function ReportEditor() {
 
         {/* Left: blocks */}
         <div className="min-w-0 flex flex-col flex-1">
-          {/* Read-only banner (status finalizado) */}
-          {!canEdit && reasonText && (
-            <div className="pt-3">
-              <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 text-xs text-emerald-800">
-                <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                <span>{reasonText}</span>
-              </div>
-            </div>
-          )}
           {/* Form provenance banner */}
           {formProvenanceLabel && (
             <div className="pt-3">
