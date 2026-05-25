@@ -1,12 +1,15 @@
-import { useCallback } from 'react'
-import type { ChartTemplate } from '@/types'
+import { useCallback, useState } from 'react'
+import type { ChartData, ChartTemplate } from '@/types'
 import { getChartTemplates } from '@/lib/api/template-api'
 import TemplatePicker from '@/components/editor/TemplatePicker'
+import AssessmentBlockPicker from '@/components/editor/AssessmentBlockPicker'
 
 interface ChartTemplatePickerProps {
   onSelectTemplate: (templateId: string) => void
   onSelectEmpty: () => void
   onBack: () => void
+  customerId?: string | null
+  onSelectFromAssessment?: (presetData: ChartData, sourceAssessmentId: string) => void
 }
 
 const chartIcon = () => (
@@ -28,8 +31,25 @@ export default function ChartTemplatePicker({
   onSelectTemplate,
   onSelectEmpty,
   onBack,
+  customerId,
+  onSelectFromAssessment,
 }: ChartTemplatePickerProps) {
   const fetchTemplates = useCallback(() => getChartTemplates(), [])
+  const [showAssessment, setShowAssessment] = useState(false)
+  const assessmentEnabled = Boolean(customerId && onSelectFromAssessment)
+
+  if (showAssessment && customerId) {
+    return (
+      <AssessmentBlockPicker
+        customerId={customerId}
+        filterKind="chart"
+        onSelect={(_, data, sourceId) => {
+          onSelectFromAssessment?.(data as ChartData, sourceId)
+        }}
+        onBack={() => setShowAssessment(false)}
+      />
+    )
+  }
 
   return (
     <TemplatePicker<ChartTemplate>
@@ -42,6 +62,26 @@ export default function ChartTemplatePicker({
       onBack={onBack}
       renderIcon={chartIcon}
       renderDetail={chartDetail}
+      extraOptionBelowEmpty={
+        assessmentEnabled ? (
+          <button
+            type="button"
+            onClick={() => setShowAssessment(true)}
+            className="w-full flex items-start gap-3 p-3 rounded-xl border-2 border-brand-200 bg-brand-50/60 hover:bg-brand-50 transition-all text-left"
+          >
+            <div className="w-9 h-9 bg-brand-500 text-white rounded-lg flex items-center justify-center text-base shrink-0">
+              📋
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-gray-900 text-sm">Avaliação do paciente</p>
+              <p className="text-xs text-gray-600 mt-0.5">
+                Reaproveitar gráfico já preenchido em uma avaliação registrada
+              </p>
+            </div>
+            <span className="text-gray-400">→</span>
+          </button>
+        ) : null
+      }
     />
   )
 }

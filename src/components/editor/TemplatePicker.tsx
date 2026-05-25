@@ -19,6 +19,7 @@ interface TemplatePickerProps<T extends BaseTemplate> {
   onBack: () => void
   renderIcon: () => React.ReactNode
   renderDetail: (tpl: T) => string
+  extraOptionBelowEmpty?: React.ReactNode
 }
 
 export default function TemplatePicker<T extends BaseTemplate>({
@@ -31,6 +32,7 @@ export default function TemplatePicker<T extends BaseTemplate>({
   onBack,
   renderIcon,
   renderDetail,
+  extraOptionBelowEmpty,
 }: TemplatePickerProps<T>) {
   const [search, setSearch] = useState('')
   const [templates, setTemplates] = useState<T[]>([])
@@ -105,6 +107,8 @@ export default function TemplatePicker<T extends BaseTemplate>({
           <p className="text-xs text-gray-500 mt-0.5">{emptyDescription}</p>
         </div>
       </button>
+
+      {extraOptionBelowEmpty}
 
       {/* Templates agrupados por categoria */}
       {grouped.length === 0 ? (
