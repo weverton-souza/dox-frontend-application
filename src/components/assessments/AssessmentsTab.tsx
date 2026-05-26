@@ -130,6 +130,7 @@ export default function AssessmentsTab({ customerId, customerName }: Assessments
             <div key={root.id} className="space-y-2">
               <AssessmentCard
                 assessment={root}
+                customerId={customerId}
                 reapplications={reapplications}
                 onEdit={() => openEdit(root)}
                 onDelete={() => handleDelete(root)}
@@ -138,6 +139,7 @@ export default function AssessmentsTab({ customerId, customerName }: Assessments
                 <div key={reapp.id} className="ml-6 border-l-2 border-brand-200 pl-4">
                   <AssessmentCard
                     assessment={reapp}
+                    customerId={customerId}
                     onEdit={() => openEdit(reapp)}
                     onDelete={() => handleDelete(reapp)}
                   />
