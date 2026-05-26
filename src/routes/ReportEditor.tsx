@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import type { Block, BlockType, BlockData, Report, ReportStatus, ReportVersion, Customer, ScoreTableTemplate, ChartTemplate } from '@/types'
+import type { Block, BlockType, BlockData, ChartData, Report, ReportStatus, ReportVersion, Customer, ScoreTableData, ScoreTableTemplate, ChartTemplate } from '@/types'
 import { createScoreTableFromTemplate, createChartFromTemplate, isSlateContent, slateContentToPlainText, REPORT_STATUS_LABELS, REPORT_STATUS_COLORS, REPORT_STATUS_TRANSITIONS } from '@/types'
 import type { TextBlockData, SectionData, InfoBoxData } from '@/types'
 import { getReport, updateReport, getExportData } from '@/lib/api/report-api'
@@ -370,6 +370,17 @@ export default function ReportEditor() {
       updateBlockSelector({ insertAfterBlockId: afterBlockId, insertParentId: parentId ?? null, showBlockSelector: true })
     },
     []
+  )
+
+  const handleAddBlockFromAssessment = useCallback(
+    (kind: 'score-table' | 'chart', presetData: ScoreTableData | ChartData) => {
+      if (!report) return
+      const newBlock = createBlock(kind, 0, undefined, blockSelector.insertParentId)
+      newBlock.data = presetData
+      setPendingNewBlock({ block: newBlock, afterBlockId: blockSelector.insertAfterBlockId })
+      updateBlockSelector({ insertAfterBlockId: null, insertParentId: null })
+    },
+    [report, blockSelector.insertAfterBlockId, blockSelector.insertParentId]
   )
 
   const [showAddRootModal, setShowAddRootModal] = useState(false)
@@ -1052,6 +1063,8 @@ export default function ReportEditor() {
           updateBlockSelector({ showBlockSelector: false, insertAfterBlockId: null, insertParentId: null })
         }}
         onSelect={handleAddBlock}
+        onSelectFromAssessment={handleAddBlockFromAssessment}
+        customerId={report.customerId}
         contextLabel={insertTargetSection}
       />
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import type { BlockType } from '@/types'
+import type { BlockType, ChartData, ScoreTableData } from '@/types'
 import { BLOCK_TYPE_LABELS, BLOCK_TYPE_DESCRIPTIONS, BLOCK_TYPE_COLORS, getBlockTypeIcon } from '@/lib/block-constants'
 import Modal from '@/components/ui/Modal'
 import ScoreTableTemplatePicker from '@/components/editor/ScoreTableTemplatePicker'
@@ -9,6 +9,12 @@ interface BlockSelectorProps {
   isOpen: boolean
   onClose: () => void
   onSelect: (type: BlockType, templateId?: string) => void
+  onSelectFromAssessment?: (
+    kind: 'score-table' | 'chart',
+    presetData: ScoreTableData | ChartData,
+    sourceAssessmentId: string,
+  ) => void
+  customerId?: string | null
   contextLabel?: string
 }
 
@@ -38,7 +44,14 @@ const blockOptions: BlockOption[] = [
   { type: 'page-break', label: BLOCK_TYPE_LABELS['page-break'], description: BLOCK_TYPE_DESCRIPTIONS['page-break'], icon: getBlockTypeIcon('page-break'), colorClass: BLOCK_TYPE_COLORS['page-break'] },
 ]
 
-export default function BlockSelector({ isOpen, onClose, onSelect, contextLabel }: BlockSelectorProps) {
+export default function BlockSelector({
+  isOpen,
+  onClose,
+  onSelect,
+  onSelectFromAssessment,
+  customerId,
+  contextLabel,
+}: BlockSelectorProps) {
   const [showTemplatePicker, setShowTemplatePicker] = useState<'score-table' | 'chart' | null>(null)
 
   const handleSelect = (option: BlockOption) => {
@@ -57,6 +70,16 @@ export default function BlockSelector({ isOpen, onClose, onSelect, contextLabel 
   const handleClose = () => {
     setShowTemplatePicker(null)
     onClose()
+  }
+
+  const handleSelectScoreFromAssessment = (presetData: ScoreTableData, sourceId: string) => {
+    onSelectFromAssessment?.('score-table', presetData, sourceId)
+    handleClose()
+  }
+
+  const handleSelectChartFromAssessment = (presetData: ChartData, sourceId: string) => {
+    onSelectFromAssessment?.('chart', presetData, sourceId)
+    handleClose()
   }
 
   const handleSelectScoreTemplate = (templateId: string) => {
@@ -86,12 +109,16 @@ export default function BlockSelector({ isOpen, onClose, onSelect, contextLabel 
           onSelectTemplate={handleSelectScoreTemplate}
           onSelectEmpty={handleSelectEmptyScoreTable}
           onBack={() => setShowTemplatePicker(null)}
+          customerId={customerId}
+          onSelectFromAssessment={onSelectFromAssessment ? handleSelectScoreFromAssessment : undefined}
         />
       ) : showTemplatePicker === 'chart' ? (
         <ChartTemplatePicker
           onSelectTemplate={handleSelectChartTemplate}
           onSelectEmpty={handleSelectEmptyChart}
           onBack={() => setShowTemplatePicker(null)}
+          customerId={customerId}
+          onSelectFromAssessment={onSelectFromAssessment ? handleSelectChartFromAssessment : undefined}
         />
       ) : (
         <div className="space-y-0">
@@ -100,28 +127,28 @@ export default function BlockSelector({ isOpen, onClose, onSelect, contextLabel 
               Inserindo em: <span className="font-medium text-gray-700">{contextLabel}</span>
             </p>
           )}
-        <div className="grid grid-cols-2 gap-3 p-4">
-          {blockOptions.map((option) => (
-            <button
-              key={option.type}
-              type="button"
-              onClick={() => handleSelect(option)}
-              className="flex items-start gap-3 p-4 rounded-xl border border-gray-200 hover:border-brand-300 hover:bg-brand-50/50 transition-all text-left group"
-            >
-              <div className={`p-2 rounded-lg shrink-0 ${option.colorClass}`}>
-                {option.icon}
-              </div>
-              <div>
-                <p className="font-medium text-gray-900 text-sm group-hover:text-brand-700">
-                  {option.label}
-                </p>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  {option.description}
-                </p>
-              </div>
-            </button>
-          ))}
-        </div>
+          <div className="grid grid-cols-2 gap-3 p-4">
+            {blockOptions.map((option) => (
+              <button
+                key={option.type}
+                type="button"
+                onClick={() => handleSelect(option)}
+                className="flex items-start gap-3 p-4 rounded-xl border border-gray-200 hover:border-brand-300 hover:bg-brand-50/50 transition-all text-left group"
+              >
+                <div className={`p-2 rounded-lg shrink-0 ${option.colorClass}`}>
+                  {option.icon}
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900 text-sm group-hover:text-brand-700">
+                    {option.label}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {option.description}
+                  </p>
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
       )}
     </Modal>
