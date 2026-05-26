@@ -47,6 +47,7 @@ import StatusBadge from '@/components/ui/StatusBadge'
 import ListCard, { ListCardPill } from '@/components/ui/ListCard'
 import CustomerContactsTab from '@/components/customer/CustomerContactsTab'
 import AssessmentsTab from '@/components/assessments/AssessmentsTab'
+import ClinicalTab from '@/components/customers/ClinicalTab'
 import { TrashIcon } from '@/components/icons'
 import { getAvatarColor, getInitials } from '@/lib/avatar-utils'
 
@@ -204,6 +205,26 @@ export default function CustomerProfile() {
       }
       await updateCustomer(updated)
       setCustomer(updated)
+    } catch (err) {
+      showError(err)
+    } finally {
+      setSaving(false)
+    }
+  }, [customer, editData, showError])
+
+  const handleSavePatch = useCallback(async (patch: Partial<CustomerData>) => {
+    if (!customer || !editData) return
+    setSaving(true)
+    try {
+      const mergedData: CustomerData = { ...editData, ...patch }
+      const updated: Customer = {
+        ...customer,
+        data: mergedData,
+        updatedAt: getNowIso(),
+      }
+      await updateCustomer(updated)
+      setCustomer(updated)
+      setEditData(mergedData)
     } catch (err) {
       showError(err)
     } finally {
@@ -411,17 +432,14 @@ export default function CustomerProfile() {
   }
 
   function renderClinicalSection() {
+    if (!editData || !id) return null
     return (
-      <SectionCard title="Dados Clínicos" onSave={handleSaveSection} saving={saving}>
-        <div className="space-y-4">
-          <TextArea label="Queixa Principal" value={editData!.chiefComplaint ?? ''} onChange={(e) => updateField('chiefComplaint', e.target.value)} placeholder="Descreva a queixa principal do cliente..." />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input label="Diagnóstico" value={editData!.diagnosis ?? ''} onChange={(e) => updateField('diagnosis', e.target.value)} />
-            <Input label="Médico Solicitante" value={editData!.referralDoctor ?? ''} onChange={(e) => updateField('referralDoctor', e.target.value)} />
-          </div>
-          <TextArea label="Medicações" value={editData!.medications ?? ''} onChange={(e) => updateField('medications', e.target.value)} placeholder="Liste as medicações em uso..." />
-        </div>
-      </SectionCard>
+      <ClinicalTab
+        customerId={id}
+        data={editData}
+        saving={saving}
+        onSavePatch={handleSavePatch}
+      />
     )
   }
 
