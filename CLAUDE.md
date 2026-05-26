@@ -211,6 +211,37 @@
 - Contextos: AuthContext (auth state + session), ErrorContext (error modal global)
 - Rotas protegidas via ProtectedRoute (redirect para /login se não autenticado)
 
+### Anexos por registro (Maio 2026)
+- API client `customer-file-api.ts`: upload (FormData multipart com onProgress), list, getCustomerFile, getCustomerFileDownloadUrl (URL assinada TTL 60min), delete
+- Hook `useFileUpload(customerId, { category })`: state uploading/progress/error + função reset
+- `FileDropzone` em `components/ui/`: 3 estados (empty drag&drop, uploading com progress bar, uploaded com remover). Helper `formatBytes` exportado
+- `AttachmentField` em `components/assessments/`: orquestra hook + dropzone + API + ErrorContext; carrega metadata por `attachmentFileId`; upload/download/remoção inline
+- Cada `AssessmentEntry` tem seu `attachmentFileId`; `AssessmentEntryForm` renderiza `AttachmentField`; `AssessmentCard` mostra paperclip indicador no header com contagem total de anexos (acesso individual via editor modal)
+- Limite default: PDF/JPG/PNG/WEBP até 10MB (definido no backend, validações batem em 422 com mensagem amigável)
+
+### Dados Clínicos redesenhada (Maio 2026)
+- Aba `Dados Clínicos` substituída por timeline tipo "registros" — botão único `+ Novo registro` abre `ClinicalActionPicker` com 5 tipos: Anamnese, Diagnóstico, Medicação, Alergia, Encaminhamento
+- Cards só aparecem quando há dados (não há "form vazio"). Vazio → empty state padrão
+- Click no card abre o mesmo modal usado pra criar/adicionar
+- Cada registro pode ter anexo próprio: Diagnóstico e Medicação têm `attachmentFileId` por item; Anamnese e Encaminhamento têm anexo único (`anamnesisAttachmentFileId`/`referralAttachmentFileId`)
+- Paperclip indicador no header do card abre URL assinada em nova aba (anamnese e encaminhamento) ou indica contagem (diagnóstico/medicação); `AttachmentChip` por item dentro da lista permite download individual
+- Tipos novos em `types/customer.ts`: `Diagnosis` (`code?`, `label`, `attachmentFileId?`), `MedicationEntry` (`name`, `dose?`, `frequency?`, `attachmentFileId?`)
+- `CustomerData` ganha: `allergies: string[]`, `activeDiagnoses: Diagnosis[]`, `medicationsList: MedicationEntry[]`, `anamnesisHistory`, `familyHistory`, `anamnesisAttachmentFileId`, `referralAttachmentFileId`
+- Campos legados (`diagnosis` string, `medications` string) mantidos pra retrocompat; auto-migrados silenciosamente quando profissional adiciona primeiro item na lista estruturada (string vira `undefined` no save, removendo do JSONB)
+- `variable-service.ts`: resolver de `{{paciente_diagnostico}}` e `{{paciente_medicamentos}}` prefere lista estruturada com fallback pra string legada — 3 vars novas (`paciente_alergias`, `paciente_historico`, `paciente_antecedentes_familia`)
+- Componentes em `components/customers/`: `ClinicalTab`, `ClinicalActionPicker`, `AnamnesisEditorModal`, `DiagnosesEditorModal`, `MedicationsEditorModal`, `AllergiesEditorModal`, `ReferralEditorModal`, `CustomerFileUploadModal`, `CustomerFilesPanel` (com props `hideAddButton` e `refreshKey`)
+- `CustomerProfile.handleSavePatch(patch)`: aplica patch local + persiste imediato; cada editor modal chama `onSave(patch)` ao confirmar, evitando botão Salvar avulso por card
+
+### Padronização visual dos cards (Maio 2026)
+- `ClinicalTab` e `AssessmentCard` compartilham estrutura idêntica: chip 36×36 + título + pills opcionais + paperclip indicador + lixeira ambar + metadata + conteúdo
+- `AttachmentChip` em `components/ui/`: botão paperclip só ícone, `p-1.5 text-gray-500 hover:bg-gray-100 hover:text-brand-700` — usado em itens de lista (diagnóstico, medicação) onde cada item tem seu próprio download
+- Lixeira ambar inline no header de cada card (padrão de `PaperclipMethodSection`): `rounded-md p-1.5 text-amber-600 hover:bg-amber-50 hover:text-amber-700`
+- Card inteiro é `<div role="button" tabIndex={0}>` clicável (abre Editor); lixeira e paperclip do header chamam `stopPropagation`
+- ClinicalTab: chip uniforme `bg-gray-100 text-gray-600` em todos os tipos (Anamnese, Diagnóstico, Medicação, Alergia, Encaminhamento) — diferenciação só pelo ícone
+- AssessmentCard: chip `bg-brand-50 text-brand-600` com `ClipboardListIcon`; entries individuais NÃO renderizadas no card (acesso via editor modal)
+- Pills uniformes shade-700 em todos os contextos
+- Ícones em `icons.tsx`: `PaperclipIcon`, `StethoscopeIcon`, `PillIcon`, `AlertTriangleIcon` (estilo Feather/Lucide, stroke 1.8, currentColor)
+
 ## Nomenclatura Frontend ↔ Backend
 
 | Frontend | Backend | Nota |
@@ -230,10 +261,9 @@
 - Opções: correção gramatical, melhoria técnica, resumir, expandir
 - Modal com texto original + opções → IA processa → diff antes/depois → aceitar ou descartar
 
-### Upload de Arquivos do Cliente
-- Tabela `customer_files` já criada (S3 key, tipo, categoria)
-- Upload de exames, laudos anteriores, encaminhamentos
-- Integração como fonte de dados na geração por IA (extração de texto via PDFBox)
+### Upload de Arquivos do Cliente (continuação)
+- ✅ Implementado: upload por registro (avaliação, diagnóstico, medicação, anamnese, encaminhamento)
+- Falta: integração como fonte de dados na geração por IA (extração de texto via PDFBox)
 
 ### Templates Locked/Unlocked
 - Modo template (locked): estrutura fixa, profissional só preenche dados

@@ -4,6 +4,7 @@ import { useError } from '@/contexts/ErrorContext'
 import { deleteAssessment, getAssessments } from '@/lib/api/assessment-api'
 import Button from '@/components/ui/Button'
 import Spinner from '@/components/ui/Spinner'
+import { PlusIcon } from '@/components/icons'
 import AssessmentCard from './AssessmentCard'
 import AssessmentEditModal from './AssessmentEditModal'
 
@@ -95,15 +96,11 @@ export default function AssessmentsTab({ customerId, customerName }: Assessments
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold">Avaliações aplicadas</h2>
-          <p className="text-sm text-gray-600">
-            {assessments.length === 0
-              ? 'Nenhuma avaliação registrada'
-              : `${groups.length} ${groups.length === 1 ? 'avaliação' : 'avaliações'} · ${assessments.length} ${assessments.length === 1 ? 'registro de sessão' : 'registros de sessão'}`}
-          </p>
-        </div>
-        <Button onClick={openNew}>+ Nova avaliação</Button>
+        <h2 className="text-lg font-semibold text-gray-900">Avaliações aplicadas</h2>
+        <Button onClick={openNew}>
+          <PlusIcon size={16} />
+          <span>Nova avaliação</span>
+        </Button>
       </div>
 
       <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-900">
@@ -130,16 +127,26 @@ export default function AssessmentsTab({ customerId, customerName }: Assessments
             <div key={root.id} className="space-y-2">
               <AssessmentCard
                 assessment={root}
-                customerId={customerId}
                 reapplications={reapplications}
                 onEdit={() => openEdit(root)}
                 onDelete={() => handleDelete(root)}
               />
               {reapplications.map(reapp => (
-                <div key={reapp.id} className="ml-6 border-l-2 border-brand-200 pl-4">
+                <div key={reapp.id} className="relative ml-5 pl-6">
+                  <span
+                    aria-hidden
+                    className="absolute left-0 top-0 bottom-0 w-px bg-gray-200"
+                  />
+                  <span
+                    aria-hidden
+                    className="absolute left-0 top-8 w-5 h-px bg-gray-200"
+                  />
+                  <span
+                    aria-hidden
+                    className="absolute left-[-3px] top-[26px] w-1.5 h-1.5 rounded-full bg-brand-400"
+                  />
                   <AssessmentCard
                     assessment={reapp}
-                    customerId={customerId}
                     onEdit={() => openEdit(reapp)}
                     onDelete={() => handleDelete(reapp)}
                   />
