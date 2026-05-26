@@ -1,7 +1,10 @@
 import type { Assessment, AssessmentEntry } from '@/types'
+import { getCustomerFileDownloadUrl } from '@/lib/api/customer-file-api'
+import { useError } from '@/contexts/ErrorContext'
 
 interface AssessmentCardProps {
   assessment: Assessment
+  customerId: string
   reapplications?: Assessment[]
   onEdit: () => void
   onDelete: () => void
@@ -35,10 +38,22 @@ function entrySummary(entry: AssessmentEntry): string {
 
 export default function AssessmentCard({
   assessment,
+  customerId,
   reapplications = [],
   onEdit,
   onDelete,
 }: AssessmentCardProps) {
+  const { showError } = useError()
+
+  async function handleDownload(fileId: string) {
+    try {
+      const { url } = await getCustomerFileDownloadUrl(customerId, fileId)
+      window.open(url, '_blank', 'noopener,noreferrer')
+    } catch (err) {
+      showError(err)
+    }
+  }
+
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
       <div className="px-6 py-4 border-b border-gray-100">
@@ -78,11 +93,20 @@ export default function AssessmentCard({
           <li key={entry.id ?? `${entry.instrumentName}-${entry.orderIndex}`} className="px-6 py-3 hover:bg-gray-50">
             <div className="flex items-start gap-3">
               <span className="text-base shrink-0">{ENTRY_ICONS[entry.entryType]}</span>
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <div className="text-sm font-medium">{entry.instrumentName || 'Sem nome'}</div>
                 <div className="text-xs text-gray-500 truncate">{entrySummary(entry)}</div>
                 {entry.observations && entry.entryType !== 'simple' && (
                   <div className="text-xs text-gray-500 italic mt-1 truncate">{entry.observations}</div>
+                )}
+                {entry.attachmentFileId && (
+                  <button
+                    type="button"
+                    onClick={() => handleDownload(entry.attachmentFileId!)}
+                    className="text-xs text-brand-600 hover:text-brand-700 mt-1 inline-flex items-center gap-1"
+                  >
+                    📎 Baixar anexo
+                  </button>
                 )}
               </div>
             </div>

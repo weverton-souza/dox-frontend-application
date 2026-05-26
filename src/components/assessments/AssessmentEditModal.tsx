@@ -530,6 +530,7 @@ export default function AssessmentEditModal({
               <div key={entry.id ?? idx}>
                 <AssessmentEntryForm
                   entry={entry}
+                  customerId={customerId}
                   index={idx}
                   total={entries.length}
                   hasInstrumentNameError={errors.instruments.has(idx)}

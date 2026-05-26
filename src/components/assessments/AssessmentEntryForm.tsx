@@ -3,10 +3,11 @@ import { ASSESSMENT_ENTRY_TYPE_LABELS } from '@/types'
 import AssessmentEntrySimple from './AssessmentEntrySimple'
 import AssessmentEntryTable from './AssessmentEntryTable'
 import AssessmentEntryChart from './AssessmentEntryChart'
-import AttachmentPlaceholder from './AttachmentPlaceholder'
+import AttachmentField from './AttachmentField'
 
 interface AssessmentEntryFormProps {
   entry: AssessmentEntry
+  customerId: string
   index: number
   total: number
   hasInstrumentNameError?: boolean
@@ -31,6 +32,7 @@ const TYPE_ICONS: Record<AssessmentEntry['entryType'], string> = {
 
 export default function AssessmentEntryForm({
   entry,
+  customerId,
   index,
   total,
   hasInstrumentNameError = false,
@@ -139,7 +141,11 @@ export default function AssessmentEntryForm({
 
         <div>
           <label className="block text-xs text-gray-600 mb-1">Anexo do protocolo</label>
-          <AttachmentPlaceholder attachmentFileId={entry.attachmentFileId} />
+          <AttachmentField
+            customerId={customerId}
+            attachmentFileId={entry.attachmentFileId}
+            onChange={fileId => onChange({ ...entry, attachmentFileId: fileId })}
+          />
         </div>
       </div>
     </div>

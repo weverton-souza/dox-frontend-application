@@ -1,5 +1,18 @@
 // ========== Customer ==========
 
+export interface Diagnosis {
+  code?: string  // CID-10/11 opcional
+  label: string
+  attachmentFileId?: string | null
+}
+
+export interface MedicationEntry {
+  name: string
+  dose?: string
+  frequency?: string
+  attachmentFileId?: string | null
+}
+
 export interface CustomerData {
   name: string
   cpf: string
@@ -14,11 +27,19 @@ export interface CustomerData {
   addressCity?: string
   addressState?: string
   addressZipCode?: string
-  // Clínico
-  chiefComplaint?: string      // queixa principal
-  diagnosis?: string
-  medications?: string
-  referralDoctor?: string      // médico solicitante
+  // Clínico — campos legados (string livre)
+  chiefComplaint?: string
+  diagnosis?: string           // legado — preferir activeDiagnoses
+  medications?: string         // legado — preferir medicationsList
+  referralDoctor?: string
+  // Clínico — campos estruturados
+  allergies?: string[]
+  activeDiagnoses?: Diagnosis[]
+  medicationsList?: MedicationEntry[]
+  anamnesisHistory?: string    // histórico clínico
+  familyHistory?: string       // antecedentes familiares
+  anamnesisAttachmentFileId?: string | null
+  referralAttachmentFileId?: string | null
 }
 
 export interface Customer {

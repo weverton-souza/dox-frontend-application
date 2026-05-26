@@ -36,7 +36,30 @@ const CUSTOMER_VARIABLE_DEFS: { key: string; label: string; field: keyof Custome
   { key: 'paciente_diagnostico', label: 'Diagnóstico', field: 'diagnosis' },
   { key: 'paciente_medicamentos', label: 'Medicamentos', field: 'medications' },
   { key: 'paciente_medico', label: 'Médico Solicitante', field: 'referralDoctor' },
+  { key: 'paciente_alergias', label: 'Alergias', field: 'allergies' },
+  { key: 'paciente_historico', label: 'Histórico Clínico', field: 'anamnesisHistory' },
+  { key: 'paciente_antecedentes_familia', label: 'Antecedentes Familiares', field: 'familyHistory' },
 ]
+
+function formatDiagnoses(customer: CustomerData): string {
+  const list = (customer.activeDiagnoses ?? [])
+    .map(d => (d.code ? `${d.code} ${d.label}` : d.label).trim())
+    .filter(Boolean)
+  if (list.length > 0) return list.join('; ')
+  return customer.diagnosis?.trim() || ''
+}
+
+function formatMedications(customer: CustomerData): string {
+  const list = (customer.medicationsList ?? [])
+    .map(m => [m.name, m.dose, m.frequency].filter(Boolean).join(' '))
+    .filter(Boolean)
+  if (list.length > 0) return list.join('; ')
+  return customer.medications?.trim() || ''
+}
+
+function formatAllergies(customer: CustomerData): string {
+  return (customer.allergies ?? []).filter(Boolean).join('; ')
+}
 
 const PARENTS_VARIABLE_KEY = 'paciente_filiacao'
 const GUARDIANS_VARIABLE_KEY = 'paciente_responsavel'
@@ -129,8 +152,15 @@ function getCustomerVariables(customer: CustomerData | null): VariableMap {
   const map: VariableMap = {}
   for (const def of CUSTOMER_VARIABLE_DEFS) {
     const value = customer[def.field]
+    if (Array.isArray(value)) continue
     if (value) map[def.key] = String(value)
   }
+  const diagnoses = formatDiagnoses(customer)
+  if (diagnoses) map['paciente_diagnostico'] = diagnoses
+  const meds = formatMedications(customer)
+  if (meds) map['paciente_medicamentos'] = meds
+  const allergies = formatAllergies(customer)
+  if (allergies) map['paciente_alergias'] = allergies
   return map
 }
 
