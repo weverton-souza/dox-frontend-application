@@ -3,6 +3,16 @@ import type { CustomerData, Diagnosis, MedicationEntry } from '@/types'
 import { useError } from '@/contexts/ErrorContext'
 import { getCustomerFileDownloadUrl } from '@/lib/api/customer-file-api'
 import Button from '@/components/ui/Button'
+import AttachmentChip from '@/components/ui/AttachmentChip'
+import {
+  AlertTriangleIcon,
+  ClipboardListIcon,
+  PaperclipIcon,
+  PillIcon,
+  PlusIcon,
+  StethoscopeIcon,
+  TrashIcon,
+} from '@/components/icons'
 import ClinicalActionPicker, { type ClinicalActionType } from './ClinicalActionPicker'
 import AnamnesisEditorModal from './AnamnesisEditorModal'
 import DiagnosesEditorModal from './DiagnosesEditorModal'
@@ -17,6 +27,100 @@ interface ClinicalTabProps {
   onSavePatch: (patch: Partial<CustomerData>) => Promise<void>
 }
 
+interface ClinicalCardShellProps {
+  icon: React.ReactNode
+  title: string
+  subtitle?: string
+  attachmentCount?: number
+  onDownloadAttachment?: (e: React.MouseEvent) => void
+  onEdit: () => void
+  onClear: () => void
+  clearTitle: string
+  children: React.ReactNode
+}
+
+function ClinicalCardShell({
+  icon,
+  title,
+  subtitle,
+  attachmentCount = 0,
+  onDownloadAttachment,
+  onEdit,
+  onClear,
+  clearTitle,
+  children,
+}: ClinicalCardShellProps) {
+  const hasAttachment = attachmentCount > 0
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onEdit}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onEdit()
+        }
+      }}
+      className="bg-white border border-gray-200 rounded-xl px-5 py-4 cursor-pointer hover:border-brand-300 hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 transition-all"
+    >
+      <div className="flex items-start gap-3">
+        <span className="inline-flex items-center justify-center w-9 h-9 rounded-lg shrink-0 bg-gray-100 text-gray-600">
+          {icon}
+        </span>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold text-gray-900 truncate">{title}</h3>
+            <div className="flex items-center gap-1 shrink-0">
+              {hasAttachment && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    if (onDownloadAttachment) {
+                      e.stopPropagation()
+                      onDownloadAttachment(e)
+                    }
+                  }}
+                  title={
+                    onDownloadAttachment
+                      ? 'Baixar anexo'
+                      : `${attachmentCount} ${attachmentCount === 1 ? 'anexo' : 'anexos'}`
+                  }
+                  aria-label={
+                    onDownloadAttachment
+                      ? 'Baixar anexo'
+                      : `${attachmentCount} ${attachmentCount === 1 ? 'anexo' : 'anexos'}`
+                  }
+                  className="inline-flex items-center gap-0.5 rounded-md p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-brand-700"
+                >
+                  <PaperclipIcon size={16} />
+                  {attachmentCount > 1 && (
+                    <span className="text-xs font-medium">{attachmentCount}</span>
+                  )}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onClear()
+                }}
+                title={clearTitle}
+                aria-label={clearTitle}
+                className="rounded-md p-1.5 text-amber-600 transition-colors hover:bg-amber-50 hover:text-amber-700"
+              >
+                <TrashIcon />
+              </button>
+            </div>
+          </div>
+          {subtitle && <div className="text-xs text-gray-500 mt-0.5">{subtitle}</div>}
+          <div className="mt-3">{children}</div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function formatDiagnosisLabel(d: Diagnosis): string {
   return d.code ? `${d.code} · ${d.label}` : d.label
 }
@@ -27,6 +131,14 @@ function formatMedicationLabel(m: MedicationEntry): string {
 
 function hasAnamnesis(data: CustomerData): boolean {
   return !!(data.chiefComplaint?.trim() || data.anamnesisHistory?.trim() || data.familyHistory?.trim())
+}
+
+function anamnesisFields(data: CustomerData): string {
+  const parts: string[] = []
+  if (data.chiefComplaint?.trim()) parts.push('Queixa')
+  if (data.anamnesisHistory?.trim()) parts.push('Histórico')
+  if (data.familyHistory?.trim()) parts.push('Antecedentes familiares')
+  return parts.join(' · ')
 }
 
 export default function ClinicalTab({ customerId, data, saving, onSavePatch }: ClinicalTabProps) {
@@ -55,6 +167,56 @@ export default function ClinicalTab({ customerId, data, saving, onSavePatch }: C
     setEditing(type)
   }
 
+  async function clearAnamnesis() {
+    if (!window.confirm('Excluir todo o registro de anamnese?\n\nEsta ação não pode ser desfeita.')) return
+    try {
+      await onSavePatch({
+        chiefComplaint: undefined,
+        anamnesisHistory: undefined,
+        familyHistory: undefined,
+        anamnesisAttachmentFileId: undefined,
+      })
+    } catch (err) {
+      showError(err)
+    }
+  }
+
+  async function clearDiagnoses() {
+    if (!window.confirm('Excluir todos os diagnósticos?\n\nEsta ação não pode ser desfeita.')) return
+    try {
+      await onSavePatch({ activeDiagnoses: [], diagnosis: undefined })
+    } catch (err) {
+      showError(err)
+    }
+  }
+
+  async function clearMedications() {
+    if (!window.confirm('Excluir todas as medicações?\n\nEsta ação não pode ser desfeita.')) return
+    try {
+      await onSavePatch({ medicationsList: [], medications: undefined })
+    } catch (err) {
+      showError(err)
+    }
+  }
+
+  async function clearAllergies() {
+    if (!window.confirm('Excluir todas as alergias?\n\nEsta ação não pode ser desfeita.')) return
+    try {
+      await onSavePatch({ allergies: [] })
+    } catch (err) {
+      showError(err)
+    }
+  }
+
+  async function clearReferral() {
+    if (!window.confirm('Excluir o encaminhamento?\n\nEsta ação não pode ser desfeita.')) return
+    try {
+      await onSavePatch({ referralDoctor: undefined, referralAttachmentFileId: undefined })
+    } catch (err) {
+      showError(err)
+    }
+  }
+
   const isEmpty =
     !hasAnamnesis(data) &&
     diagnoses.length === 0 && !legacyDiagnosis &&
@@ -65,14 +227,10 @@ export default function ClinicalTab({ customerId, data, saving, onSavePatch }: C
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold">Dados clínicos</h2>
-          <p className="text-sm text-gray-600">
-            Cada registro pode ter seu próprio anexo.
-          </p>
-        </div>
+        <h2 className="text-lg font-semibold text-gray-900">Dados clínicos</h2>
         <Button onClick={() => setPickerOpen(true)} disabled={saving}>
-          + Novo registro
+          <PlusIcon size={16} />
+          <span>Novo registro</span>
         </Button>
       </div>
 
@@ -83,67 +241,66 @@ export default function ClinicalTab({ customerId, data, saving, onSavePatch }: C
       )}
 
       {hasAnamnesis(data) && (
-        <button
-          type="button"
-          onClick={() => setEditing('anamnesis')}
-          className="w-full text-left bg-white border border-gray-200 rounded-xl px-5 py-4 hover:border-brand-300 hover:shadow-sm transition"
+        <ClinicalCardShell
+          icon={<ClipboardListIcon size={20} />}
+          title="Anamnese"
+          subtitle={anamnesisFields(data)}
+          attachmentCount={data.anamnesisAttachmentFileId ? 1 : 0}
+          onDownloadAttachment={
+            data.anamnesisAttachmentFileId
+              ? (e) => handleDownload(e, data.anamnesisAttachmentFileId!)
+              : undefined
+          }
+          onEdit={() => setEditing('anamnesis')}
+          onClear={clearAnamnesis}
+          clearTitle="Excluir anamnese"
         >
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <span className="text-lg">📋</span>
-              <h3 className="text-sm font-semibold text-gray-900">Anamnese</h3>
-              {data.anamnesisAttachmentFileId && (
-                <span
-                  role="button"
-                  tabIndex={0}
-                  onClick={(e) => handleDownload(e, data.anamnesisAttachmentFileId!)}
-                  className="text-xs text-brand-600 hover:text-brand-700 inline-flex items-center gap-0.5"
-                >
-                  📎
-                </span>
-              )}
-            </div>
-            <span className="text-xs text-brand-600">Editar</span>
-          </div>
           <div className="space-y-1 text-sm text-gray-700">
-            {data.chiefComplaint && <div className="line-clamp-2"><span className="text-xs text-gray-500">Queixa: </span>{data.chiefComplaint}</div>}
-            {data.anamnesisHistory && <div className="line-clamp-2"><span className="text-xs text-gray-500">Histórico: </span>{data.anamnesisHistory}</div>}
-            {data.familyHistory && <div className="line-clamp-2"><span className="text-xs text-gray-500">Antecedentes: </span>{data.familyHistory}</div>}
+            {data.chiefComplaint && (
+              <div className="line-clamp-2">
+                <span className="text-xs text-gray-500">Queixa: </span>
+                {data.chiefComplaint}
+              </div>
+            )}
+            {data.anamnesisHistory && (
+              <div className="line-clamp-2">
+                <span className="text-xs text-gray-500">Histórico: </span>
+                {data.anamnesisHistory}
+              </div>
+            )}
+            {data.familyHistory && (
+              <div className="line-clamp-2">
+                <span className="text-xs text-gray-500">Antecedentes: </span>
+                {data.familyHistory}
+              </div>
+            )}
           </div>
-        </button>
+        </ClinicalCardShell>
       )}
 
       {(diagnoses.length > 0 || legacyDiagnosis) && (
-        <button
-          type="button"
-          onClick={() => setEditing('diagnoses')}
-          className="w-full text-left bg-white border border-gray-200 rounded-xl px-5 py-4 hover:border-brand-300 hover:shadow-sm transition"
+        <ClinicalCardShell
+          icon={<StethoscopeIcon size={20} />}
+          title="Diagnósticos"
+          subtitle={
+            diagnoses.length > 0
+              ? `${diagnoses.length} ${diagnoses.length === 1 ? 'diagnóstico registrado' : 'diagnósticos registrados'}`
+              : 'Registro em texto livre'
+          }
+          attachmentCount={diagnoses.filter((d) => d.attachmentFileId).length}
+          onEdit={() => setEditing('diagnoses')}
+          onClear={clearDiagnoses}
+          clearTitle="Excluir todos os diagnósticos"
         >
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <span className="text-lg">🧠</span>
-              <h3 className="text-sm font-semibold text-gray-900">
-                Diagnósticos{diagnoses.length > 0 && ` (${diagnoses.length})`}
-              </h3>
-            </div>
-            <span className="text-xs text-brand-600">Editar</span>
-          </div>
           {diagnoses.length > 0 ? (
-            <ul className="space-y-1">
+            <ul className="space-y-1.5">
               {diagnoses.map((d, i) => (
-                <li key={i} className="flex items-center justify-between text-sm text-gray-700">
-                  <span className="inline-flex px-2.5 py-0.5 rounded-full bg-brand-50 text-brand-700 text-xs">
+                <li key={i} className="flex items-center justify-between gap-2 text-sm text-gray-700">
+                  <span className="inline-flex px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-700 text-xs">
                     {formatDiagnosisLabel(d)}
                   </span>
                   {d.attachmentFileId && (
-                    <span
-                      role="button"
-                      tabIndex={0}
-                      onClick={(e) => handleDownload(e, d.attachmentFileId!)}
-                      className="text-xs text-brand-600 hover:text-brand-700 inline-flex items-center gap-0.5"
-                    >
-                      📎
-                    </span>
+                    <AttachmentChip onClick={(e) => handleDownload(e, d.attachmentFileId!)} />
                   )}
                 </li>
               ))}
@@ -151,40 +308,32 @@ export default function ClinicalTab({ customerId, data, saving, onSavePatch }: C
           ) : (
             <div className="text-sm text-gray-700">{legacyDiagnosis}</div>
           )}
-        </button>
+        </ClinicalCardShell>
       )}
 
       {(meds.length > 0 || legacyMedications) && (
-        <button
-          type="button"
-          onClick={() => setEditing('medications')}
-          className="w-full text-left bg-white border border-gray-200 rounded-xl px-5 py-4 hover:border-brand-300 hover:shadow-sm transition"
+        <ClinicalCardShell
+          icon={<PillIcon size={20} />}
+          title="Medicações"
+          subtitle={
+            meds.length > 0
+              ? `${meds.length} ${meds.length === 1 ? 'medicação em uso' : 'medicações em uso'}`
+              : 'Registro em texto livre'
+          }
+          attachmentCount={meds.filter((m) => m.attachmentFileId).length}
+          onEdit={() => setEditing('medications')}
+          onClear={clearMedications}
+          clearTitle="Excluir todas as medicações"
         >
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <span className="text-lg">💊</span>
-              <h3 className="text-sm font-semibold text-gray-900">
-                Medicações{meds.length > 0 && ` (${meds.length})`}
-              </h3>
-            </div>
-            <span className="text-xs text-brand-600">Editar</span>
-          </div>
           {meds.length > 0 ? (
-            <ul className="space-y-1">
+            <ul className="space-y-1.5">
               {meds.map((m, i) => (
-                <li key={i} className="flex items-center justify-between text-sm text-gray-700">
-                  <span className="inline-flex px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-xs">
+                <li key={i} className="flex items-center justify-between gap-2 text-sm text-gray-700">
+                  <span className="inline-flex px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-700 text-xs">
                     {formatMedicationLabel(m)}
                   </span>
                   {m.attachmentFileId && (
-                    <span
-                      role="button"
-                      tabIndex={0}
-                      onClick={(e) => handleDownload(e, m.attachmentFileId!)}
-                      className="text-xs text-brand-600 hover:text-brand-700 inline-flex items-center gap-0.5"
-                    >
-                      📎
-                    </span>
+                    <AttachmentChip onClick={(e) => handleDownload(e, m.attachmentFileId!)} />
                   )}
                 </li>
               ))}
@@ -192,57 +341,45 @@ export default function ClinicalTab({ customerId, data, saving, onSavePatch }: C
           ) : (
             <div className="text-sm text-gray-700">{legacyMedications}</div>
           )}
-        </button>
+        </ClinicalCardShell>
       )}
 
       {allergies.length > 0 && (
-        <button
-          type="button"
-          onClick={() => setEditing('allergies')}
-          className="w-full text-left bg-white border border-gray-200 rounded-xl px-5 py-4 hover:border-brand-300 hover:shadow-sm transition"
+        <ClinicalCardShell
+          icon={<AlertTriangleIcon size={20} />}
+          title="Alergias"
+          subtitle={`${allergies.length} ${allergies.length === 1 ? 'alergia registrada' : 'alergias registradas'}`}
+          onEdit={() => setEditing('allergies')}
+          onClear={clearAllergies}
+          clearTitle="Excluir todas as alergias"
         >
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <span className="text-lg">⚠️</span>
-              <h3 className="text-sm font-semibold text-gray-900">Alergias ({allergies.length})</h3>
-            </div>
-            <span className="text-xs text-brand-600">Editar</span>
-          </div>
           <div className="flex flex-wrap gap-1.5">
             {allergies.map((a, i) => (
-              <span key={i} className="inline-flex px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 text-xs">
+              <span key={i} className="inline-flex px-2.5 py-1 rounded-full bg-gray-100 text-gray-700 text-xs">
                 {a}
               </span>
             ))}
           </div>
-        </button>
+        </ClinicalCardShell>
       )}
 
       {data.referralDoctor?.trim() && (
-        <button
-          type="button"
-          onClick={() => setEditing('referral')}
-          className="w-full text-left bg-white border border-gray-200 rounded-xl px-5 py-4 hover:border-brand-300 hover:shadow-sm transition"
+        <ClinicalCardShell
+          icon={<StethoscopeIcon size={20} />}
+          title="Encaminhamento"
+          subtitle="Profissional solicitante"
+          attachmentCount={data.referralAttachmentFileId ? 1 : 0}
+          onDownloadAttachment={
+            data.referralAttachmentFileId
+              ? (e) => handleDownload(e, data.referralAttachmentFileId!)
+              : undefined
+          }
+          onEdit={() => setEditing('referral')}
+          onClear={clearReferral}
+          clearTitle="Excluir encaminhamento"
         >
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <span className="text-lg">🩺</span>
-              <h3 className="text-sm font-semibold text-gray-900">Encaminhamento</h3>
-              {data.referralAttachmentFileId && (
-                <span
-                  role="button"
-                  tabIndex={0}
-                  onClick={(e) => handleDownload(e, data.referralAttachmentFileId!)}
-                  className="text-xs text-brand-600 hover:text-brand-700 inline-flex items-center gap-0.5"
-                >
-                  📎
-                </span>
-              )}
-            </div>
-            <span className="text-xs text-brand-600">Editar</span>
-          </div>
           <div className="text-sm text-gray-700">{data.referralDoctor}</div>
-        </button>
+        </ClinicalCardShell>
       )}
 
       <ClinicalActionPicker
