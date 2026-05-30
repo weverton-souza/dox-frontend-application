@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import type { Block, BlockType, BlockData, ReportTemplate, TemplateBlock, ScoreTableTemplate, ChartTemplate } from '@/types'
 import { createScoreTableFromTemplate, createChartFromTemplate } from '@/types'
@@ -10,12 +10,13 @@ import {
   getChartTemplates,
 } from '@/lib/api/template-api'
 import { useError } from '@/contexts/ErrorContext'
-import { createBlock } from '@/lib/utils'
+import { createBlock, computeBlockMetas, getDescendantIds } from '@/lib/utils'
 import { useAutoSave } from '@/lib/hooks/use-auto-save'
-import { useClickOutside } from '@/lib/hooks/use-click-outside'
-import OutlineTree from '@/components/editor/OutlineTree'
+import ReportSummary from '@/components/editor/ReportSummary'
+import SectionEditor from '@/components/editor/SectionEditor'
 import BlockSelector from '@/components/editor/BlockSelector'
 import BlockEditModal from '@/components/editor/BlockEditModal'
+import AddRootBlockModal from '@/components/editor/AddRootBlockModal'
 import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
 import EditorPageHeader from '@/components/editor/EditorPageHeader'
@@ -50,7 +51,6 @@ interface BlockSelectorState {
   showBlockSelector: boolean
   insertAfterBlockId: string | null
   insertParentId: string | null
-  showSectionSelector: boolean
 }
 
 // ========== Component ==========
@@ -65,26 +65,23 @@ export default function TemplateEditor() {
   const [blocks, setBlocks] = useState<Block[]>([])
   const [loading, setLoading] = useState(true)
 
-  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set())
+  const [activeItemId, setActiveItemId] = useState<string | null>(null)
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null)
   const [pendingNewBlock, setPendingNewBlock] = useState<{ block: Block; afterBlockId: string | null } | null>(null)
   const [blockSelector, setBlockSelector] = useState<BlockSelectorState>({
     showBlockSelector: false,
     insertAfterBlockId: null,
     insertParentId: null,
-    showSectionSelector: false,
   })
   const updateBlockSelector = (patch: Partial<BlockSelectorState>) => setBlockSelector(prev => ({ ...prev, ...patch }))
 
+  const [showAddRootModal, setShowAddRootModal] = useState(false)
   const [scoreTableTemplates, setScoreTableTemplates] = useState<ScoreTableTemplate[]>([])
   const [chartTemplates, setChartTemplates] = useState<ChartTemplate[]>([])
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false)
   const [isDirty, setIsDirty] = useState(false)
   const [isSaved, setIsSaved] = useState(!isNew)
-  const sectionSelectorRef = useRef<HTMLDivElement>(null)
   const templateIdRef = useRef<string | null>(null)
-
-  useClickOutside(sectionSelectorRef, () => updateBlockSelector({ showSectionSelector: false }))
 
   const isMaster = template?.isMaster ?? false
 
@@ -179,7 +176,15 @@ export default function TemplateEditor() {
     load()
   }, [id, isNew, navigate, showError])
 
-  // ========== Handlers ==========
+  // ========== Central blocks setter ==========
+
+  const handleBlocksChange = useCallback((newBlocks: Block[]) => {
+    setIsDirty(true)
+    setBlocks(newBlocks)
+    if (template) triggerSave(template, newBlocks)
+  }, [template, triggerSave])
+
+  // ========== Header field handlers ==========
 
   const handleNameChange = useCallback((name: string) => {
     setIsDirty(true)
@@ -201,12 +206,6 @@ export default function TemplateEditor() {
     })
   }, [blocks, triggerSave])
 
-  const handleBlocksChange = useCallback((newBlocks: Block[]) => {
-    setIsDirty(true)
-    setBlocks(newBlocks)
-    if (template) triggerSave(template, newBlocks)
-  }, [template, triggerSave])
-
   const handleBlockDataChange = useCallback((blockId: string, data: BlockData) => {
     setIsDirty(true)
     setBlocks(prev => {
@@ -215,6 +214,63 @@ export default function TemplateEditor() {
       return updated
     })
   }, [template, triggerSave])
+
+  // ========== Block / section handlers (ported para layout novo) ==========
+
+  const handleReorderBlocks = useCallback((nextBlocks: Block[]) => {
+    handleBlocksChange(nextBlocks)
+  }, [handleBlocksChange])
+
+  const handleDuplicateBlock = useCallback((blockId: string) => {
+    const block = blocks.find((b) => b.id === blockId)
+    if (!block) return
+    const sorted = [...blocks].sort((a, b) => a.order - b.order)
+    const idx = sorted.findIndex((b) => b.id === blockId)
+    if (idx === -1) return
+    const newBlock: Block = {
+      ...block,
+      id: crypto.randomUUID(),
+      data: JSON.parse(JSON.stringify(block.data)),
+    }
+    sorted.splice(idx + 1, 0, newBlock)
+    handleBlocksChange(sorted.map((b, i) => ({ ...b, order: i })))
+  }, [blocks, handleBlocksChange])
+
+  const handleRemoveBlock = useCallback((blockId: string) => {
+    const filtered = blocks.filter((b) => b.id !== blockId)
+    handleBlocksChange(filtered.map((b, i) => ({ ...b, order: i })))
+  }, [blocks, handleBlocksChange])
+
+  const handleDeleteSectionCascade = useCallback((sectionId: string) => {
+    const descendants = getDescendantIds(blocks, sectionId)
+    const idsToRemove = new Set([sectionId, ...descendants])
+    const filtered = blocks.filter((b) => !idsToRemove.has(b.id))
+    handleBlocksChange(filtered.map((b, i) => ({ ...b, order: i })))
+    if (activeItemId && idsToRemove.has(activeItemId)) setActiveItemId(null)
+  }, [blocks, handleBlocksChange, activeItemId])
+
+  const handleDeleteSectionMove = useCallback((sectionId: string, targetSectionId: string) => {
+    const descendants = new Set(getDescendantIds(blocks, sectionId))
+    const childBlocks = blocks
+      .filter((b) => descendants.has(b.id) && b.parentId === sectionId)
+      .map((b) => ({ ...b, parentId: targetSectionId }))
+    const keptDescendants = blocks.filter((b) => descendants.has(b.id) && b.parentId !== sectionId)
+    const remaining = blocks.filter((b) => b.id !== sectionId && !descendants.has(b.id))
+    const result = [...remaining, ...childBlocks, ...keptDescendants]
+    handleBlocksChange(result.map((b, i) => ({ ...b, order: i })))
+    if (activeItemId === sectionId) setActiveItemId(targetSectionId)
+  }, [blocks, handleBlocksChange, activeItemId])
+
+  const handleMoveBlocksToSection = useCallback((blockIds: string[], destSectionId: string | null) => {
+    if (blockIds.length === 0) return
+    const movingIds = new Set(blockIds)
+    const movingBlocks = blocks
+      .filter((b) => movingIds.has(b.id))
+      .map((b) => ({ ...b, parentId: destSectionId }))
+    const remaining = blocks.filter((b) => !movingIds.has(b.id))
+    const result = [...remaining, ...movingBlocks]
+    handleBlocksChange(result.map((b, i) => ({ ...b, order: i })))
+  }, [blocks, handleBlocksChange])
 
   const handleAddBlock = useCallback((type: BlockType, templateId?: string) => {
     const newBlock = createBlock(type, 0, undefined, blockSelector.insertParentId)
@@ -239,65 +295,70 @@ export default function TemplateEditor() {
       return
     }
 
-    setBlocks(prev => {
-      const sorted = [...prev].sort((a, b) => a.order - b.order)
-
-      if (blockSelector.insertAfterBlockId) {
-        const afterIdx = sorted.findIndex(b => b.id === blockSelector.insertAfterBlockId)
-        if (afterIdx !== -1) sorted.splice(afterIdx + 1, 0, newBlock)
-        else sorted.push(newBlock)
+    const sorted = [...blocks].sort((a, b) => a.order - b.order)
+    let newBlocks: Block[]
+    if (blockSelector.insertAfterBlockId) {
+      const afterIdx = sorted.findIndex(b => b.id === blockSelector.insertAfterBlockId)
+      if (afterIdx !== -1) {
+        sorted.splice(afterIdx + 1, 0, newBlock)
+        newBlocks = sorted.map((b, i) => ({ ...b, order: i }))
       } else {
-        sorted.push(newBlock)
+        newBlocks = [...sorted, newBlock].map((b, i) => ({ ...b, order: i }))
       }
+    } else {
+      newBlocks = [...sorted, newBlock].map((b, i) => ({ ...b, order: i }))
+    }
 
-      const reordered = sorted.map((b, i) => ({ ...b, order: i }))
-      updateBlockSelector({ insertAfterBlockId: null, insertParentId: null })
-      if (template) triggerSave(template, reordered)
-      return reordered
-    })
-  }, [blockSelector.insertAfterBlockId, blockSelector.insertParentId, scoreTableTemplates, chartTemplates, template, triggerSave])
+    updateBlockSelector({ insertAfterBlockId: null, insertParentId: null })
+    handleBlocksChange(newBlocks)
+  }, [blockSelector.insertAfterBlockId, blockSelector.insertParentId, scoreTableTemplates, chartTemplates, blocks, handleBlocksChange])
 
   const handleRequestAddBlock = useCallback((afterBlockId: string, parentId?: string | null) => {
     updateBlockSelector({ insertAfterBlockId: afterBlockId, insertParentId: parentId ?? null, showBlockSelector: true })
   }, [])
 
-  const toggleSectionCollapse = useCallback((blockId: string, childContainerIds?: string[]) => {
-    setCollapsedSections(prev => {
-      const next = new Set(prev)
-      if (next.has(blockId)) {
-        next.delete(blockId)
-      } else {
-        next.add(blockId)
-        childContainerIds?.forEach(id => next.add(id))
-      }
-      return next
-    })
-  }, [])
+  const missingSpecials = useMemo<Array<'cover' | 'identification' | 'closing-page'>>(() => {
+    const types = new Set(blocks.map((b) => b.type))
+    const missing: Array<'cover' | 'identification' | 'closing-page'> = []
+    if (!types.has('cover')) missing.push('cover')
+    if (!types.has('identification')) missing.push('identification')
+    if (!types.has('closing-page')) missing.push('closing-page')
+    return missing
+  }, [blocks])
+
+  const insertRootBlock = useCallback((type: BlockType) => {
+    const sorted = [...blocks].sort((a, b) => a.order - b.order)
+    const newBlock = createBlock(type, 0, undefined, null)
+
+    let inserted: Block[]
+    if (type === 'cover') {
+      inserted = [newBlock, ...sorted]
+    } else if (type === 'identification') {
+      const coverIdx = sorted.findIndex((b) => b.type === 'cover')
+      const insertAt = coverIdx !== -1 ? coverIdx + 1 : 0
+      inserted = [...sorted]
+      inserted.splice(insertAt, 0, newBlock)
+    } else if (type === 'closing-page') {
+      inserted = [...sorted, newBlock]
+    } else {
+      const closingIdx = sorted.findIndex((b) => b.type === 'closing-page')
+      inserted = [...sorted]
+      if (closingIdx !== -1) inserted.splice(closingIdx, 0, newBlock)
+      else inserted.push(newBlock)
+    }
+
+    handleBlocksChange(inserted.map((b, i) => ({ ...b, order: i })))
+    setShowAddRootModal(false)
+    setActiveItemId(newBlock.id)
+  }, [blocks, handleBlocksChange])
 
   const handleAddTextSection = useCallback(() => {
-    setIsDirty(true)
-    const sorted = [...blocks].sort((a, b) => a.order - b.order)
-    const newBlock = createBlock('section', 0, undefined, null)
-
-    const closingIdx = sorted.findIndex(b => b.type === 'closing-page')
-    if (closingIdx !== -1) sorted.splice(closingIdx, 0, newBlock)
-    else sorted.push(newBlock)
-
-    const reordered = sorted.map((b, i) => ({ ...b, order: i }))
-    setBlocks(reordered)
-    if (template) triggerSave(template, reordered)
-    updateBlockSelector({ showSectionSelector: false })
-  }, [blocks, template, triggerSave])
-
-  const handleAddClosingPage = useCallback(() => {
-    setIsDirty(true)
-    const sorted = [...blocks].sort((a, b) => a.order - b.order)
-    const newBlock = createBlock('closing-page', 0)
-    const reordered = [...sorted, newBlock].map((b, i) => ({ ...b, order: i }))
-    setBlocks(reordered)
-    if (template) triggerSave(template, reordered)
-    updateBlockSelector({ showSectionSelector: false })
-  }, [blocks, template, triggerSave])
+    if (missingSpecials.length > 0) {
+      setShowAddRootModal(true)
+      return
+    }
+    insertRootBlock('section')
+  }, [missingSpecials.length, insertRootBlock])
 
   const handleForceSave = useCallback(async () => {
     if (!template || isMaster) return
@@ -326,20 +387,40 @@ export default function TemplateEditor() {
       sorted.push(updated)
     }
 
-    const reordered = sorted.map((b, i) => ({ ...b, order: i }))
-    setBlocks(reordered)
-    if (template) triggerSave(template, reordered)
+    handleBlocksChange(sorted.map((b, i) => ({ ...b, order: i })))
     setPendingNewBlock(null)
     setEditingBlockId(null)
-  }, [pendingNewBlock, blocks, template, triggerSave])
+  }, [pendingNewBlock, blocks, handleBlocksChange])
 
   // ========== Derived ==========
+
+  const summaryItemIds = useMemo(() => {
+    const collect: string[] = []
+    const roots = blocks
+      .filter((b) => (b.parentId ?? null) === null && (b.type === 'section' || b.type === 'identification' || b.type === 'closing-page'))
+      .sort((a, b) => a.order - b.order)
+    function walk(rootId: string) {
+      collect.push(rootId)
+      const children = blocks
+        .filter((b) => b.parentId === rootId && b.type === 'section')
+        .sort((a, b) => a.order - b.order)
+      for (const c of children) walk(c.id)
+    }
+    for (const r of roots) walk(r.id)
+    return collect
+  }, [blocks])
+
+  useEffect(() => {
+    if (activeItemId && summaryItemIds.includes(activeItemId)) return
+    setActiveItemId(summaryItemIds[0] ?? null)
+  }, [activeItemId, summaryItemIds])
+
+  const sortedBlocks = useMemo(() => [...blocks].sort((a, b) => a.order - b.order), [blocks])
+  const blockMetas = useMemo(() => computeBlockMetas(sortedBlocks), [sortedBlocks])
 
   const editingBlock = editingBlockId
     ? blocks.find(b => b.id === editingBlockId) ?? pendingNewBlock?.block ?? null
     : pendingNewBlock?.block ?? null
-
-  const hasClosingPage = blocks.some(b => b.type === 'closing-page')
 
   // ========== Render ==========
 
@@ -359,6 +440,7 @@ export default function TemplateEditor() {
       style={{
         backgroundImage: 'radial-gradient(circle, rgba(0,0,0,0.10) 1px, transparent 1px)',
         backgroundSize: '22px 22px',
+        backgroundAttachment: 'fixed',
       }}
     >
       <EditorPageHeader
@@ -406,100 +488,65 @@ export default function TemplateEditor() {
       />
 
       {/* Content */}
-      <div className="flex-1 max-w-3xl mx-auto w-full px-2 sm:px-4">
-        {/* Description */}
-        <div className="pt-2 pb-4">
-          <input
-            type="text"
-            value={template.description}
-            onChange={(e) => handleDescChange(e.target.value)}
-            placeholder="Descrição do template (opcional)"
-            disabled={isMaster}
-            className="w-full text-sm text-gray-500 bg-transparent border-0 focus:outline-none focus:ring-0 placeholder:text-gray-400 disabled:cursor-default"
-          />
-        </div>
+      <div className="flex-1 flex w-full px-4 sm:px-6 lg:px-8 pt-6">
+        <div className="min-w-0 flex flex-col flex-1">
+          {/* Description */}
+          <div className="pb-4">
+            <input
+              type="text"
+              value={template.description}
+              onChange={(e) => handleDescChange(e.target.value)}
+              placeholder="Descrição do template (opcional)"
+              disabled={isMaster}
+              className="w-full text-sm text-gray-500 bg-transparent border-0 focus:outline-none focus:ring-0 placeholder:text-gray-400 disabled:cursor-default"
+            />
+          </div>
 
-        {/* Block tree */}
-        <main className="flex-1 pb-6">
-          <OutlineTree
-            blocks={blocks}
-            onBlocksChange={handleBlocksChange}
-            collapsedSections={collapsedSections}
-            onToggleSectionCollapse={toggleSectionCollapse}
-            onRequestAddBlock={handleRequestAddBlock}
-            onEditBlock={setEditingBlockId}
-            locked={isMaster}
-          />
-
-          {!isMaster && (
-            <div className="mt-6 flex justify-center">
-              <div className="relative w-full max-w-md" ref={sectionSelectorRef}>
-                <Button
-                  variant="ghost"
-                  size="lg"
-                  onClick={() => updateBlockSelector({ showSectionSelector: !blockSelector.showSectionSelector })}
-                  className="border-2 border-dashed border-gray-300 hover:border-brand-400 hover:text-brand-700 w-full"
-                >
-                  + Adicionar Seção
-                </Button>
-
-                {blockSelector.showSectionSelector && (
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-                    <button
-                      type="button"
-                      onClick={handleAddTextSection}
-                      className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 text-left"
-                    >
-                      <span className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                          <polyline points="14 2 14 8 20 8" />
-                          <line x1="16" y1="13" x2="8" y2="13" />
-                          <line x1="16" y1="17" x2="8" y2="17" />
-                        </svg>
-                      </span>
-                      <div>
-                        <p className="font-medium">Nova Seção</p>
-                        <p className="text-xs text-gray-400">Seção de texto com título</p>
-                      </div>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleAddClosingPage}
-                      disabled={hasClosingPage}
-                      className={`w-full flex items-center gap-3 px-4 py-3 text-sm text-left ${
-                        hasClosingPage ? 'text-gray-300 cursor-not-allowed' : 'text-gray-700 hover:bg-gray-50'
-                      }`}
-                    >
-                      <span className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                        hasClosingPage ? 'bg-gray-50 text-gray-300' : 'bg-gray-100 text-gray-600'
-                      }`}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                          <polyline points="14 2 14 8 20 8" />
-                        </svg>
-                      </span>
-                      <div>
-                        <p className="font-medium">Termo de Entrega</p>
-                        <p className="text-xs text-gray-400">
-                          {hasClosingPage ? 'Já adicionado' : 'Página de encerramento e assinaturas'}
-                        </p>
-                      </div>
-                    </button>
-                  </div>
-                )}
-              </div>
+          {/* Document view */}
+          <main className="flex-1 pb-6">
+            <div className="flex gap-8 lg:gap-12">
+              <ReportSummary
+                blocks={blocks}
+                activeItemId={activeItemId}
+                onSelect={setActiveItemId}
+                onRequestAddSection={handleAddTextSection}
+                onReorder={isMaster ? undefined : handleReorderBlocks}
+                locked={isMaster}
+                saveStatus={isMaster ? undefined : (isDirty && !isSaved ? 'unsaved' : saveStatus)}
+              />
+              <SectionEditor
+                blocks={blocks}
+                activeItemId={activeItemId}
+                blockMetas={blockMetas}
+                onEditBlock={setEditingBlockId}
+                onDuplicateBlock={handleDuplicateBlock}
+                onRemoveBlock={handleRemoveBlock}
+                onChangeBlock={handleBlockDataChange}
+                onRequestAddBlock={handleRequestAddBlock}
+                onDeleteSectionCascade={handleDeleteSectionCascade}
+                onDeleteSectionMove={handleDeleteSectionMove}
+                onMoveBlocksToSection={handleMoveBlocksToSection}
+                locked={isMaster}
+                readOnly={isMaster}
+              />
             </div>
-          )}
-        </main>
+          </main>
+        </div>
       </div>
 
       {/* Block Selector Modal */}
       <BlockSelector
         isOpen={blockSelector.showBlockSelector}
-        onClose={() => updateBlockSelector({ showBlockSelector: false })}
+        onClose={() => updateBlockSelector({ showBlockSelector: false, insertAfterBlockId: null, insertParentId: null })}
         onSelect={handleAddBlock}
+      />
+
+      {/* Add Root Block Modal */}
+      <AddRootBlockModal
+        isOpen={showAddRootModal}
+        onClose={() => setShowAddRootModal(false)}
+        availableSpecials={missingSpecials}
+        onSelect={insertRootBlock}
       />
 
       {/* Block Edit Modal */}
