@@ -4,7 +4,7 @@ import type { Customer, CustomerData, Report, Page } from '@/types'
 import { createEmptyCustomer } from '@/types'
 import { getCustomers, createCustomer, updateCustomer, deleteCustomer } from '@/lib/api/customer-api'
 import { getReports } from '@/lib/api/report-api'
-import { formatDateTime, calculateAge } from '@/lib/utils'
+import { formatDateTime, calculateAge, todayIso } from '@/lib/utils'
 import { applyMask } from '@/lib/masks'
 import { useConfirmDelete } from '@/lib/hooks/use-confirm-delete'
 import { useCreateReport } from '@/lib/hooks/use-create-report'
@@ -339,6 +339,8 @@ export default function CustomerList() {
                 label="Data de Nascimento"
                 value={editingCustomer.data.birthDate}
                 onChange={(value) => { updateEditingField('birthDate', value); updateEditingField('age', calculateAge(value)) }}
+                min="1950-01-01"
+                max={todayIso()}
               />
               <Input
                 label="Idade"
