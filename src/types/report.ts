@@ -189,6 +189,7 @@ export interface ChartData {
   showLegend: boolean
   showRegionLegend: boolean
   description: string | SlateContent
+  templateId?: string | null
 }
 
 // ========== References ==========
@@ -527,5 +528,6 @@ export function createChartFromTemplate(template: ChartTemplate): ChartData {
     showLegend: template.showLegend,
     showRegionLegend: template.showRegionLegend,
     description: template.defaultDescription ?? '',
+    templateId: template.id,
   }
 }

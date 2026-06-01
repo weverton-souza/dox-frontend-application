@@ -1,10 +1,12 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import type { Block, BlockType, BlockData, ChartData, Report, ReportStatus, ReportVersion, Customer, ScoreTableData, ScoreTableTemplate, ChartTemplate } from '@/types'
 import { createScoreTableFromTemplate, createChartFromTemplate, isSlateContent, slateContentToPlainText, REPORT_STATUS_LABELS, REPORT_STATUS_COLORS, REPORT_STATUS_TRANSITIONS } from '@/types'
 import type { TextBlockData, SectionData, InfoBoxData } from '@/types'
 import { getReport, updateReport, getExportData } from '@/lib/api/report-api'
 import { getCustomers } from '@/lib/api/customer-api'
+import { getAssessments } from '@/lib/api/assessment-api'
+import { findAutofillMatches, applyAutofillMatches, type AutofillMatch } from '@/lib/assessment-autofill'
 import { createReportTemplate, getReportTemplates, getScoreTableTemplates, getChartTemplates } from '@/lib/api/template-api'
 import { getFormById, getFormResponseById } from '@/lib/api/form-api'
 import { useError } from '@/contexts/ErrorContext'
@@ -18,6 +20,7 @@ import SectionEditor from '@/components/editor/SectionEditor'
 import PreviewModal from '@/components/editor/PreviewModal'
 import BlockSelector from '@/components/editor/BlockSelector'
 import AddRootBlockModal from '@/components/editor/AddRootBlockModal'
+import AssessmentAutofillModal from '@/components/editor/AssessmentAutofillModal'
 import BlockEditModal from '@/components/editor/BlockEditModal'
 import VersionHistoryModal from '@/components/editor/VersionHistoryModal'
 import Button from '@/components/ui/Button'
@@ -64,6 +67,7 @@ interface AiModalsState {
 export default function ReportEditor() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
   const { showError } = useError()
 
   const [report, setReport] = useState<Report | null>(null)
@@ -111,6 +115,9 @@ export default function ReportEditor() {
   const updateAiModals = (patch: Partial<AiModalsState>) => setAiModals(prev => ({ ...prev, ...patch }))
 
   const [pendingStatusChange, setPendingStatusChange] = useState<ReportStatus | null>(null)
+  const [autofillMatches, setAutofillMatches] = useState<AutofillMatch[]>([])
+  const [showAutofill, setShowAutofill] = useState(false)
+  const autofillCheckedRef = useRef(false)
 
   // Load report, customers, and templates
   useEffect(() => {
@@ -193,6 +200,44 @@ export default function ReportEditor() {
     },
     [handleUpdateReport]
   )
+
+  // Autofill de tabelas/gráficos a partir das avaliações — só ao criar o laudo de um template
+  useEffect(() => {
+    if (autofillCheckedRef.current) return
+    if (!report || !report.customerId) return
+    const offered = (location.state as { offerAssessmentAutofill?: boolean } | null)?.offerAssessmentAutofill
+    if (!offered) return
+    autofillCheckedRef.current = true
+
+    const hasMatchable = report.blocks.some(
+      (b) => (b.type === 'score-table' || b.type === 'chart') && !!(b.data as { templateId?: string | null }).templateId
+    )
+    if (!hasMatchable) return
+
+    getAssessments(report.customerId, 0, 100)
+      .then((page) => {
+        const matches = findAutofillMatches(report.blocks, page.content)
+        if (matches.length > 0) {
+          setAutofillMatches(matches)
+          setShowAutofill(true)
+        }
+      })
+      .catch(() => {})
+  }, [report, location.state])
+
+  const handleAutofillConfirm = useCallback(
+    (selectedBlockIds: Set<string>) => {
+      if (report) {
+        const newBlocks = applyAutofillMatches(report.blocks, autofillMatches, selectedBlockIds)
+        handleUpdateReport({ blocks: newBlocks })
+        setPreviewRefreshKey((k) => k + 1)
+      }
+      setShowAutofill(false)
+    },
+    [report, autofillMatches, handleUpdateReport]
+  )
+
+  const handleAutofillSkip = useCallback(() => setShowAutofill(false), [])
 
   const numberingActive = useMemo(
     () => (report ? isNumberingActive(report.blocks) : false),
@@ -1074,6 +1119,14 @@ export default function ReportEditor() {
         onClose={() => setShowAddRootModal(false)}
         availableSpecials={missingSpecials}
         onSelect={insertRootBlock}
+      />
+
+      {/* Assessment Autofill Modal */}
+      <AssessmentAutofillModal
+        isOpen={showAutofill}
+        matches={autofillMatches}
+        onConfirm={handleAutofillConfirm}
+        onSkip={handleAutofillSkip}
       />
 
       {/* Save Template Modal */}

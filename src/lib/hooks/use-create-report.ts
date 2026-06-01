@@ -26,7 +26,7 @@ export function useCreateReport() {
     if (!customer) return
     try {
       const report = await createReportFromTemplate(customer, template)
-      navigate(`/reports/${report.id}`)
+      navigate(`/reports/${report.id}`, { state: { offerAssessmentAutofill: true } })
     } catch (err) {
       showError(err)
     }
