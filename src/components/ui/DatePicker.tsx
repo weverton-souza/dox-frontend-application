@@ -151,6 +151,9 @@ export default function DatePicker({
     today: 'font-bold text-brand-600',
     selected: 'font-semibold',
     chevron: `${defaultClassNames.chevron} fill-brand-600`,
+    dropdowns: `${defaultClassNames.dropdowns ?? ''} !font-sans`,
+    dropdown: `${defaultClassNames.dropdown ?? ''} !font-sans !text-sm !text-gray-900`,
+    caption_label: `${defaultClassNames.caption_label ?? ''} !font-sans !text-sm !font-semibold !text-gray-800`,
   }
 
   const triggerBase = `
@@ -162,6 +165,10 @@ export default function DatePicker({
   const triggerBorder = error
     ? 'border-red-400 focus-visible:border-red-500'
     : 'border-gray-200 hover:border-gray-300 focus-visible:border-brand-500'
+
+  const now = new Date()
+  const navStart = min ? parseIsoDate(min) : new Date(now.getFullYear() - 120, 0, 1)
+  const navEnd = max ? parseIsoDate(max) : new Date(now.getFullYear() + 10, 11, 31)
 
   const dropdown = open && position ? (
     <div
@@ -177,6 +184,10 @@ export default function DatePicker({
     >
       <DayPicker
         mode="single"
+        captionLayout="dropdown"
+        startMonth={navStart}
+        endMonth={navEnd}
+        defaultMonth={parseIsoDate(value)}
         selected={parseIsoDate(value)}
         onSelect={(date) => {
           onChange(toIsoDate(date))

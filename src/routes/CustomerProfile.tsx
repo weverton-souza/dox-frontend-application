@@ -31,7 +31,7 @@ import { getReportsByCustomer } from '@/lib/api/report-api'
 import { revokeFormLink, resendFormLinkInvite } from '@/lib/api/form-link-api'
 import { MAX_MANUAL_RESENDS } from '@/types'
 import { getAggregatedForms } from '@/lib/api/customer-forms-api'
-import { formatDateTime, calculateAge, getNowIso } from '@/lib/utils'
+import { formatDateTime, calculateAge, getNowIso, todayIso } from '@/lib/utils'
 import { useCreateReport } from '@/lib/hooks/use-create-report'
 import { useCustomerLabel } from '@/lib/hooks/useCustomerLabel'
 import { useError } from '@/contexts/ErrorContext'
@@ -408,7 +408,7 @@ export default function CustomerProfile() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input label="Nome completo" value={editData!.name} onChange={(e) => updateField('name', e.target.value)} />
             <Input label="CPF" value={editData!.cpf} onChange={(e) => updateField('cpf', e.target.value)} mask="cpf" />
-            <DatePicker label="Data de Nascimento" value={editData!.birthDate} onChange={(value) => { updateField('birthDate', value); updateField('age', calculateAge(value)) }} />
+            <DatePicker label="Data de Nascimento" value={editData!.birthDate} onChange={(value) => { updateField('birthDate', value); updateField('age', calculateAge(value)) }} min="1950-01-01" max={todayIso()} />
             <Input label="Idade" value={editData!.age} onChange={(e) => updateField('age', e.target.value)} placeholder="Ex: 32 anos e 4 meses" readOnly />
             <Input label="Escolaridade" value={editData!.education} onChange={(e) => updateField('education', e.target.value)} />
             <Input label="Profissão" value={editData!.profession} onChange={(e) => updateField('profession', e.target.value)} />

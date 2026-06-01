@@ -315,6 +315,12 @@ export function getNow(): Date {
   return new Date()
 }
 
+/** Data de hoje em ISO `YYYY-MM-DD`, em horário local (sem bug de timezone do toISOString). */
+export function todayIso(): string {
+  const d = getNow()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 /** ISO 8601 do "agora" — usado em timestamps de eventos, criação, error logs. */
 export function getNowIso(): string {
   return getNow().toISOString()
