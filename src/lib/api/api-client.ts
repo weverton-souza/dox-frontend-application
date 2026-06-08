@@ -48,7 +48,8 @@ export function setRefreshToken(token: string | null): void {
     } else {
       sessionStorage.setItem(REFRESH_TOKEN_KEY, token)
     }
-  } else {
+  } else if (token === null) {
+    // Apenas null limpa o token; string vazia é no-op para preservar o refresh existente
     localStorage.removeItem(REFRESH_TOKEN_KEY)
     sessionStorage.removeItem(REFRESH_TOKEN_KEY)
   }
