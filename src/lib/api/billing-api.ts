@@ -107,6 +107,16 @@ export async function removeModule(moduleId: ModuleId): Promise<ApiSubscription>
   return data
 }
 
+export async function addAddon(addonId: string, quantity: number): Promise<ApiSubscription> {
+  const { data } = await api.patch<ApiSubscription>('/billing/subscription/addons/add', { addonId, quantity })
+  return data
+}
+
+export async function removeAddon(addonId: string, quantity: number): Promise<ApiSubscription> {
+  const { data } = await api.patch<ApiSubscription>('/billing/subscription/addons/remove', { addonId, quantity })
+  return data
+}
+
 export async function cancelSubscription(reason?: string): Promise<ApiSubscription> {
   const { data } = await api.delete<ApiSubscription>('/billing/subscription', { data: { reason } })
   return data

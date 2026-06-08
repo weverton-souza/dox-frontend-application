@@ -29,6 +29,7 @@ import PaymentMethodSection from '@/components/billing/PaymentMethodSection'
 import PaymentHistoryTable from '@/components/billing/PaymentHistoryTable'
 import InvoiceTable from '@/components/billing/InvoiceTable'
 import BillingActions from '@/components/billing/BillingActions'
+import SeatManagementModal from '@/components/billing/SeatManagementModal'
 import Spinner from '@/components/ui/Spinner'
 import Modal from '@/components/ui/Modal'
 
@@ -58,6 +59,7 @@ export default function SettingsBilling() {
   const [addressModalOpen, setAddressModalOpen] = useState(false)
   const [customerProfile, setCustomerProfile] = useState<CustomerProfile | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
+  const [seatModalOpen, setSeatModalOpen] = useState(false)
 
   const hasBillingAddress = isCustomerProfileComplete(customerProfile)
 
@@ -162,6 +164,7 @@ export default function SettingsBilling() {
           <BillingActions
             onChangePlan={() => setComingSoonAction('Trocar de plano')}
             onAddModule={() => setComingSoonAction('Adicionar módulo')}
+            onManageSeats={() => setSeatModalOpen(true)}
             onCancel={() => setComingSoonAction('Cancelar assinatura')}
           />
         </div>
@@ -177,6 +180,12 @@ export default function SettingsBilling() {
         open={addressModalOpen}
         onClose={() => setAddressModalOpen(false)}
         onSaved={(profile) => setCustomerProfile(profile)}
+      />
+
+      <SeatManagementModal
+        open={seatModalOpen}
+        onClose={() => setSeatModalOpen(false)}
+        onChanged={() => setReloadKey((k) => k + 1)}
       />
 
       {comingSoonAction && (

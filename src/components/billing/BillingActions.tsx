@@ -1,12 +1,14 @@
 interface BillingActionsProps {
   onChangePlan: () => void
   onAddModule: () => void
+  onManageSeats: () => void
   onCancel: () => void
 }
 
 export default function BillingActions({
   onChangePlan,
   onAddModule,
+  onManageSeats,
   onCancel,
 }: BillingActionsProps) {
   return (
@@ -16,7 +18,7 @@ export default function BillingActions({
           Gerenciar assinatura
         </h3>
         <p className="text-sm text-gray-600">
-          Trocar de plano, adicionar módulos ou cancelar.
+          Trocar de plano, adicionar módulos, gerenciar profissionais ou cancelar.
         </p>
       </header>
 
@@ -34,6 +36,13 @@ export default function BillingActions({
           className="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-900 shadow-sm transition-colors hover:bg-gray-50"
         >
           Adicionar módulo
+        </button>
+        <button
+          type="button"
+          onClick={onManageSeats}
+          className="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-900 shadow-sm transition-colors hover:bg-gray-50"
+        >
+          Adicionar profissional
         </button>
         <button
           type="button"
